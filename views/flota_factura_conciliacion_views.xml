@@ -171,7 +171,7 @@
                 <field name="proveedor"/>
                 <filter name="conciliado" string="Conciliados" domain="[('estado', '=', 'conciliado')]"/>
                 <filter name="draft" string="Borrador / Procesando" domain="[('estado', 'in', ['draft', 'procesando'])]"/>
-                <group expand="0" string="Agrupar por">
+                <group string="Agrupar por">
                     <filter name="group_periodo" string="Periodo" context="{'group_by': 'periodo'}"/>
                     <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
                 </group>
