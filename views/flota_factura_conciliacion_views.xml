@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sequence for Factura Conciliación -->
+    <record id="seq_flota_factura_conciliacion" model="ir.sequence">
+        <field name="name">Secuencia Factura Conciliación Flota</field>
+        <field name="code">flota.factura.conciliacion</field>
+        <field name="prefix">FAC-CLARO/%(year)s/</field>
+        <field name="padding">4</field>
+    </record>
+
+    <!-- TREE / LIST VIEW -->
+    <record id="view_flota_factura_conciliacion_tree" model="ir.ui.view">
+        <field name="name">flota.factura.conciliacion.tree</field>
+        <field name="model">flota.factura.conciliacion</field>
+        <field name="arch" type="xml">
+            <tree string="Conciliaciones de Factura Claro" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'">
+                <field name="name"/>
+                <field name="periodo"/>
+                <field name="proveedor"/>
+                <field name="fecha_factura"/>
+                <field name="count_lineas"/>
+                <field name="count_excesos" widget="badge" decoration-warning="count_excesos &gt; 0"/>
+                <field name="subtotal" widget="monetary" sum="Subtotal Total"/>
+                <field name="itbis_monto" widget="monetary" sum="ITBIS Total"/>
+                <field name="cdt_monto" widget="monetary" sum="CDT Total"/>
+                <field name="isc_monto" widget="monetary" sum="ISC Total"/>
+                <field name="total_mes" widget="monetary" sum="Gran Total"/>
+                <field name="estado" widget="badge" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- FORM VIEW -->
+    <record id="view_flota_factura_conciliacion_form" model="ir.ui.view">
+        <field name="name">flota.factura.conciliacion.form</field>
+        <field name="model">flota.factura.conciliacion</field>
+        <field name="arch" type="xml">
+            <form string="Conciliación Financiera Factura Claro">
+                <header>
+                    <button name="action_generar_resumen_departamentos" string="Re-Consolidar Departamentos" type="object" class="btn-secondary"/>
+                    <button name="action_marcar_conciliado" string="Marcar como Conciliado" type="object" class="btn-primary" invisible="estado == 'conciliado'"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="draft,procesando,conciliado"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                        <h3>
+                            <field name="periodo" placeholder="AAAA-MM (Ej. 2026-09)"/>
+                        </h3>
+                    </div>
+
+                    <!-- BANNER STATS / KPIS -->
+                    <div class="row text-center mb-4 g-2">
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light shadow-sm">
+                                <span class="text-muted d-block small">SUBTOTAL FACTURA</span>
+                                <strong class="fs-4 text-primary"><field name="subtotal" widget="monetary"/></strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light shadow-sm">
+                                <span class="text-muted d-block small">IMPUESTOS (18%+2%+10%)</span>
+                                <strong class="fs-4 text-info">
+                                    <field name="itbis_monto" widget="monetary"/>
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light shadow-sm">
+                                <span class="text-muted d-block small">TOTAL DEL MES</span>
+                                <strong class="fs-4 text-success"><field name="total_mes" widget="monetary"/></strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded bg-light shadow-sm">
+                                <span class="text-muted d-block small">EXCESOS DATA / ROAMING</span>
+                                <strong class="fs-4 text-warning"><field name="count_excesos"/> línea(s)</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <group>
+                        <group string="Datos del Proveedor y Periodo">
+                            <field name="proveedor"/>
+                            <field name="fecha_factura"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Resumen General de Factura (Claro Dominicana)">
+                            <field name="renta_mensual" widget="monetary"/>
+                            <field name="renta_otros_servicios" widget="monetary"/>
+                            <field name="uso_data_movil" widget="monetary"/>
+                            <field name="llamadas_roaming" widget="monetary"/>
+                            <field name="otros_cargos_creditos" widget="monetary"/>
+                        </group>
+                    </group>
+
+                    <group string="Impuestos Legalmente Aplicados (República Dominicana)">
+                        <group>
+                            <field name="subtotal" widget="monetary" readonly="1"/>
+                            <field name="itbis_monto" widget="monetary" readonly="1" string="ITBIS (18%)"/>
+                        </group>
+                        <group>
+                            <field name="cdt_monto" widget="monetary" readonly="1" string="CDT (2%)"/>
+                            <field name="isc_monto" widget="monetary" readonly="1" string="ISC (10%)"/>
+                            <field name="total_mes" widget="monetary" readonly="1" class="fw-bold fs-5 text-success" string="TOTAL DEL MES"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <!-- Pestaña 1: Detalle por Empleado / Línea -->
+                        <page string="Desglose por Empleado (Líneas Factura)" name="lineas">
+                            <field name="linea_ids">
+                                <tree string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea == 'desconocido'">
+                                    <field name="numero_flota"/>
+                                    <field name="empleado_id"/>
+                                    <field name="departamento_id" optional="show"/>
+                                    <field name="ubicacion_id" optional="show"/>
+                                    <field name="cargo" optional="hide"/>
+                                    <field name="monto_renta_plan" widget="monetary" sum="Total Renta"/>
+                                    <field name="monto_otros_servicios" widget="monetary" optional="hide"/>
+                                    <field name="monto_uso_adicional" widget="monetary" sum="Total Adicional"/>
+                                    <field name="monto_roaming" widget="monetary" sum="Total Roaming"/>
+                                    <field name="monto_financiamiento" widget="monetary" optional="hide"/>
+                                    <field name="monto_creditos" widget="monetary" optional="hide"/>
+                                    <field name="subtotal_linea" widget="monetary" sum="Subtotal"/>
+                                    <field name="total_linea" widget="monetary" sum="Total Líneas"/>
+                                    <field name="estado_linea" widget="badge" decoration-success="estado_linea=='ok'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Pestaña 2: Consolidado por CEDI / Departamento -->
+                        <page string="Consolidado por CEDI / Departamento" name="resumen_depto">
+                            <field name="resumen_depto_ids" readonly="1">
+                                <tree string="Resumen por Departamento">
+                                    <field name="departamento_id"/>
+                                    <field name="ubicacion_id"/>
+                                    <field name="cantidad_empleados" sum="Total Empleados"/>
+                                    <field name="monto_subtotal" widget="monetary" sum="Total Subtotal"/>
+                                    <field name="monto_total" widget="monetary" sum="Total General"/>
+                                    <field name="porcentaje_gasto" widget="percentage"/>
+                                </tree>
+                            </field>
+                        </page>
+
+                        <!-- Pestaña 3: Notas -->
+                        <page string="Observaciones / Notas" name="notes">
+                            <field name="notes" placeholder="Notas de conciliación o aclaraciones de auditoría..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- SEARCH VIEW FOR CONCILIACION -->
+    <record id="view_flota_factura_conciliacion_search" model="ir.ui.view">
+        <field name="name">flota.factura.conciliacion.search</field>
+        <field name="model">flota.factura.conciliacion</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Conciliaciones">
+                <field name="name"/>
+                <field name="periodo"/>
+                <field name="proveedor"/>
+                <filter name="conciliado" string="Conciliados" domain="[('estado', '=', 'conciliado')]"/>
+                <filter name="draft" string="Borrador / Procesando" domain="[('estado', 'in', ['draft', 'procesando'])]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_periodo" string="Periodo" context="{'group_by': 'periodo'}"/>
+                    <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- PIVOT VIEW FOR FLOTA FACTURA LINEA -->
+    <record id="view_flota_factura_linea_pivot" model="ir.ui.view">
+        <field name="name">flota.factura.linea.pivot</field>
+        <field name="model">flota.factura.linea</field>
+        <field name="arch" type="xml">
+            <pivot string="Matriz Financiera de Consumo por Departamento" sample="1">
+                <field name="departamento_id" type="row"/>
+                <field name="ubicacion_id" type="row"/>
+                <field name="estado_linea" type="col"/>
+                <field name="subtotal_linea" type="measure"/>
+                <field name="total_linea" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- GRAPH VIEW FOR FLOTA FACTURA LINEA -->
+    <record id="view_flota_factura_linea_graph" model="ir.ui.view">
+        <field name="name">flota.factura.linea.graph</field>
+        <field name="model">flota.factura.linea</field>
+        <field name="arch" type="xml">
+            <graph string="Gastos Telefónicos por Departamento" type="bar" sample="1">
+                <field name="departamento_id"/>
+                <field name="total_linea" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- ACTION FOR CONCILIACION -->
+    <record id="action_flota_factura_conciliacion" model="ir.actions.act_window">
+        <field name="name">Conciliación de Facturas Claro</field>
+        <field name="res_model">flota.factura.conciliacion</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_flota_factura_conciliacion_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                ¡No hay conciliaciones registradas aún!
+            </p>
+            <p>
+                Las facturas procesadas por n8n o importadas manualmente se registrarán aquí con su desglose por empleado y departamento.
+            </p>
+        </field>
+    </record>
+
+    <!-- ACTION FOR ANALYTICS / PIVOT -->
+    <record id="action_flota_factura_linea_analytics" model="ir.actions.act_window">
+        <field name="name">Análisis Financiero de Consumos</field>
+        <field name="res_model">flota.factura.linea</field>
+        <field name="view_mode">pivot,graph,tree</field>
+    </record>
+
+    <!-- MENU ITEMS -->
+    <menuitem id="menu_flota_factura_root" name="Conciliación Facturas" parent="menu_flota_root" sequence="25"/>
+    <menuitem id="menu_flota_factura_conciliacion" name="Facturas Claro" parent="menu_flota_factura_root" action="action_flota_factura_conciliacion" sequence="10"/>
+    <menuitem id="menu_flota_factura_analytics" name="Análisis Financiero (Pivot)" parent="menu_flota_factura_root" action="action_flota_factura_linea_analytics" sequence="20"/>
+</odoo>

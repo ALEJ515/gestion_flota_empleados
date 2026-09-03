@@ -4,6 +4,19 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.7.0] - 2026-09-03
+### Añadido
+- **Centro de Conciliación Financiera Facturas Claro (`flota.factura.conciliacion` & `flota.factura.linea`)**:
+  - Encabezado con rubros dinámicos de Claro: Renta Mensual, Renta Otros Servicios, Uso Data Móvil, Roaming y Otros Cargos/Créditos.
+  - Cálculo automático de impuestos de República Dominicana: ITBIS (18%), CDT (2%), ISC (10%) y Subtotal / Total del Mes.
+  - Desglose por Empleado/Línea con vinculación automática por `numero_flota` y detección de excesos de consumo.
+  - Consolidación automática por Departamento / CEDI con porcentaje de gasto.
+  - Tablero de KPIs en cabecera y Vistas Matriz Pivot / Gráficos por Departamento.
+- **Endpoint API REST n8n (`/api/v1/flota/conciliar_factura`)**:
+  - Permite a los workflows de n8n enviar la sabana de factura procesada para conciliación instantánea.
+
+---
+
 ## [v1.6.0] - 2026-09-03
 ### Añadido
 - **Asistente de Asignación Masiva (`flota.empleado.mass.update.wizard`)**:

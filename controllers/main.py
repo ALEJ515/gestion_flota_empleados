@@ -207,3 +207,88 @@ class FlotaEmpleadoController(http.Controller):
             'nombre': dept.name,
             'codigo': dept.code
         }
+
+    # ---------------------------------------------------------
+    # ENDPOINT CONCILIACION FACTURA CLARO (n8n JSON Input)
+    # ---------------------------------------------------------
+    @http.route('/api/v1/flota/conciliar_factura', type='jsonrpc', auth='none', methods=['POST', 'GET'], csrf=False)
+    def conciliar_factura_from_n8n(self, **kwargs):
+        """ Recibe el desglose completo de la factura de Claro procesado por n8n """
+        if not self._validate_token():
+            return {'error': 'No autorizado', 'code': 401}
+
+        data = request.jsonrequest or kwargs
+        periodo = data.get('periodo', fields.Date.today().strftime('%Y-%m'))
+        fecha_factura = data.get('fecha_factura', fields.Date.today())
+        proveedor = data.get('proveedor', 'Claro Dominicana')
+
+        renta_mensual = float(data.get('renta_mensual', 0.0))
+        renta_otros_servicios = float(data.get('renta_otros_servicios', 0.0))
+        uso_data_movil = float(data.get('uso_data_movil', 0.0))
+        llamadas_roaming = float(data.get('llamadas_roaming', 0.0))
+        otros_cargos_creditos = float(data.get('otros_cargos_creditos', 0.0))
+
+        lineas_data = data.get('lineas', [])
+
+        Conciliacion = request.env['flota.factura.conciliacion'].sudo()
+        Linea = request.env['flota.factura.linea'].sudo()
+
+        conciliacion = Conciliacion.search([
+            ('periodo', '=', periodo),
+            ('proveedor', '=ilike', proveedor),
+            ('estado', 'in', ['draft', 'procesando'])
+        ], limit=1)
+
+        vals = {
+            'periodo': periodo,
+            'fecha_factura': fecha_factura,
+            'proveedor': proveedor,
+            'renta_mensual': renta_mensual,
+            'renta_otros_servicios': renta_otros_servicios,
+            'uso_data_movil': uso_data_movil,
+            'llamadas_roaming': llamadas_roaming,
+            'otros_cargos_creditos': otros_cargos_creditos,
+            'estado': 'procesando'
+        }
+
+        if conciliacion:
+            conciliacion.write(vals)
+            conciliacion.linea_ids.unlink()
+        else:
+            conciliacion = Conciliacion.create(vals)
+
+        lineas_creadas = 0
+        for l in lineas_data:
+            num = l.get('numero_flota')
+            if not num:
+                continue
+            Linea.create({
+                'conciliacion_id': conciliacion.id,
+                'numero_flota': str(num),
+                'monto_renta_plan': float(l.get('monto_renta_plan', 0.0)),
+                'monto_otros_servicios': float(l.get('monto_otros_servicios', 0.0)),
+                'monto_uso_adicional': float(l.get('monto_uso_adicional', 0.0)),
+                'monto_roaming': float(l.get('monto_roaming', 0.0)),
+                'monto_financiamiento': float(l.get('monto_financiamiento', 0.0)),
+                'monto_creditos': float(l.get('monto_creditos', 0.0)),
+            })
+            lineas_creadas += 1
+
+        conciliacion.action_generar_resumen_departamentos()
+        conciliacion.write({'estado': 'conciliado'})
+
+        return {
+            'status': 'success',
+            'conciliacion_id': conciliacion.id,
+            'referencia': conciliacion.name,
+            'periodo': conciliacion.periodo,
+            'subtotal': conciliacion.subtotal,
+            'itbis_18': conciliacion.itbis_monto,
+            'cdt_2': conciliacion.cdt_monto,
+            'isc_10': conciliacion.isc_monto,
+            'total_mes': conciliacion.total_mes,
+            'total_lineas': lineas_creadas,
+            'lineas_excesos': conciliacion.count_excesos,
+            'monto_excesos': conciliacion.monto_excesos
+        }
+
