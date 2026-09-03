@@ -48,7 +48,7 @@ class FlotaEmpleadoController(http.Controller):
         if not self._validate_token():
             return {'error': 'No autorizado', 'code': 401}
 
-        data = request.jsonrequest or kwargs
+        data = kwargs or (getattr(request, 'params', {}) or {})
         nombre = data.get('nombre')
         numero_flota = data.get('numero_flota')
         departamento_nombre = data.get('departamento')
@@ -132,7 +132,7 @@ class FlotaEmpleadoController(http.Controller):
         if not self._validate_token():
             return {'error': 'No autorizado', 'code': 401}
 
-        data = request.jsonrequest or kwargs
+        data = kwargs or (getattr(request, 'params', {}) or {})
         nombre = data.get('nombre')
         codigo = data.get('codigo', '')
         active = data.get('active', True)
@@ -183,7 +183,7 @@ class FlotaEmpleadoController(http.Controller):
         if not self._validate_token():
             return {'error': 'No autorizado', 'code': 401}
 
-        data = request.jsonrequest or kwargs
+        data = kwargs or (getattr(request, 'params', {}) or {})
         nombre = data.get('nombre')
         codigo = data.get('codigo', '')
         active = data.get('active', True)
@@ -217,7 +217,7 @@ class FlotaEmpleadoController(http.Controller):
         if not self._validate_token():
             return {'error': 'No autorizado', 'code': 401}
 
-        data = request.jsonrequest or kwargs
+        data = kwargs or (getattr(request, 'params', {}) or {})
         periodo = data.get('periodo', fields.Date.today().strftime('%Y-%m'))
         fecha_factura = data.get('fecha_factura', fields.Date.today())
         proveedor = data.get('proveedor', 'Claro Dominicana')
