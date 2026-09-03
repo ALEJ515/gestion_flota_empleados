@@ -121,6 +121,131 @@ class FlotaFacturaConciliacion(models.Model):
         self.write({'estado': 'conciliado'})
         self.message_post(body=_("Factura de Flota marcada como <b>Conciliada</b> correctamente."))
 
+    def _extract_pdf_text_native(self, pdf_bytes):
+        """ Extrae el texto completo de las páginas del PDF utilizando pypdf / PyPDF2 / pdfplumber """
+        text = ""
+        try:
+            import io
+            try:
+                from pypdf import PdfReader
+                reader = PdfReader(io.BytesIO(pdf_bytes))
+                for page in reader.pages:
+                    text += (page.extract_text() or "") + "\n"
+            except Exception:
+                from PyPDF2 import PdfFileReader
+                reader = PdfFileReader(io.BytesIO(pdf_bytes))
+                for i in range(reader.getNumPages()):
+                    text += (reader.getPage(i).extractText() or "") + "\n"
+        except Exception as e:
+            _logger.warning("Error con PyPDF/PyPDF2, intentando pdfplumber: %s", str(e))
+
+        if len(text.strip()) < 50:
+            try:
+                import io
+                import pdfplumber
+                with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                    for page in pdf.pages:
+                        text += (page.extract_text() or "") + "\n"
+            except Exception as e2:
+                _logger.error("Error extrayendo con pdfplumber: %s", str(e2))
+                
+        return text
+
+    def action_procesar_pdf_nativo(self):
+        """ Procesa el archivo PDF de la Factura de Claro 100% NATIVO dentro de Odoo sin depender de servicios externos """
+        self.ensure_one()
+        if not self.archivo_pdf:
+            raise UserError(_('Por favor adjunte el archivo PDF de la Factura de Claro antes de procesar.'))
+
+        import re
+        pdf_bytes = base64.b64decode(self.archivo_pdf)
+        pdf_text = self._extract_pdf_text_native(pdf_bytes)
+
+        if not pdf_text or len(pdf_text.strip()) < 20:
+            raise UserError(_('No se pudo extraer texto del archivo PDF adjunto. Verifique que el archivo no esté protegido con contraseña o dañado.'))
+
+        # 1. Extraer Rubros Generales de Cabecera Factura Claro
+        renta_m = 0.0
+        renta_o = 0.0
+        data_m = 0.0
+        roam_m = 0.0
+        cred_m = 0.0
+
+        m_renta = re.search(r'Renta\s+mensual\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_renta:
+            renta_m = float(m_renta.group(1).replace(',', ''))
+
+        m_renta_o = re.search(r'Renta\s+otros\s+servicios\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_renta_o:
+            renta_o = float(m_renta_o.group(1).replace(',', ''))
+
+        m_data = re.search(r'Uso\s+servicios\s+Data\s+M[oó]vil\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_data:
+            data_m = float(m_data.group(1).replace(',', ''))
+
+        m_roam = re.search(r'Llamadas\s+Roaming\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_roam:
+            roam_m = float(m_roam.group(1).replace(',', ''))
+
+        m_cred = re.search(r'Otros\s+cargos,?\s+cr[eé]ditos.*?-?\s*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_cred:
+            val = float(m_cred.group(1).replace(',', ''))
+            cred_m = -val if 'CR' in m_cred.group(0).upper() or '-' in m_cred.group(0) else val
+
+        # 2. Extraer Números Telefónicos y Consumos Línea por Línea
+        lineas_vals = []
+        phone_matches = re.finditer(r'(8[029]\d[\s-]?\d{3}[\s-]?\d{4})[^\n]*?([0-9,]+\.[0-9]{2})', pdf_text)
+        
+        seen_phones = set()
+        for match in phone_matches:
+            raw_phone = match.group(1)
+            clean_phone = re.sub(r'[^0-9]', '', raw_phone)
+            monto_val = float(match.group(2).replace(',', ''))
+
+            if clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10 and clean_phone not in seen_phones:
+                seen_phones.add(clean_phone)
+                lineas_vals.append({
+                    'conciliacion_id': self.id,
+                    'numero_flota': clean_phone,
+                    'monto_renta_plan': monto_val,
+                    'monto_otros_servicios': 0.0,
+                    'monto_uso_adicional': 0.0,
+                    'monto_roaming': 0.0,
+                    'monto_financiamiento': 0.0,
+                    'monto_creditos': 0.0,
+                })
+
+        # 3. Actualizar la Conciliación
+        self.write({
+            'renta_mensual': renta_m,
+            'renta_otros_servicios': renta_o,
+            'uso_data_movil': data_m,
+            'llamadas_roaming': roam_m,
+            'otros_cargos_creditos': cred_m,
+            'estado': 'procesando'
+        })
+
+        self.linea_ids.unlink()
+        if lineas_vals:
+            self.env['flota.factura.linea'].create(lineas_vals)
+
+        self.action_generar_resumen_departamentos()
+        self.write({'estado': 'conciliado'})
+
+        self.message_post(body=_("<b>Factura PDF procesada NATIVAMENTE en Odoo:</b><br/>Líneas encontradas: %s | Gran Total: RD$%s") % (len(seen_phones), self.total_mes))
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Extracción y Conciliación Exitosa'),
+                'message': _('Se procesó la factura PDF nativamente. Se extrajeron %s líneas telefónicas.'),
+                'type': 'success',
+                'sticky': False,
+                'next': {'type': 'ir.actions.client', 'tag': 'reload'}
+            }
+        }
+
     def action_procesar_pdf_n8n(self):
         """ Envía el archivo PDF adjunto al Webhook de n8n para parsing y conciliación """
         self.ensure_one()

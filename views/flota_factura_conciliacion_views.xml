@@ -37,7 +37,7 @@
         <field name="arch" type="xml">
             <form string="Conciliación Financiera Factura Claro">
                 <header>
-                    <button name="action_procesar_pdf_n8n" string="⚡ Procesar PDF con n8n" type="object" class="btn-success shadow-sm" invisible="not archivo_pdf"/>
+                    <button name="action_procesar_pdf_nativo" string="📄 Extraer y Conciliar PDF (Nativo)" type="object" class="btn-success shadow-sm" invisible="not archivo_pdf"/>
                     <button name="action_exportar_excel" string="📊 Exportar a Excel (.xlsx)" type="object" class="btn-info text-white shadow-sm"/>
                     <button name="action_generar_resumen_departamentos" string="Re-Consolidar Departamentos" type="object" class="btn-secondary"/>
                     <button name="action_marcar_conciliado" string="Marcar como Conciliado" type="object" class="btn-primary" invisible="estado == 'conciliado'"/>

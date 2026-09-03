@@ -4,6 +4,17 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.9.0] - 2026-09-03
+### Añadido
+- **Extracción y Conciliación 100% NATIVA de PDF en Odoo (sin n8n)**:
+  - Botón **"📄 Extraer y Conciliar PDF (Nativo)"** que lee directamente los bytes del archivo PDF con PyPDF2 / pdfplumber.
+  - Regex avanzado nativo en Python para parsear rubros generales (Renta mensual, Renta otros servicios, Data Móvil, Roaming, Descuentos CR, ITBIS 18%, CDT 2%, ISC 10%, Total Mes).
+  - Escaneo automático de números telefónicos (`809/829/849`) y vinculación directa con los Empleados, Departamentos y Ubicaciones de Odoo.
+- **Exportación a Excel (`.xlsx`) y PDF Nativo QWeb**:
+  - Descarga directa de reportes Excel multinoja e informe impreso en PDF.
+
+---
+
 ## [v1.8.0] - 2026-09-03
 ### Añadido
 - **Carga Directa de PDF en Odoo**:
