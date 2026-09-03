@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" 
+     x="0px" y="0px" viewBox="0 0 256 256" style="enable-background:new 0 0 256 256;" xml:space="preserve">
+<style type="text/css">
+	.bg-grad{fill:url(#bgGradient);}
+	.card-bg{fill:#FFFFFF;fill-opacity:0.12;stroke:#FFFFFF;stroke-width:2;stroke-opacity:0.25;}
+	.icon-main{fill:#0EA5E9;}
+	.icon-accent{fill:#38BDF8;}
+	.icon-gold{fill:#F59E0B;}
+	.icon-white{fill:#FFFFFF;}
+	.shadow{fill:#000000;fill-opacity:0.2;}
+</style>
+<defs>
+	<linearGradient id="bgGradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="256" y2="256">
+		<stop offset="0%" stop-color="#0F172A"/>
+		<stop offset="50%" stop-color="#1E293B"/>
+		<stop offset="100%" stop-color="#0284C7"/>
+	</linearGradient>
+	<linearGradient id="cardGrad" gradientUnits="userSpaceOnUse" x1="40" y1="40" x2="216" y2="216">
+		<stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.18"/>
+		<stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.05"/>
+	</linearGradient>
+	<linearGradient id="badgeGrad" gradientUnits="userSpaceOnUse" x1="80" y1="80" x2="176" y2="176">
+		<stop offset="0%" stop-color="#38BDF8"/>
+		<stop offset="100%" stop-color="#0284C7"/>
+	</linearGradient>
+</defs>
+
+<!-- Background -->
+<rect width="256" height="256" rx="56" class="bg-grad"/>
+
+<!-- Subtle Inner Glow Card -->
+<rect x="28" y="28" width="200" height="200" rx="40" fill="url(#cardGrad)" stroke="#FFFFFF" stroke-opacity="0.2" stroke-width="1.5"/>
+
+<!-- Decorative Elements: Signal Wave Circles -->
+<circle cx="128" cy="115" r="75" fill="none" stroke="#38BDF8" stroke-opacity="0.15" stroke-width="3" stroke-dasharray="6 6"/>
+<circle cx="128" cy="115" r="90" fill="none" stroke="#38BDF8" stroke-opacity="0.08" stroke-width="2"/>
+
+<!-- Smartphone / ID Card Base -->
+<rect x="74" y="44" width="108" height="168" rx="20" fill="#1E293B" stroke="#38BDF8" stroke-width="3.5"/>
+<rect x="80" y="52" width="96" height="152" rx="14" fill="#0F172A"/>
+
+<!-- Top Camera Dot / Speaker -->
+<rect x="114" y="58" width="28" height="4" rx="2" fill="#38BDF8" fill-opacity="0.6"/>
+
+<!-- Employee User Avatar inside Phone -->
+<!-- Head -->
+<circle cx="128" cy="94" r="20" fill="url(#badgeGrad)"/>
+<!-- Shoulders -->
+<path d="M96 134 C96 118, 108 116, 128 116 C148 116, 160 118, 160 134 V140 H96 Z" fill="url(#badgeGrad)"/>
+
+<!-- Fleet / Phone Badge overlay (Mobile Signal & Car/Phone Badge) -->
+<g transform="translate(0, 15)">
+    <!-- Signal Bars on Top Right of Phone Screen -->
+    <rect x="144" y="145" width="4" height="6" rx="1" fill="#38BDF8"/>
+    <rect x="150" y="141" width="4" height="10" rx="1" fill="#38BDF8"/>
+    <rect x="156" y="137" width="4" height="14" rx="1" fill="#38BDF8"/>
+    
+    <!-- Phone / Fleet Badge Icon bottom center -->
+    <circle cx="128" cy="150" r="18" fill="#F59E0B"/>
+    <!-- Phone handset inside badge -->
+    <path d="M123 143 C123 142, 125 141, 127 143 L129 146 C130 147, 130 148, 129 149 L127.8 150.2 C128.5 151.6, 129.4 152.5, 130.8 153.2 L132 152 C133 151, 134 151, 135 152 L138 154 C140 156, 139 158, 138 159 C136 161, 132 160, 126 154 C120 148, 119 144, 121 142 Z" fill="#FFFFFF"/>
+</g>
+
+<!-- Modern Fleet Tag / Signal Ring -->
+<circle cx="180" cy="70" r="16" fill="#10B981"/>
+<!-- Checkmark / Fleet active indicator -->
+<path d="M173 70 L178 75 L187 65" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+</svg>

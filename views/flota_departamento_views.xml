@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Action -->
+    <record id="action_flota_departamento" model="ir.actions.act_window">
+        <field name="name">Departamentos</field>
+        <field name="res_model">flota.departamento</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay departamentos registrados.
+            </p>
+            <p>
+                Crea áreas como Gestión Humana, Operaciones, Tecnología, Logística, etc.
+            </p>
+        </field>
+    </record>
+
+    <!-- List View con Conteo de Inactivos y Fecha de Modificación -->
+    <record id="view_flota_departamento_list" model="ir.ui.view">
+        <field name="name">flota.departamento.list</field>
+        <field name="model">flota.departamento</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0"/>
+                <field name="empleados_activos_count" string="Activos" widget="badge" decoration-success="empleados_activos_count &gt; 0" optional="show"/>
+                <field name="empleados_inactivos_count" string="Inactivos" widget="badge" decoration-danger="empleados_inactivos_count &gt; 0" optional="show"/>
+                <field name="write_date" string="Última Modificación" widget="datetime" optional="show"/>
+                <field name="write_uid" string="Modificado Por" optional="hide"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View con Smart Buttons, Metricas de Inactivos y Chatter Nativo Odoo 19 -->
+    <record id="view_flota_departamento_form" model="ir.ui.view">
+        <field name="name">flota.departamento.form</field>
+        <field name="model">flota.departamento</field>
+        <field name="arch" type="xml">
+            <form string="Departamento">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_empleados" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="total_empleados" widget="statinfo" string="Total Empleados"/>
+                        </button>
+                        <button name="action_view_empleados" type="object" class="oe_stat_button" icon="fa-exclamation-triangle">
+                            <field name="empleados_inactivos_count" widget="statinfo" string="Inactivos"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Inactivo" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Nombre del Departamento"/>
+                        <h1>
+                            <field name="name" placeholder="Ej. CT - Distribuidor Norte"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Detalles Generales">
+                            <field name="code" placeholder="Ej. CT-DN"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                        <group string="Resumen de Personal">
+                            <field name="total_empleados" readonly="1"/>
+                            <field name="empleados_activos_count" readonly="1"/>
+                            <field name="empleados_inactivos_count" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Empleados en este Departamento" name="employees">
+                            <field name="empleado_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="ubicacion_id"/>
+                                    <field name="cargo"/>
+                                    <field name="numero_flota"/>
+                                    <field name="estado" widget="badge" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Kanban View Profesional con Indicador de Inactivos -->
+    <record id="view_flota_departamento_kanban" model="ir.ui.view">
+        <field name="name">flota.departamento.kanban</field>
+        <field name="model">flota.departamento</field>
+        <field name="arch" type="xml">
+            <kanban class="o_kanban_small_column">
+                <field name="id"/>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="total_empleados"/>
+                <field name="empleados_activos_count"/>
+                <field name="empleados_inactivos_count"/>
+                <field name="tiene_inactivos"/>
+                <field name="active"/>
+                <templates>
+                    <t t-name="card">
+                        <div class="d-flex flex-column justify-content-between p-2">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <strong class="fs-6 text-dark">
+                                        <span class="fa fa-building me-1 text-primary" title="Departamento"/>
+                                        <field name="name"/>
+                                    </strong>
+                                    <span class="badge bg-secondary">
+                                        <field name="code"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-muted small">Total Empleados:</span>
+                                    <span class="badge bg-primary text-white fs-6">
+                                        <field name="total_empleados"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
+                                <t t-if="record.empleados_inactivos_count.raw_value &gt; 0">
+                                    <span class="badge bg-danger text-white">
+                                        <span class="fa fa-exclamation-triangle me-1" title="Empleados Inactivos"/> <field name="empleados_inactivos_count"/> Inactivo(s)
+                                    </span>
+                                </t>
+                                <t t-if="record.empleados_inactivos_count.raw_value == 0">
+                                    <span class="badge bg-success text-white">
+                                        <span class="fa fa-check-circle me-1" title="Sin Inactivos"/> Sin Inactivos
+                                    </span>
+                                </t>
+                                <span class="text-muted small">
+                                    Activos: <field name="empleados_activos_count"/>
+                                </span>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+</odoo>

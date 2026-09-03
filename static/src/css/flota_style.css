@@ -1,0 +1,4 @@
+/* Estilos Personalizados para Gestión de Flota y Empleados (Odoo 19 Nativo) */
+.o_form_view .o_form_sheet {
+    box-sizing: border-box !important;
+}

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menú Raíz -->
+    <menuitem id="menu_flota_root"
+              name="Flota Empleados"
+              web_icon="fa fa-phone-square,#1E293B,#38BDF8"
+              sequence="15"/>
+
+    <!-- Submenús -->
+    <menuitem id="menu_flota_empleados"
+              name="Empleados"
+              parent="menu_flota_root"
+              action="action_flota_empleado"
+              sequence="10"/>
+
+    <menuitem id="menu_flota_departamentos"
+              name="Departamentos"
+              parent="menu_flota_root"
+              action="action_flota_departamento"
+              sequence="20"/>
+
+    <menuitem id="menu_flota_ubicaciones"
+              name="Ubicaciones"
+              parent="menu_flota_root"
+              action="action_flota_ubicacion"
+              sequence="30"/>
+
+    <menuitem id="menu_flota_config"
+              name="Configuración n8n"
+              parent="menu_flota_root"
+              action="action_flota_config_settings"
+              sequence="90"/>
+</odoo>

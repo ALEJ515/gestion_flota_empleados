@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_flota_empleado_mass_update_wizard_form" model="ir.ui.view">
+        <field name="name">flota.empleado.mass.update.wizard.form</field>
+        <field name="model">flota.empleado.mass.update.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Asignación Masiva de Empleados">
+                <sheet>
+                    <div class="alert alert-info shadow-sm rounded mb-4" role="alert">
+                        <i class="fa fa-info-circle me-2"/> 
+                        Se aplicarán los cambios a <strong><field name="count_empleados" readonly="1"/></strong> empleado(s) seleccionado(s). Marque las casillas de los campos que desea actualizar.
+                    </div>
+                    
+                    <group>
+                        <group string="Ubicación y Departamento">
+                            <label for="set_ubicacion" string="CEDI / Ubicación"/>
+                            <div class="o_row">
+                                <field name="set_ubicacion" class="me-2"/>
+                                <field name="ubicacion_id" invisible="not set_ubicacion" required="set_ubicacion" placeholder="Seleccionar CEDI..."/>
+                            </div>
+
+                            <label for="set_departamento" string="Departamento"/>
+                            <div class="o_row">
+                                <field name="set_departamento" class="me-2"/>
+                                <field name="departamento_id" invisible="not set_departamento" required="set_departamento" placeholder="Seleccionar Departamento..."/>
+                            </div>
+                        </group>
+
+                        <group string="Cargo y Estado">
+                            <label for="set_cargo" string="Cargo"/>
+                            <div class="o_row">
+                                <field name="set_cargo" class="me-2"/>
+                                <field name="cargo" invisible="not set_cargo" required="set_cargo" placeholder="Ej. Supervisor de Logística"/>
+                            </div>
+
+                            <label for="set_estado" string="Estado"/>
+                            <div class="o_row">
+                                <field name="set_estado" class="me-2"/>
+                                <field name="estado" invisible="not set_estado" required="set_estado"/>
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_apply_mass_update" string="Aplicar Cambios Masivos" type="object" class="btn-primary shadow-sm"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción vinculada al menú de Acciones en la vista lista de flota.empleado -->
+    <record id="action_flota_empleado_mass_update_wizard" model="ir.actions.act_window">
+        <field name="name">Asignación Masiva</field>
+        <field name="res_model">flota.empleado.mass.update.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_flota_empleado"/>
+        <field name="binding_view_types">list</field>
+    </record>
+</odoo>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Ubicaciones Solicitadas -->
+        <record id="ubi_azua" model="flota.ubicacion">
+            <field name="name">CEDI: Azua</field>
+            <field name="code">AZU</field>
+            <field name="active">1</field>
+        </record>
+
+        <record id="ubi_centro_media" model="flota.ubicacion">
+            <field name="name">Centro Media</field>
+            <field name="code">CM</field>
+            <field name="active">1</field>
+        </record>
+
+        <record id="ubi_cayacoa" model="flota.ubicacion">
+            <field name="name">Cayacoa</field>
+            <field name="code">CAY</field>
+            <field name="active">1</field>
+        </record>
+
+        <record id="ubi_romana" model="flota.ubicacion">
+            <field name="name">Romana</field>
+            <field name="code">ROM</field>
+            <field name="active">1</field>
+        </record>
+
+        <record id="ubi_planta" model="flota.ubicacion">
+            <field name="name">Planta</field>
+            <field name="code">PLT</field>
+            <field name="active">1</field>
+        </record>
+
+        <!-- Departamentos Demo -->
+        <record id="dept_gh" model="flota.departamento">
+            <field name="name">Gestion Humana</field>
+            <field name="code">GH</field>
+            <field name="active">1</field>
+        </record>
+
+        <!-- Empleados Demo -->
+        <record id="emp_karina" model="flota.empleado">
+            <field name="name">Karina Virginia Victoriano Vásquez</field>
+            <field name="departamento_id" ref="dept_gh"/>
+            <field name="ubicacion_id" ref="ubi_azua"/>
+            <field name="cargo">Coord Integración y Capacitación</field>
+            <field name="numero_flota">809 206-0146</field>
+            <field name="estado">active</field>
+            <field name="active">1</field>
+        </record>
+
+        <record id="emp_durgen" model="flota.empleado">
+            <field name="name">Durgen Capellan</field>
+            <field name="departamento_id" ref="dept_gh"/>
+            <field name="ubicacion_id" ref="ubi_centro_media"/>
+            <field name="cargo">Coord de Integración y Relaciones</field>
+            <field name="numero_flota">809 266-4455</field>
+            <field name="estado">active</field>
+            <field name="active">1</field>
+        </record>
+    </data>
+</odoo>

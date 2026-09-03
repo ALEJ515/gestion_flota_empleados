@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_flota" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.flota</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="100"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app string="Flota Empleados &amp; n8n" name="gestion_flota_empleados" data-string="Flota Empleados &amp; n8n">
+                    <block title="Configuración de Integración n8n" name="n8n_settings">
+                        <setting help="Enviar datos a n8n de forma automática al crear o modificar un empleado.">
+                            <field name="n8n_auto_sync"/>
+                        </setting>
+                        <setting help="URL del Webhook en n8n para recibir notificaciones de Odoo.">
+                            <field name="n8n_webhook_url" placeholder="https://n8n.tu-dominio.com/webhook/flota-empleados"/>
+                        </setting>
+                        <setting help="Clave de seguridad para autenticar la API bidireccional.">
+                            <field name="n8n_api_key" password="1" placeholder="Token secreto o Bearer Token"/>
+                        </setting>
+                        <setting help="Envía manualmente la información completa de empleados, flotas telefónicas, departamentos y ubicaciones al Webhook de n8n configurado. Ideal para forzar la actualización masiva o resincronización inicial de datos.">
+                            <button name="action_force_n8n_sync_all" string="Sincronizar" type="object" class="btn-primary" icon="fa-cloud-upload"/>
+                            <div class="text-muted mt-2 small">
+                                Acción de actualización masiva: Envía todos los registros activos hacia el flujo de automatización en n8n.
+                            </div>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_flota_config_settings" model="ir.actions.act_window">
+        <field name="name">Configuración n8n</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">current</field>
+        <field name="context">{'module' : 'gestion_flota_empleados'}</field>
+    </record>
+</odoo>
