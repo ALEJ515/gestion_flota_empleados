@@ -151,11 +151,7 @@
                         </page>
                     </notebook>
                 </sheet>
-                <div class="oe_chatter">
-                    <field name="message_follower_ids"/>
-                    <field name="activity_ids"/>
-                    <field name="message_ids"/>
-                </div>
+                <chatter/>
             </form>
         </field>
     </record>
@@ -171,7 +167,7 @@
                 <field name="proveedor"/>
                 <filter name="conciliado" string="Conciliados" domain="[('estado', '=', 'conciliado')]"/>
                 <filter name="draft" string="Borrador / Procesando" domain="[('estado', 'in', ['draft', 'procesando'])]"/>
-                <group string="Agrupar por">
+                <group>
                     <filter name="group_periodo" string="Periodo" context="{'group_by': 'periodo'}"/>
                     <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
                 </group>
