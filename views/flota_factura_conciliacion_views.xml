@@ -8,12 +8,12 @@
         <field name="padding">4</field>
     </record>
 
-    <!-- TREE / LIST VIEW -->
-    <record id="view_flota_factura_conciliacion_tree" model="ir.ui.view">
-        <field name="name">flota.factura.conciliacion.tree</field>
+    <!-- LIST VIEW -->
+    <record id="view_flota_factura_conciliacion_list" model="ir.ui.view">
+        <field name="name">flota.factura.conciliacion.list</field>
         <field name="model">flota.factura.conciliacion</field>
         <field name="arch" type="xml">
-            <tree string="Conciliaciones de Factura Claro" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'">
+            <list string="Conciliaciones de Factura Claro" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'">
                 <field name="name"/>
                 <field name="periodo"/>
                 <field name="proveedor"/>
@@ -26,7 +26,7 @@
                 <field name="isc_monto" widget="monetary" sum="ISC Total"/>
                 <field name="total_mes" widget="monetary" sum="Gran Total"/>
                 <field name="estado" widget="badge" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -112,7 +112,7 @@
                         <!-- Pestaña 1: Detalle por Empleado / Línea -->
                         <page string="Desglose por Empleado (Líneas Factura)" name="lineas">
                             <field name="linea_ids">
-                                <tree string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea == 'desconocido'">
+                                <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea == 'desconocido'">
                                     <field name="numero_flota"/>
                                     <field name="empleado_id"/>
                                     <field name="departamento_id" optional="show"/>
@@ -127,21 +127,21 @@
                                     <field name="subtotal_linea" widget="monetary" sum="Subtotal"/>
                                     <field name="total_linea" widget="monetary" sum="Total Líneas"/>
                                     <field name="estado_linea" widget="badge" decoration-success="estado_linea=='ok'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
 
                         <!-- Pestaña 2: Consolidado por CEDI / Departamento -->
                         <page string="Consolidado por CEDI / Departamento" name="resumen_depto">
                             <field name="resumen_depto_ids" readonly="1">
-                                <tree string="Resumen por Departamento">
+                                <list string="Resumen por Departamento">
                                     <field name="departamento_id"/>
                                     <field name="ubicacion_id"/>
                                     <field name="cantidad_empleados" sum="Total Empleados"/>
                                     <field name="monto_subtotal" widget="monetary" sum="Total Subtotal"/>
                                     <field name="monto_total" widget="monetary" sum="Total General"/>
                                     <field name="porcentaje_gasto" widget="percentage"/>
-                                </tree>
+                                </list>
                             </field>
                         </page>
 
@@ -210,7 +210,7 @@
     <record id="action_flota_factura_conciliacion" model="ir.actions.act_window">
         <field name="name">Conciliación de Facturas Claro</field>
         <field name="res_model">flota.factura.conciliacion</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_flota_factura_conciliacion_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -226,7 +226,7 @@
     <record id="action_flota_factura_linea_analytics" model="ir.actions.act_window">
         <field name="name">Análisis Financiero de Consumos</field>
         <field name="res_model">flota.factura.linea</field>
-        <field name="view_mode">pivot,graph,tree</field>
+        <field name="view_mode">pivot,graph,list</field>
     </record>
 
     <!-- MENU ITEMS -->
