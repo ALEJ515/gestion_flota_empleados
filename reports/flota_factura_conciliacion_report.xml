@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Report Action -->
+    <record id="action_report_flota_factura_conciliacion" model="ir.actions.report">
+        <field name="name">Reporte Conciliación Factura Claro (PDF)</field>
+        <field name="model">flota.factura.conciliacion</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">gestion_flota_empleados.report_flota_factura_conciliacion</field>
+        <field name="report_file">gestion_flota_empleados.report_flota_factura_conciliacion</field>
+        <field name="binding_model_id" ref="model_flota_factura_conciliacion"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Template -->
+    <template id="report_flota_factura_conciliacion">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-family: Arial, sans-serif;">
+                        <h2 class="text-center fw-bold text-primary mb-3">
+                            INFORME DE CONCILIACIÓN DE FACTURA TELEFÓNICA (CLARO)
+                        </h2>
+                        
+                        <div class="row mb-4 p-3 bg-light border rounded">
+                            <div class="col-6">
+                                <strong>Referencia:</strong> <span t-field="doc.name"/><br/>
+                                <strong>Periodo:</strong> <span t-field="doc.periodo"/><br/>
+                                <strong>Proveedor:</strong> <span t-field="doc.proveedor"/>
+                            </div>
+                            <div class="col-6 text-end">
+                                <strong>Fecha Factura:</strong> <span t-field="doc.fecha_factura"/><br/>
+                                <strong>Estado:</strong> <span t-field="doc.estado"/><br/>
+                                <strong>Total Empleados Auditados:</strong> <span t-field="doc.count_lineas"/>
+                            </div>
+                        </div>
+
+                        <!-- TOTALES FACTURA CLARO -->
+                        <h4 class="text-secondary border-bottom pb-2 mb-3">1. Resumen General de Factura y Tributación</h4>
+                        <table class="table table-sm table-bordered mb-4">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Rubro Factura Claro</th>
+                                    <th class="text-end">Monto (RD$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr><td>Renta Mensual</td><td class="text-end" t-field="doc.renta_mensual" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>Renta Otros Servicios</td><td class="text-end" t-field="doc.renta_otros_servicios" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>Uso Data Móvil</td><td class="text-end" t-field="doc.uso_data_movil" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>Llamadas Roaming</td><td class="text-end" t-field="doc.llamadas_roaming" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>Otros Cargos, Créditos o Descuentos</td><td class="text-end" t-field="doc.otros_cargos_creditos" t-options='{"widget": "monetary"}'/></tr>
+                                <tr class="fw-bold table-secondary"><td>SUBTOTAL</td><td class="text-end" t-field="doc.subtotal" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>ITBIS (18%)</td><td class="text-end" t-field="doc.itbis_monto" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>CDT (2%)</td><td class="text-end" t-field="doc.cdt_monto" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>ISC (10%)</td><td class="text-end" t-field="doc.isc_monto" t-options='{"widget": "monetary"}'/></tr>
+                                <tr class="fw-bold table-success fs-5"><td>TOTAL DEL MES</td><td class="text-end" t-field="doc.total_mes" t-options='{"widget": "monetary"}'/></tr>
+                            </tbody>
+                        </table>
+
+                        <!-- CONSOLIDADO DEPARTAMENTOS -->
+                        <h4 class="text-secondary border-bottom pb-2 mb-3">2. Consolidado por Departamento y CEDI</h4>
+                        <table class="table table-sm table-striped mb-4">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Departamento</th>
+                                    <th>CEDI / Ubicación</th>
+                                    <th class="text-center">Empleados</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Total Depto (RD$)</th>
+                                    <th class="text-end">% Gasto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="doc.resumen_depto_ids" t-as="d">
+                                    <tr>
+                                        <td><span t-field="d.departamento_id"/></td>
+                                        <td><span t-field="d.ubicacion_id"/></td>
+                                        <td class="text-center"><span t-field="d.cantidad_empleados"/></td>
+                                        <td class="text-end" t-field="d.monto_subtotal" t-options='{"widget": "monetary"}'/>
+                                        <td class="text-end" t-field="d.monto_total" t-options='{"widget": "monetary"}'/>
+                                        <td class="text-end"><span t-field="d.porcentaje_gasto"/>%</td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

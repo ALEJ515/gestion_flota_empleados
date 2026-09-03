@@ -4,6 +4,17 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.8.0] - 2026-09-03
+### Añadido
+- **Carga Directa de PDF en Odoo**:
+  - Campo de adjunto `archivo_pdf` y botón **"⚡ Procesar PDF con n8n"** para enviar el PDF adjunto al flujo de parsing y conciliación automática.
+- **Exportación a Excel (`.xlsx`)**:
+  - Botón **"📊 Exportar a Excel (.xlsx)"** que genera un libro multinoja formateado con Resumen Claro, Consolidado por Departamento y Desglose por Empleado.
+- **Reporte Imprimible PDF Nativo**:
+  - Plantilla QWeb e informe corporativo **"Reporte Conciliación Factura Claro (PDF)"** listo para descarga e impresión oficial.
+
+---
+
 ## [v1.7.0] - 2026-09-03
 ### Añadido
 - **Centro de Conciliación Financiera Facturas Claro (`flota.factura.conciliacion` & `flota.factura.linea`)**:

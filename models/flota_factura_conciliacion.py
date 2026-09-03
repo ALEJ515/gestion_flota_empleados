@@ -1,5 +1,7 @@
 import json
 import logging
+import base64
+import io
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 
@@ -16,6 +18,10 @@ class FlotaFacturaConciliacion(models.Model):
     periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, index=True, tracking=True)
     fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True)
     
+    # Archivo PDF Adjunto
+    archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True)
+    pdf_filename = fields.Char(string='Nombre del Archivo PDF')
+
     # --- DATOS GENERALES FACTURA CLARO ---
     renta_mensual = fields.Monetary(string='Renta Mensual', currency_field='currency_id', default=0.0, tracking=True)
     renta_otros_servicios = fields.Monetary(string='Renta Otros Servicios', currency_field='currency_id', default=0.0, tracking=True)
@@ -81,8 +87,6 @@ class FlotaFacturaConciliacion(models.Model):
             dept_totals = {}
             for linea in rec.linea_ids:
                 dept_id = linea.departamento_id.id if linea.departamento_id else 0
-                dept_name = linea.departamento_id.name if linea.departamento_id else 'Sin Departamento'
-                ubic_name = linea.ubicacion_id.name if linea.ubicacion_id else 'N/A'
                 
                 if dept_id not in dept_totals:
                     dept_totals[dept_id] = {
@@ -116,6 +120,187 @@ class FlotaFacturaConciliacion(models.Model):
         self.action_generar_resumen_departamentos()
         self.write({'estado': 'conciliado'})
         self.message_post(body=_("Factura de Flota marcada como <b>Conciliada</b> correctamente."))
+
+    def action_procesar_pdf_n8n(self):
+        """ Envía el archivo PDF adjunto al Webhook de n8n para parsing y conciliación """
+        self.ensure_one()
+        if not self.archivo_pdf:
+            raise UserError(_('Por favor adjunte un archivo PDF de la Factura Claro antes de presionar este botón.'))
+        
+        import requests
+        ICP = self.env['ir.config_parameter'].sudo()
+        n8n_webhook_url = ICP.get_param('gestion_flota_empleados.n8n_webhook_url', 'http://100.95.106.4:5678/webhook/conciliar-factura-claro')
+        
+        pdf_bytes = base64.b64decode(self.archivo_pdf)
+        files = {
+            'file': (self.pdf_filename or 'factura_claro.pdf', pdf_bytes, 'application/pdf')
+        }
+        data = {
+            'periodo': self.periodo,
+            'proveedor': self.proveedor or 'Claro Dominicana'
+        }
+
+        try:
+            response = requests.post(n8n_webhook_url, files=files, data=data, timeout=30)
+            if response.status_code in [200, 201]:
+                res_data = response.json()
+                if isinstance(res_data, dict) and res_data.get('status') == 'success':
+                    self.message_post(body=_("<b>Factura PDF procesada con éxito via n8n:</b><br/>Total: RD$%s | Líneas: %s") % (res_data.get('total_mes'), res_data.get('total_lineas')))
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Factura PDF Procesada'),
+                            'message': _('La factura PDF fue enviada y conciliada exitosamente.'),
+                            'type': 'success',
+                            'next': {'type': 'ir.actions.client', 'tag': 'reload'}
+                        }
+                    }
+        except Exception as e:
+            _logger.error("Error enviando PDF a n8n: %s", str(e))
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Enviado a n8n'),
+                'message': _('El PDF se envió a n8n para su lectura y concatenación.'),
+                'type': 'info',
+                'next': {'type': 'ir.actions.client', 'tag': 'reload'}
+            }
+        }
+
+    def action_exportar_excel(self):
+        """ Exporta la Conciliación Completa a un libro formateado de Excel (.xlsx) """
+        self.ensure_one()
+        import openpyxl
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+
+        wb = openpyxl.Workbook()
+        ws1 = wb.active
+        ws1.title = "Resumen Factura Claro"
+        
+        header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
+        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        title_font = Font(name="Calibri", size=14, bold=True, color="1F2937")
+        bold_font = Font(name="Calibri", size=11, bold=True)
+
+        ws1["A1"] = f"CONCILIACIÓN FINANCIERA FACTURA CLARO — {self.name}"
+        ws1["A1"].font = title_font
+        ws1["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
+        ws1["A2"].font = Font(italic=True, color="4B5563")
+
+        ws1["A4"] = "RUBRO FACTURA CLARO"
+        ws1["B4"] = "MONTO (RD$)"
+        ws1["A4"].fill = header_fill
+        ws1["A4"].font = header_font
+        ws1["B4"].fill = header_fill
+        ws1["B4"].font = header_font
+
+        rubros = [
+            ("Renta Mensual", self.renta_mensual),
+            ("Renta Otros Servicios", self.renta_otros_servicios),
+            ("Uso Data Móvil", self.uso_data_movil),
+            ("Llamadas Roaming", self.llamadas_roaming),
+            ("Otros Cargos / Créditos (CR)", self.otros_cargos_creditos),
+            ("SUBTOTAL", self.subtotal),
+            ("ITBIS (18%)", self.itbis_monto),
+            ("CDT (2%)", self.cdt_monto),
+            ("ISC (10%)", self.isc_monto),
+            ("TOTAL DEL MES", self.total_mes)
+        ]
+
+        row = 5
+        for name, val in rubros:
+            ws1.cell(row=row, column=1, value=name)
+            cell_val = ws1.cell(row=row, column=2, value=val)
+            cell_val.number_format = '"RD$"#,##0.00'
+            if name in ["SUBTOTAL", "TOTAL DEL MES"]:
+                ws1.cell(row=row, column=1).font = bold_font
+                cell_val.font = bold_font
+            row += 1
+
+        # Sheet 2: Consolidado por Departamento
+        ws2 = wb.create_sheet(title="Consolidado Departamento")
+        ws2["A1"] = f"RESUMEN GASTO POR DEPARTAMENTO Y CEDI — {self.name}"
+        ws2["A1"].font = title_font
+        
+        headers_depto = ["DEPARTAMENTO", "CEDI / UBICACIÓN", "EMPLEADOS", "SUBTOTAL (RD$)", "TOTAL (RD$)", "% DEL GASTO"]
+        for col_num, h in enumerate(headers_depto, 1):
+            cell = ws2.cell(row=3, column=col_num, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+
+        row = 4
+        for d in self.resumen_depto_ids:
+            ws2.cell(row=row, column=1, value=d.departamento_id.name if d.departamento_id else 'N/A')
+            ws2.cell(row=row, column=2, value=d.ubicacion_id.name if d.ubicacion_id else 'N/A')
+            ws2.cell(row=row, column=3, value=d.cantidad_empleados)
+            c4 = ws2.cell(row=row, column=4, value=d.monto_subtotal)
+            c4.number_format = '"RD$"#,##0.00'
+            c5 = ws2.cell(row=row, column=5, value=d.monto_total)
+            c5.number_format = '"RD$"#,##0.00'
+            c6 = ws2.cell(row=row, column=6, value=d.porcentaje_gasto / 100.0)
+            c6.number_format = '0.00%'
+            row += 1
+
+        # Sheet 3: Detalle por Empleado
+        ws3 = wb.create_sheet(title="Detalle Empleados")
+        ws3["A1"] = f"DESGLOSE LÍNEA POR EMPLEADO — {self.name}"
+        ws3["A1"].font = title_font
+
+        headers_emp = ["NÚMERO FLOTA", "EMPLEADO", "DEPARTAMENTO", "CEDI / UBICACIÓN", "CARGO", "RENTA PLAN", "USO ADICIONAL", "ROAMING", "SUBTOTAL", "TOTAL LÍNEA", "ESTADO"]
+        for col_num, h in enumerate(headers_emp, 1):
+            cell = ws3.cell(row=3, column=col_num, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+
+        row = 4
+        for l in self.linea_ids:
+            ws3.cell(row=row, column=1, value=l.numero_flota)
+            ws3.cell(row=row, column=2, value=l.empleado_id.name if l.empleado_id else 'NO REGISTRADO')
+            ws3.cell(row=row, column=3, value=l.departamento_id.name if l.departamento_id else 'N/A')
+            ws3.cell(row=row, column=4, value=l.ubicacion_id.name if l.ubicacion_id else 'N/A')
+            ws3.cell(row=row, column=5, value=l.cargo or '')
+            c_renta = ws3.cell(row=row, column=6, value=l.monto_renta_plan)
+            c_renta.number_format = '"RD$"#,##0.00'
+            c_uso = ws3.cell(row=row, column=7, value=l.monto_uso_adicional)
+            c_uso.number_format = '"RD$"#,##0.00'
+            c_roam = ws3.cell(row=row, column=8, value=l.monto_roaming)
+            c_roam.number_format = '"RD$"#,##0.00'
+            c_sub = ws3.cell(row=row, column=9, value=l.subtotal_linea)
+            c_sub.number_format = '"RD$"#,##0.00'
+            c_tot = ws3.cell(row=row, column=10, value=l.total_linea)
+            c_tot.number_format = '"RD$"#,##0.00'
+            ws3.cell(row=row, column=11, value=l.estado_linea.upper())
+            row += 1
+
+        for ws in [ws1, ws2, ws3]:
+            for col in ws.columns:
+                max_len = max(len(str(cell.value or '')) for cell in col)
+                col_letter = openpyxl.utils.get_column_letter(col[0].column)
+                ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+
+        output = io.BytesIO()
+        wb.save(output)
+        output.seek(0)
+        file_data = base64.b64encode(output.read())
+        output.close()
+
+        attachment = self.env['ir.attachment'].create({
+            'name': f'Conciliacion_Claro_{self.periodo}_{self.name}.xlsx',
+            'datas': file_data,
+            'res_model': self._name,
+            'res_id': self.id,
+            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        })
+
+        return {
+            'type': 'ir.actions.act_url',
+            'url': f'/web/content/{attachment.id}?download=true',
+            'target': 'self',
+        }
+
 
 class FlotaFacturaLinea(models.Model):
     _name = 'flota.factura.linea'
@@ -155,10 +340,8 @@ class FlotaFacturaLinea(models.Model):
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
-            # Auto-link employee by numero_flota if not set
             if not vals.get('empleado_id') and vals.get('numero_flota'):
                 num_clean = vals['numero_flota'].replace('-', '').replace(' ', '').replace('+', '')
-                # Find matching employee
                 emp = self.env['flota.empleado'].search([
                     '|',
                     ('numero_flota', '=', vals['numero_flota']),
