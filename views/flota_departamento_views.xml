@@ -26,7 +26,8 @@
                 <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0"/>
                 <field name="empleados_activos_count" string="Activos" widget="badge" decoration-success="empleados_activos_count &gt; 0" optional="show"/>
                 <field name="empleados_inactivos_count" string="Inactivos" widget="badge" decoration-danger="empleados_inactivos_count &gt; 0" optional="show"/>
-                <field name="write_date" string="Última Modificación" widget="datetime" optional="show"/>
+                <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura Depto (RD$)" optional="show" sum="Total Deptos"/>
+                <field name="write_date" string="Última Modificación" widget="datetime" optional="hide"/>
                 <field name="write_uid" string="Modificado Por" optional="hide"/>
                 <field name="active" widget="boolean_toggle"/>
             </list>

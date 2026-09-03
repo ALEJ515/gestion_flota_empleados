@@ -26,7 +26,7 @@
         <field name="code">records.action_sync_n8n()</field>
     </record>
 
-    <!-- List View con Selector de Columnas y Fecha de Modificación Sutil -->
+    <!-- List View con Selector de Columnas y Facturación -->
     <record id="view_flota_empleado_list" model="ir.ui.view">
         <field name="name">flota.empleado.list</field>
         <field name="model">flota.empleado</field>
@@ -37,8 +37,10 @@
                 <field name="ubicacion_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
+                <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
+                <field name="ultima_facturacion_periodo" string="Periodo Factura" optional="show"/>
                 <field name="estado" widget="badge" optional="show" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
-                <field name="write_date" string="Última Modificación" widget="datetime" optional="show"/>
+                <field name="write_date" string="Última Modificación" widget="datetime" optional="hide"/>
                 <field name="write_uid" string="Modificado Por" optional="hide"/>
                 <field name="active" string="Archivado" widget="boolean" optional="hide"/>
                 <field name="n8n_sync_status" widget="badge" optional="show" decoration-success="n8n_sync_status == 'synced'" decoration-warning="n8n_sync_status == 'pending'" decoration-danger="n8n_sync_status == 'error'"/>
@@ -47,7 +49,7 @@
         </field>
     </record>
 
-    <!-- Form View Profesional con Statusbar Clicable, Pestaña de Compañeros y Chatter Nativo Odoo 19 -->
+    <!-- Form View -->
     <record id="view_flota_empleado_form" model="ir.ui.view">
         <field name="name">flota.empleado.form</field>
         <field name="model">flota.empleado</field>
@@ -70,12 +72,28 @@
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
                         </group>
-                        <group string="Contacto y Flota">
+                        <group string="Contacto y Facturación">
                             <field name="numero_flota" placeholder="Ej. 809 206-0146"/>
+                            <field name="ultima_facturacion_monto" widget="monetary" readonly="1"/>
+                            <field name="ultima_facturacion_periodo" readonly="1"/>
+                            <field name="currency_id" invisible="1"/>
                             <field name="active" widget="boolean_toggle" string="Activo en Sistema"/>
                         </group>
                     </group>
                     <notebook>
+                        <page string="Historial de Consumo Telefónico" name="invoice_history">
+                            <field name="historial_factura_linea_ids" readonly="1">
+                                <list string="Historial Facturas Claro">
+                                    <field name="conciliacion_id" string="Factura / Referencia"/>
+                                    <field name="monto_renta_plan" widget="monetary"/>
+                                    <field name="monto_uso_adicional" widget="monetary"/>
+                                    <field name="monto_roaming" widget="monetary"/>
+                                    <field name="subtotal_linea" widget="monetary"/>
+                                    <field name="total_linea" widget="monetary" sum="Total Histórico"/>
+                                    <field name="estado_linea" widget="badge" decoration-success="estado_linea=='ok'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Compañeros de Departamento" name="department_teammates" invisible="not departamento_id">
                             <field name="companeros_departamento_ids" readonly="1">
                                 <list>
@@ -83,6 +101,7 @@
                                     <field name="cargo"/>
                                     <field name="numero_flota"/>
                                     <field name="ubicacion_id"/>
+                                    <field name="ultima_facturacion_monto" widget="monetary"/>
                                     <field name="estado" widget="badge" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
                                 </list>
                             </field>
@@ -95,11 +114,8 @@
                                 </group>
                             </group>
                             <group string="Log de Respuesta">
-                                <field name="n8n_response_log" nolabel="1" placeholder="Información técnica del último envío o webhook recibido..."/>
+                                <field name="n8n_response_log" readonly="1"/>
                             </group>
-                        </page>
-                        <page string="Notas Adicionales" name="notes">
-                            <field name="notas" placeholder="Detalles u observaciones sobre el usuario de la flota..."/>
                         </page>
                     </notebook>
                 </sheet>
@@ -120,6 +136,8 @@
                 <field name="ubicacion_id"/>
                 <field name="cargo"/>
                 <field name="numero_flota"/>
+                <field name="ultima_facturacion_monto"/>
+                <field name="ultima_facturacion_periodo"/>
                 <field name="estado"/>
                 <field name="active"/>
                 <field name="n8n_sync_status"/>
@@ -138,10 +156,15 @@
                                     <span class="fa fa-map-marker me-1" title="Ubicación"/>
                                     <field name="ubicacion_id"/>
                                 </div>
-                                <div class="text-primary fw-bold">
+                                <div class="text-primary fw-bold mb-1">
                                     <span class="fa fa-phone me-1" title="Número Flota"/>
                                     <field name="numero_flota"/>
                                 </div>
+                                <t t-if="record.ultima_facturacion_monto.raw_value">
+                                    <div class="text-success small fw-bold">
+                                        Factura: RD$<t t-esc="record.ultima_facturacion_monto.value"/> (<t t-esc="record.ultima_facturacion_periodo.value"/>)
+                                    </div>
+                                </t>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
                                 <field name="estado" widget="badge" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>

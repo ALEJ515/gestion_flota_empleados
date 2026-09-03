@@ -2,10 +2,34 @@ import json
 import logging
 import base64
 import io
+import re
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
+
+def _find_empleado_by_phone(env, phone_str):
+    if not phone_str:
+        return False
+    digits = re.sub(r'\D', '', str(phone_str))
+    if len(digits) == 11 and digits.startswith('1'):
+        digits = digits[1:]
+    
+    emp = env['flota.empleado'].search([('numero_flota', '=', phone_str)], limit=1)
+    if emp:
+        return emp
+
+    all_emps = env['flota.empleado'].search([])
+    for e in all_emps:
+        if not e.numero_flota:
+            continue
+        e_digits = re.sub(r'\D', '', str(e.numero_flota))
+        if len(e_digits) == 11 and e_digits.startswith('1'):
+            e_digits = e_digits[1:]
+        if e_digits and digits and (e_digits == digits or e_digits.endswith(digits) or digits.endswith(e_digits)):
+            return e
+    return False
+
 
 class FlotaFacturaConciliacion(models.Model):
     _name = 'flota.factura.conciliacion'
@@ -18,18 +42,15 @@ class FlotaFacturaConciliacion(models.Model):
     periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, index=True, tracking=True)
     fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True)
     
-    # Archivo PDF Adjunto
     archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True)
     pdf_filename = fields.Char(string='Nombre del Archivo PDF')
 
-    # --- DATOS GENERALES FACTURA CLARO ---
     renta_mensual = fields.Monetary(string='Renta Mensual', currency_field='currency_id', default=0.0, tracking=True)
     renta_otros_servicios = fields.Monetary(string='Renta Otros Servicios', currency_field='currency_id', default=0.0, tracking=True)
     uso_data_movil = fields.Monetary(string='Uso Data Móvil', currency_field='currency_id', default=0.0, tracking=True)
     llamadas_roaming = fields.Monetary(string='Llamadas Roaming', currency_field='currency_id', default=0.0, tracking=True)
     otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Monto de descuentos o notas de crédito (monto negativo o positivo ajustado)")
 
-    # --- DATOS COMPUTADOS AUTOMÁTICAMENTE ---
     subtotal = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
     itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
     cdt_monto = fields.Monetary(string='CDT (2%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
@@ -39,18 +60,16 @@ class FlotaFacturaConciliacion(models.Model):
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id)
     estado = fields.Selection([
         ('draft', 'Borrador'),
-        ('procesando', 'Procesando n8n'),
+        ('procesando', 'Procesando'),
         ('conciliado', 'Conciliado'),
         ('error', 'Con Errores / Desviaciones')
     ], string='Estado', default='draft', required=True, index=True, tracking=True)
 
     notes = fields.Text(string='Observaciones y Notas')
 
-    # Relaciones
     linea_ids = fields.One2many('flota.factura.linea', 'conciliacion_id', string='Desglose por Empleado / Número')
     resumen_depto_ids = fields.One2many('flota.factura.departamento.resumen', 'conciliacion_id', string='Resumen por Departamento')
 
-    # KPIs Computados
     count_lineas = fields.Integer(string='Total Líneas', compute='_compute_kpis', store=True)
     count_excesos = fields.Integer(string='Líneas con Exceso', compute='_compute_kpis', store=True)
     monto_excesos = fields.Monetary(string='Monto Total Excesos', compute='_compute_kpis', store=True, currency_field='currency_id')
@@ -81,7 +100,7 @@ class FlotaFacturaConciliacion(models.Model):
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.monto_uso_adicional + l.monto_roaming))
 
     def action_generar_resumen_departamentos(self):
-        """ Agrupa y consolida el gasto por Departamento / CEDI """
+        """ Agrupa y consolida el gasto por Departamento / CEDI e impacta el historial en Empleados """
         for rec in self:
             rec.resumen_depto_ids.unlink()
             dept_totals = {}
@@ -100,6 +119,13 @@ class FlotaFacturaConciliacion(models.Model):
                 dept_totals[dept_id]['monto_subtotal'] += linea.subtotal_linea
                 dept_totals[dept_id]['monto_total'] += linea.total_linea
 
+                # Actualizar última facturación en el registro del Empleado
+                if linea.empleado_id:
+                    linea.empleado_id.write({
+                        'ultima_facturacion_monto': linea.total_linea,
+                        'ultima_facturacion_periodo': rec.periodo
+                    })
+
             resumen_vals = []
             tot_gral = rec.total_mes if rec.total_mes else 1.0
             for d_id, data in dept_totals.items():
@@ -113,6 +139,12 @@ class FlotaFacturaConciliacion(models.Model):
                     'monto_total': data['monto_total'],
                     'porcentaje_gasto': pct
                 }))
+                # Actualizar última facturación en el registro del Departamento
+                if data['departamento_id']:
+                    dept_rec = self.env['flota.departamento'].browse(data['departamento_id'])
+                    if dept_rec.exists():
+                        dept_rec.write({'ultima_facturacion_monto': data['monto_total']})
+
             rec.write({'resumen_depto_ids': resumen_vals})
 
     def action_marcar_conciliado(self):
@@ -122,7 +154,6 @@ class FlotaFacturaConciliacion(models.Model):
         self.message_post(body=_("Factura de Flota marcada como <b>Conciliada</b> correctamente."))
 
     def _extract_pdf_text_native(self, pdf_bytes):
-        """ Extrae el texto completo de las páginas del PDF utilizando pypdf / PyPDF2 / pdfplumber """
         text = ""
         try:
             import io
@@ -137,7 +168,7 @@ class FlotaFacturaConciliacion(models.Model):
                 for i in range(reader.getNumPages()):
                     text += (reader.getPage(i).extractText() or "") + "\n"
         except Exception as e:
-            _logger.warning("Error con PyPDF/PyPDF2, intentando pdfplumber: %s", str(e))
+            _logger.warning("Error con PyPDF/PyPDF2: %s", str(e))
 
         if len(text.strip()) < 50:
             try:
@@ -152,19 +183,17 @@ class FlotaFacturaConciliacion(models.Model):
         return text
 
     def action_procesar_pdf_nativo(self):
-        """ Procesa el archivo PDF de la Factura de Claro 100% NATIVO dentro de Odoo sin depender de servicios externos """
+        """ Extrae y concilia la factura PDF directamente en Odoo """
         self.ensure_one()
         if not self.archivo_pdf:
             raise UserError(_('Por favor adjunte el archivo PDF de la Factura de Claro antes de procesar.'))
 
-        import re
         pdf_bytes = base64.b64decode(self.archivo_pdf)
         pdf_text = self._extract_pdf_text_native(pdf_bytes)
 
         if not pdf_text or len(pdf_text.strip()) < 20:
-            raise UserError(_('No se pudo extraer texto del archivo PDF adjunto. Verifique que el archivo no esté protegido con contraseña o dañado.'))
+            raise UserError(_('No se pudo extraer texto del archivo PDF adjunto. Verifique que el archivo no esté protegido.'))
 
-        # 1. Extraer Rubros Generales de Cabecera Factura Claro
         renta_m = 0.0
         renta_o = 0.0
         data_m = 0.0
@@ -192,21 +221,22 @@ class FlotaFacturaConciliacion(models.Model):
             val = float(m_cred.group(1).replace(',', ''))
             cred_m = -val if 'CR' in m_cred.group(0).upper() or '-' in m_cred.group(0) else val
 
-        # 2. Extraer Números Telefónicos y Consumos Línea por Línea
         lineas_vals = []
         phone_matches = re.finditer(r'(8[029]\d[\s-]?\d{3}[\s-]?\d{4})[^\n]*?([0-9,]+\.[0-9]{2})', pdf_text)
         
         seen_phones = set()
         for match in phone_matches:
             raw_phone = match.group(1)
-            clean_phone = re.sub(r'[^0-9]', '', raw_phone)
+            clean_phone = re.sub(r'\D', '', raw_phone)
             monto_val = float(match.group(2).replace(',', ''))
 
             if clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10 and clean_phone not in seen_phones:
                 seen_phones.add(clean_phone)
+                emp = _find_empleado_by_phone(self.env, clean_phone)
                 lineas_vals.append({
                     'conciliacion_id': self.id,
                     'numero_flota': clean_phone,
+                    'empleado_id': emp.id if emp else False,
                     'monto_renta_plan': monto_val,
                     'monto_otros_servicios': 0.0,
                     'monto_uso_adicional': 0.0,
@@ -215,7 +245,6 @@ class FlotaFacturaConciliacion(models.Model):
                     'monto_creditos': 0.0,
                 })
 
-        # 3. Actualizar la Conciliación
         self.write({
             'renta_mensual': renta_m,
             'renta_otros_servicios': renta_o,
@@ -239,58 +268,9 @@ class FlotaFacturaConciliacion(models.Model):
             'tag': 'display_notification',
             'params': {
                 'title': _('Extracción y Conciliación Exitosa'),
-                'message': _('Se procesó la factura PDF nativamente. Se extrajeron %s líneas telefónicas.'),
+                'message': _('Se procesó la factura PDF nativamente. Se extrajeron %s líneas telefónicas.') % len(seen_phones),
                 'type': 'success',
                 'sticky': False,
-                'next': {'type': 'ir.actions.client', 'tag': 'reload'}
-            }
-        }
-
-    def action_procesar_pdf_n8n(self):
-        """ Envía el archivo PDF adjunto al Webhook de n8n para parsing y conciliación """
-        self.ensure_one()
-        if not self.archivo_pdf:
-            raise UserError(_('Por favor adjunte un archivo PDF de la Factura Claro antes de presionar este botón.'))
-        
-        import requests
-        ICP = self.env['ir.config_parameter'].sudo()
-        n8n_webhook_url = ICP.get_param('gestion_flota_empleados.n8n_webhook_url', 'http://100.95.106.4:5678/webhook/conciliar-factura-claro')
-        
-        pdf_bytes = base64.b64decode(self.archivo_pdf)
-        files = {
-            'file': (self.pdf_filename or 'factura_claro.pdf', pdf_bytes, 'application/pdf')
-        }
-        data = {
-            'periodo': self.periodo,
-            'proveedor': self.proveedor or 'Claro Dominicana'
-        }
-
-        try:
-            response = requests.post(n8n_webhook_url, files=files, data=data, timeout=30)
-            if response.status_code in [200, 201]:
-                res_data = response.json()
-                if isinstance(res_data, dict) and res_data.get('status') == 'success':
-                    self.message_post(body=_("<b>Factura PDF procesada con éxito via n8n:</b><br/>Total: RD$%s | Líneas: %s") % (res_data.get('total_mes'), res_data.get('total_lineas')))
-                    return {
-                        'type': 'ir.actions.client',
-                        'tag': 'display_notification',
-                        'params': {
-                            'title': _('Factura PDF Procesada'),
-                            'message': _('La factura PDF fue enviada y conciliada exitosamente.'),
-                            'type': 'success',
-                            'next': {'type': 'ir.actions.client', 'tag': 'reload'}
-                        }
-                    }
-        except Exception as e:
-            _logger.error("Error enviando PDF a n8n: %s", str(e))
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': _('Enviado a n8n'),
-                'message': _('El PDF se envió a n8n para su lectura y concatenación.'),
-                'type': 'info',
                 'next': {'type': 'ir.actions.client', 'tag': 'reload'}
             }
         }
@@ -466,12 +446,7 @@ class FlotaFacturaLinea(models.Model):
     def create(self, vals_list):
         for vals in vals_list:
             if not vals.get('empleado_id') and vals.get('numero_flota'):
-                num_clean = vals['numero_flota'].replace('-', '').replace(' ', '').replace('+', '')
-                emp = self.env['flota.empleado'].search([
-                    '|',
-                    ('numero_flota', '=', vals['numero_flota']),
-                    ('numero_flota', '=', num_clean)
-                ], limit=1)
+                emp = _find_empleado_by_phone(self.env, vals['numero_flota'])
                 if emp:
                     vals['empleado_id'] = emp.id
         return super(FlotaFacturaLinea, self).create(vals_list)

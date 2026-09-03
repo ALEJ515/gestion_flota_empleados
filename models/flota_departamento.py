@@ -11,6 +11,13 @@ class FlotaDepartamento(models.Model):
     code = fields.Char(string='Código Interno', tracking=True)
     active = fields.Boolean(default=True, string='Activo', tracking=True)
     
+    ultima_facturacion_monto = fields.Monetary(
+        string='Última Facturación Depto (RD$)',
+        currency_field='currency_id',
+        readonly=True
+    )
+    currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id)
+    
     empleado_ids = fields.One2many(
         'flota.empleado', 
         'departamento_id', 

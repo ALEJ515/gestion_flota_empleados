@@ -39,6 +39,30 @@ class FlotaEmpleado(models.Model):
     notas = fields.Text(string='Notas')
     active = fields.Boolean(default=True, string='Activo en Sistema', tracking=True)
 
+    # Campos de Facturación y Consumos Telefónicos
+    ultima_facturacion_monto = fields.Monetary(
+        string='Última Facturación (RD$)',
+        currency_field='currency_id',
+        readonly=True,
+        tracking=True
+    )
+    ultima_facturacion_periodo = fields.Char(
+        string='Periodo Última Factura',
+        readonly=True,
+        tracking=True
+    )
+    currency_id = fields.Many2one(
+        'res.currency',
+        string='Moneda',
+        default=lambda self: self.env.company.currency_id
+    )
+
+    historial_factura_linea_ids = fields.One2many(
+        'flota.factura.linea',
+        'empleado_id',
+        string='Historial de Facturación y Consumos'
+    )
+
     # Campo Computado: Compañeros del Mismo Departamento
     companeros_departamento_ids = fields.One2many(
         'flota.empleado',

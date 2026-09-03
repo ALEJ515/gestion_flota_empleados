@@ -44,16 +44,16 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr><td>Renta Mensual</td><td class="text-end" t-field="doc.renta_mensual" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>Renta Otros Servicios</td><td class="text-end" t-field="doc.renta_otros_servicios" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>Uso Data Móvil</td><td class="text-end" t-field="doc.uso_data_movil" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>Llamadas Roaming</td><td class="text-end" t-field="doc.llamadas_roaming" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>Otros Cargos, Créditos o Descuentos</td><td class="text-end" t-field="doc.otros_cargos_creditos" t-options='{"widget": "monetary"}'/></tr>
-                                <tr class="fw-bold table-secondary"><td>SUBTOTAL</td><td class="text-end" t-field="doc.subtotal" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>ITBIS (18%)</td><td class="text-end" t-field="doc.itbis_monto" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>CDT (2%)</td><td class="text-end" t-field="doc.cdt_monto" t-options='{"widget": "monetary"}'/></tr>
-                                <tr><td>ISC (10%)</td><td class="text-end" t-field="doc.isc_monto" t-options='{"widget": "monetary"}'/></tr>
-                                <tr class="fw-bold table-success fs-5"><td>TOTAL DEL MES</td><td class="text-end" t-field="doc.total_mes" t-options='{"widget": "monetary"}'/></tr>
+                                <tr><td>Renta Mensual</td><td class="text-end"><span t-field="doc.renta_mensual"/></td></tr>
+                                <tr><td>Renta Otros Servicios</td><td class="text-end"><span t-field="doc.renta_otros_servicios"/></td></tr>
+                                <tr><td>Uso Data Móvil</td><td class="text-end"><span t-field="doc.uso_data_movil"/></td></tr>
+                                <tr><td>Llamadas Roaming</td><td class="text-end"><span t-field="doc.llamadas_roaming"/></td></tr>
+                                <tr><td>Otros Cargos, Créditos o Descuentos</td><td class="text-end"><span t-field="doc.otros_cargos_creditos"/></td></tr>
+                                <tr class="fw-bold table-secondary"><td>SUBTOTAL</td><td class="text-end"><span t-field="doc.subtotal"/></td></tr>
+                                <tr><td>ITBIS (18%)</td><td class="text-end"><span t-field="doc.itbis_monto"/></td></tr>
+                                <tr><td>CDT (2%)</td><td class="text-end"><span t-field="doc.cdt_monto"/></td></tr>
+                                <tr><td>ISC (10%)</td><td class="text-end"><span t-field="doc.isc_monto"/></td></tr>
+                                <tr class="fw-bold table-success fs-5"><td>TOTAL DEL MES</td><td class="text-end"><span t-field="doc.total_mes"/></td></tr>
                             </tbody>
                         </table>
 
@@ -73,11 +73,11 @@
                             <tbody>
                                 <t t-foreach="doc.resumen_depto_ids" t-as="d">
                                     <tr>
-                                        <td><span t-field="d.departamento_id"/></td>
-                                        <td><span t-field="d.ubicacion_id"/></td>
+                                        <td><span t-field="d.departamento_id.name"/></td>
+                                        <td><span t-field="d.ubicacion_id.name"/></td>
                                         <td class="text-center"><span t-field="d.cantidad_empleados"/></td>
-                                        <td class="text-end" t-field="d.monto_subtotal" t-options='{"widget": "monetary"}'/>
-                                        <td class="text-end" t-field="d.monto_total" t-options='{"widget": "monetary"}'/>
+                                        <td class="text-end"><span t-field="d.monto_subtotal"/></td>
+                                        <td class="text-end"><span t-field="d.monto_total"/></td>
                                         <td class="text-end"><span t-field="d.porcentaje_gasto"/>%</td>
                                     </tr>
                                 </t>
