@@ -1,14 +1,14 @@
 {
-    'name': 'Gestión de Flota y Empleados (n8n Integrated)',
-    'version': '19.0.1.9.0',
+    'name': 'Gestión de Flota y Empleados (Factura Claro Nativa)',
+    'version': '19.0.1.13.0',
     'category': 'Human Resources',
-    'summary': 'Registro profesional de empleados, cargos, flota telefónica, ubicaciones, conciliación de facturas Claro 100% nativa.',
+    'summary': 'Registro profesional de empleados, cargos, flota telefónica, ubicaciones, conciliación financiera de facturas Claro 100% nativa.',
     'description': """
     Módulo profesional para Odoo 19:
     - Registro de Empleados, Departamentos y Ubicaciones.
     - Asistente de Asignación Masiva para CEDI/Departamento/Cargo/Estado.
-    - Conciliación Financiera NATIVA de Facturas Claro (extracción avanzada de PDF dentro de Odoo sin n8n).
-    - Exportación a Excel multinoja (.xlsx) y Reporte Imprimible PDF nativo.
+    - Conciliación Financiera NATIVA de Facturas Claro (extracción avanzada de PDF dentro de Odoo).
+    - Exportación a Excel en una sola hoja (.xlsx) y Reporte Imprimible PDF nativo.
     - Auditoría completa e historial de cambios en vivo (Chatter & Tracking).
     """,
     'author': 'PaulDev',

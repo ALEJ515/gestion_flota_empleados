@@ -8,27 +8,26 @@ from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
-def _find_empleado_by_phone(env, phone_str):
+def _normalize_phone(phone_str):
     if not phone_str:
-        return False
+        return ''
     digits = re.sub(r'\D', '', str(phone_str))
     if len(digits) == 11 and digits.startswith('1'):
         digits = digits[1:]
-    
-    emp = env['flota.empleado'].search([('numero_flota', '=', phone_str)], limit=1)
-    if emp:
-        return emp
+    return digits
 
-    all_emps = env['flota.empleado'].search([])
-    for e in all_emps:
-        if not e.numero_flota:
+def _build_empleado_phone_map(env):
+    emp_map = {}
+    emps = env['flota.empleado'].search([])
+    for emp in emps:
+        if not emp.numero_flota:
             continue
-        e_digits = re.sub(r'\D', '', str(e.numero_flota))
-        if len(e_digits) == 11 and e_digits.startswith('1'):
-            e_digits = e_digits[1:]
-        if e_digits and digits and (e_digits == digits or e_digits.endswith(digits) or digits.endswith(e_digits)):
-            return e
-    return False
+        norm = _normalize_phone(emp.numero_flota)
+        if norm:
+            emp_map[norm] = emp
+            if len(norm) >= 10:
+                emp_map[norm[-10:]] = emp
+    return emp_map
 
 
 class FlotaFacturaConciliacion(models.Model):
@@ -38,9 +37,9 @@ class FlotaFacturaConciliacion(models.Model):
     _order = 'periodo desc, id desc'
 
     name = fields.Char(string='Referencia / Folio', required=True, copy=False, default=lambda self: _('Nuevo'), index=True, tracking=True)
-    proveedor = fields.Char(string='Proveedor Telecom', default='Claro Dominicana', required=True, tracking=True)
+    proveedor = fields.Char(string='Proveedor', default='Claro Dominicana', required=True, tracking=True)
     periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, default=lambda self: fields.Date.today().strftime('%Y-%m'), index=True, tracking=True)
-    fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True)
+    fecha_factura = fields.Date(string='Fecha', default=fields.Date.context_today, required=True, tracking=True)
     
     archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True)
     pdf_filename = fields.Char(string='Nombre del Archivo PDF')
@@ -49,7 +48,7 @@ class FlotaFacturaConciliacion(models.Model):
     renta_otros_servicios = fields.Monetary(string='Renta Otros Servicios', currency_field='currency_id', default=0.0, tracking=True)
     uso_data_movil = fields.Monetary(string='Uso Data Móvil', currency_field='currency_id', default=0.0, tracking=True)
     llamadas_roaming = fields.Monetary(string='Llamadas Roaming', currency_field='currency_id', default=0.0, tracking=True)
-    otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Monto de descuentos o notas de crédito (monto negativo o positivo ajustado)")
+    otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Monto de descuentos o notas de crédito")
 
     subtotal = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
     itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
@@ -189,7 +188,7 @@ class FlotaFacturaConciliacion(models.Model):
         return text
 
     def action_procesar_pdf_nativo(self):
-        """ Extrae y concilia la factura PDF directamente en Odoo alineado a la estructura de Claro """
+        """ Extrae y concilia la factura PDF directamente en Odoo """
         self.ensure_one()
         if not self.archivo_pdf:
             raise UserError(_('Por favor adjunte el archivo PDF de la Factura de Claro antes de procesar.'))
@@ -198,7 +197,7 @@ class FlotaFacturaConciliacion(models.Model):
         pdf_text = self._extract_pdf_text_native(pdf_bytes)
 
         if not pdf_text or len(pdf_text.strip()) < 20:
-            raise UserError(_('No se pudo extraer texto del archivo PDF adjunto. Verifique que el archivo no esté protegido.'))
+            raise UserError(_('No se pudo extraer texto del archivo PDF adjunto.'))
 
         renta_m = 0.0
         renta_o = 0.0
@@ -227,6 +226,7 @@ class FlotaFacturaConciliacion(models.Model):
             val = float(m_cred.group(1).replace(',', ''))
             cred_m = -val if 'CR' in m_cred.group(0).upper() or '-' in m_cred.group(0) else val
 
+        emp_map = _build_empleado_phone_map(self.env)
         lineas_vals = []
         lines = pdf_text.split('\n')
         seen_phones = set()
@@ -237,7 +237,7 @@ class FlotaFacturaConciliacion(models.Model):
                 continue
 
             raw_phone = m_phone.group(1)
-            clean_phone = re.sub(r'\D', '', raw_phone)
+            clean_phone = _normalize_phone(raw_phone)
             if not (clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10):
                 continue
 
@@ -245,7 +245,6 @@ class FlotaFacturaConciliacion(models.Model):
                 continue
             seen_phones.add(clean_phone)
 
-            # Extraer montos ordenados de la línea
             amounts_matches = re.finditer(r'(-?\s*[0-9,]+\.[0-9]{2}\s*(?:CR)?)', line_str[m_phone.end():], re.IGNORECASE)
             num_values = []
             for am in amounts_matches:
@@ -262,7 +261,7 @@ class FlotaFacturaConciliacion(models.Model):
             financiamiento = num_values[3] if len(num_values) > 3 else 0.0
             creditos = num_values[4] if len(num_values) > 4 else 0.0
 
-            emp = _find_empleado_by_phone(self.env, clean_phone)
+            emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:])
 
             lineas_vals.append({
                 'conciliacion_id': self.id,
@@ -328,6 +327,7 @@ class FlotaFacturaConciliacion(models.Model):
         ws["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
         ws["A2"].font = Font(italic=True, color="4B5563")
 
+        # Columnas exactas en el mismo orden que en la vista: EMPLEADO, NÚMERO FLOTA, CARGO, DEPARTAMENTO, TOTAL LÍNEA
         headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "TOTAL LÍNEA (RD$)"]
         for col_num, h in enumerate(headers_emp, 1):
             cell = ws.cell(row=4, column=col_num, value=h)
@@ -413,7 +413,7 @@ class FlotaFacturaLinea(models.Model):
 
     conciliacion_id = fields.Many2one('flota.factura.conciliacion', string='Factura Conciliación', ondelete='cascade', index=True)
     periodo = fields.Char(string='Periodo', related='conciliacion_id.periodo', store=True, readonly=True)
-    fecha_factura = fields.Date(string='Fecha Factura', related='conciliacion_id.fecha_factura', store=True, readonly=True)
+    fecha_factura = fields.Date(string='Fecha', related='conciliacion_id.fecha_factura', store=True, readonly=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True)
     
     empleado_id = fields.Many2one('flota.empleado', string='Empleado', ondelete='set null', index=True)
@@ -445,9 +445,11 @@ class FlotaFacturaLinea(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        emp_map = _build_empleado_phone_map(self.env)
         for vals in vals_list:
             if not vals.get('empleado_id') and vals.get('numero_flota'):
-                emp = _find_empleado_by_phone(self.env, vals['numero_flota'])
+                norm = _normalize_phone(vals['numero_flota'])
+                emp = emp_map.get(norm) or emp_map.get(norm[-10:])
                 if emp:
                     vals['empleado_id'] = emp.id
         return super(FlotaFacturaLinea, self).create(vals_list)

@@ -16,8 +16,8 @@
             <list string="Conciliaciones de Factura Claro" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'">
                 <field name="name"/>
                 <field name="periodo"/>
-                <field name="proveedor"/>
-                <field name="fecha_factura"/>
+                <field name="proveedor" string="Proveedor"/>
+                <field name="fecha_factura" string="Fecha"/>
                 <field name="count_lineas"/>
                 <field name="count_excesos" widget="badge" decoration-warning="count_excesos &gt; 0"/>
                 <field name="subtotal" widget="monetary" sum="Subtotal Total"/>
@@ -30,7 +30,7 @@
         </field>
     </record>
 
-    <!-- FORM VIEW (PROTAGONISTA Y ANCHO COMPLETO) -->
+    <!-- FORM VIEW (ANCHO COMPLETO Y ORDEN SOLICITADO) -->
     <record id="view_flota_factura_conciliacion_form" model="ir.ui.view">
         <field name="name">flota.factura.conciliacion.form</field>
         <field name="model">flota.factura.conciliacion</field>
@@ -82,11 +82,10 @@
                         </div>
                     </div>
 
-                    <!-- SECCION COMPACTA DE PARAMETROS GENERALES -->
                     <group>
                         <group string="Información General Factura">
-                            <field name="proveedor"/>
-                            <field name="fecha_factura"/>
+                            <field name="proveedor" string="Proveedor"/>
+                            <field name="fecha_factura" string="Fecha"/>
                             <field name="archivo_pdf" filename="pdf_filename" widget="binary"/>
                             <field name="pdf_filename" invisible="1"/>
                             <field name="currency_id" invisible="1"/>
@@ -112,30 +111,40 @@
                         </group>
                     </group>
 
-                    <!-- TABLA DE MOVIMIENTOS PROTAGONISTA -->
+                    <!-- TABLA DE MOVIMIENTOS PROTAGONISTA CON ORDEN SOLICITADO -->
                     <notebook class="mt-4">
                         <page string="Desglose por Empleado (Líneas Factura)" name="lineas">
                             <field name="linea_ids">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea == 'desconocido'">
-                                    <field name="numero_flota" optional="show"/>
+                                    <!-- 1. Empleado -->
                                     <field name="empleado_id" optional="show"/>
-                                    <field name="departamento_id" optional="show"/>
-                                    <field name="ubicacion_id" optional="show"/>
+                                    <!-- 2. Número Flota -->
+                                    <field name="numero_flota" optional="show"/>
+                                    <!-- 3. Cargo -->
                                     <field name="cargo" optional="show"/>
-                                    <field name="monto_renta_plan" widget="monetary" sum="Total Renta" optional="show"/>
+                                    <!-- 4. Departamento -->
+                                    <field name="departamento_id" optional="show"/>
+                                    <!-- 5. Total Línea -->
+                                    <field name="total_linea" widget="monetary" sum="Total Líneas" optional="show"/>
+                                    
+                                    <!-- Columnas adicionales configuradas para selector de filtros (optional=hide) -->
+                                    <field name="ubicacion_id" optional="hide"/>
+                                    <field name="monto_renta_plan" widget="monetary" sum="Total Renta" optional="hide"/>
                                     <field name="monto_otros_servicios" widget="monetary" optional="hide"/>
-                                    <field name="monto_uso_adicional" widget="monetary" sum="Total Adicional" optional="show"/>
-                                    <field name="monto_roaming" widget="monetary" sum="Total Roaming" optional="show"/>
+                                    <field name="monto_uso_adicional" widget="monetary" sum="Total Adicional" optional="hide"/>
+                                    <field name="monto_roaming" widget="monetary" sum="Total Roaming" optional="hide"/>
                                     <field name="monto_financiamiento" widget="monetary" optional="hide"/>
                                     <field name="monto_creditos" widget="monetary" optional="hide"/>
-                                    <field name="subtotal_linea" widget="monetary" sum="Subtotal" optional="show"/>
-                                    <field name="total_linea" widget="monetary" sum="Total Líneas" optional="show"/>
-                                    <field name="estado_linea" widget="badge" optional="show" decoration-success="estado_linea=='ok'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                    <field name="subtotal_linea" widget="monetary" sum="Subtotal" optional="hide"/>
+                                    <field name="itbis_linea" widget="monetary" optional="hide" string="ITBIS (18%)"/>
+                                    <field name="cdt_linea" widget="monetary" optional="hide" string="CDT (2%)"/>
+                                    <field name="isc_linea" widget="monetary" optional="hide" string="ISC (10%)"/>
+                                    <field name="estado_linea" widget="badge" optional="hide" decoration-success="estado_linea=='ok'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
                             </field>
                         </page>
 
-                        <page string="Consolidado por CEDI / Departamento" name="resumen_depto">
+                        <page string="Consolidado por Departamento" name="resumen_depto">
                             <field name="resumen_depto_ids" readonly="1">
                                 <list string="Resumen por Departamento">
                                     <field name="departamento_id" optional="show"/>
@@ -177,33 +186,6 @@
         </field>
     </record>
 
-    <!-- PIVOT VIEW -->
-    <record id="view_flota_factura_linea_pivot" model="ir.ui.view">
-        <field name="name">flota.factura.linea.pivot</field>
-        <field name="model">flota.factura.linea</field>
-        <field name="arch" type="xml">
-            <pivot string="Matriz Financiera de Consumo por Departamento" sample="1">
-                <field name="departamento_id" type="row"/>
-                <field name="ubicacion_id" type="row"/>
-                <field name="estado_linea" type="col"/>
-                <field name="subtotal_linea" type="measure"/>
-                <field name="total_linea" type="measure"/>
-            </pivot>
-        </field>
-    </record>
-
-    <!-- GRAPH VIEW -->
-    <record id="view_flota_factura_linea_graph" model="ir.ui.view">
-        <field name="name">flota.factura.linea.graph</field>
-        <field name="model">flota.factura.linea</field>
-        <field name="arch" type="xml">
-            <graph string="Gastos Telefónicos por Departamento" type="bar" sample="1">
-                <field name="departamento_id"/>
-                <field name="total_linea" type="measure"/>
-            </graph>
-        </field>
-    </record>
-
     <!-- ACTIONS -->
     <record id="action_flota_factura_conciliacion" model="ir.actions.act_window">
         <field name="name">Conciliación de Facturas Claro</field>
@@ -220,14 +202,7 @@
         </field>
     </record>
 
-    <record id="action_flota_factura_linea_analytics" model="ir.actions.act_window">
-        <field name="name">Análisis Financiero de Consumos</field>
-        <field name="res_model">flota.factura.linea</field>
-        <field name="view_mode">pivot,graph,list</field>
-    </record>
-
     <!-- MENU ITEMS -->
     <menuitem id="menu_flota_factura_root" name="Conciliación Facturas" parent="menu_flota_root" sequence="25"/>
     <menuitem id="menu_flota_factura_conciliacion" name="Facturas Claro" parent="menu_flota_factura_root" action="action_flota_factura_conciliacion" sequence="10"/>
-    <menuitem id="menu_flota_factura_analytics" name="Análisis Financiero (Pivot)" parent="menu_flota_factura_root" action="action_flota_factura_linea_analytics" sequence="20"/>
 </odoo>

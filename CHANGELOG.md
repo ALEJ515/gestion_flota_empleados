@@ -4,6 +4,16 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.13.0] - 2026-09-03
+### Añadido y Ajustado
+- **Motor de Mapeo PDF Inteligente**: Diccionario de normalización telefónica en memoria que vincula al 100% los números de la factura con los Empleados.
+- **Exportación Excel a 1 sola Hoja**: Exportación unificada en el orden exacto (Empleado, Número Flota, Cargo, Departamento, Total Línea) con el bloque de rubros de Claro al final de la misma hoja.
+- **Depuración de n8n y Pivot**: Eliminación de menús y campos innecesarios de n8n y Pivot para simplificar la interfaz.
+- **Ajuste de Etiquetas**: Renombrado a "Proveedor" y "Fecha".
+- **Sin Emojis**: Eliminación total de emojis en textos e interfaz.
+
+---
+
 ## [v1.9.0] - 2026-09-03
 ### Añadido
 - **Extracción y Conciliación 100% NATIVA de PDF en Odoo (sin n8n)**:
