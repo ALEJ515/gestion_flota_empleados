@@ -162,28 +162,28 @@ class FlotaFacturaConciliacion(models.Model):
         text = ""
         try:
             import io
-            try:
-                from pypdf import PdfReader
-                reader = PdfReader(io.BytesIO(pdf_bytes))
-                for page in reader.pages:
+            import pdfplumber
+            with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                for page in pdf.pages:
                     text += (page.extract_text() or "") + "\n"
-            except Exception:
-                from PyPDF2 import PdfFileReader
-                reader = PdfFileReader(io.BytesIO(pdf_bytes))
-                for i in range(reader.getNumPages()):
-                    text += (reader.getPage(i).extractText() or "") + "\n"
         except Exception as e:
-            _logger.warning("Error con PyPDF/PyPDF2: %s", str(e))
+            _logger.warning("Error extrayendo con pdfplumber: %s", str(e))
 
-        if len(text.strip()) < 50:
+        if not text or len(text.strip()) < 50:
             try:
                 import io
-                import pdfplumber
-                with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-                    for page in pdf.pages:
+                try:
+                    from pypdf import PdfReader
+                    reader = PdfReader(io.BytesIO(pdf_bytes))
+                    for page in reader.pages:
                         text += (page.extract_text() or "") + "\n"
+                except Exception:
+                    from PyPDF2 import PdfFileReader
+                    reader = PdfFileReader(io.BytesIO(pdf_bytes))
+                    for i in range(reader.getNumPages()):
+                        text += (reader.getPage(i).extractText() or "") + "\n"
             except Exception as e2:
-                _logger.error("Error extrayendo con pdfplumber: %s", str(e2))
+                _logger.error("Error extrayendo con PyPDF/PyPDF2: %s", str(e2))
                 
         return text
 
@@ -221,10 +221,11 @@ class FlotaFacturaConciliacion(models.Model):
         if m_roam:
             roam_m = float(m_roam.group(1).replace(',', ''))
 
-        m_cred = re.search(r'Otros\s+cargos,?\s+cr[eé]ditos.*?-?\s*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        m_cred = re.search(r'Otros\s+cargos,?\s+cr[eé]ditos.*?([0-9,]+\.[0-9]{2}\s*(?:CR)?)', pdf_text, re.IGNORECASE)
         if m_cred:
-            val = float(m_cred.group(1).replace(',', ''))
-            cred_m = -val if 'CR' in m_cred.group(0).upper() or '-' in m_cred.group(0) else val
+            t_c = m_cred.group(1).upper()
+            val = float(re.sub(r'[^0-9.]', '', t_c.replace(',', '')) or 0)
+            cred_m = -val if ('CR' in t_c or '-' in t_c) else val
 
         emp_map = _build_empleado_phone_map(self.env)
         lineas_vals = []
@@ -240,26 +241,52 @@ class FlotaFacturaConciliacion(models.Model):
             clean_phone = _normalize_phone(raw_phone)
             if not (clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10):
                 continue
+            if clean_phone in ('8092201212', '8092201111'):
+                continue
 
             if clean_phone in seen_phones:
                 continue
             seen_phones.add(clean_phone)
 
-            amounts_matches = re.finditer(r'(-?\s*[0-9,]+\.[0-9]{2}\s*(?:CR)?)', line_str[m_phone.end():], re.IGNORECASE)
+            tokens = line_str.split()
             num_values = []
-            for am in amounts_matches:
-                t = am.group(1).strip()
-                is_cr = 'CR' in t.upper() or '-' in t
-                v = float(re.sub(r'[^0-9.]', '', t.replace(',', '')) or 0)
-                if is_cr:
-                    v = -abs(v)
-                num_values.append(v)
+            for tok in tokens:
+                m_val = re.search(r'(-?\s*[0-9,]+\.[0-9]{2}\s*(?:CR)?)', tok, re.IGNORECASE)
+                if m_val:
+                    t_str = m_val.group(1).upper()
+                    is_cr = 'CR' in t_str or '-' in t_str
+                    v = float(re.sub(r'[^0-9.]', '', t_str.replace(',', '')) or 0)
+                    if is_cr:
+                        v = -abs(v)
+                    num_values.append(v)
 
-            renta = num_values[0] if len(num_values) > 0 else 0.0
-            uso_adicional = num_values[1] if len(num_values) > 1 else 0.0
-            roaming = num_values[2] if len(num_values) > 2 else 0.0
-            financiamiento = num_values[3] if len(num_values) > 3 else 0.0
-            creditos = num_values[4] if len(num_values) > 4 else 0.0
+            r_plan = 0.0
+            r_otros = 0.0
+            uso_add = 0.0
+            roam = 0.0
+            finan = 0.0
+            cred = 0.0
+
+            if len(num_values) >= 7:
+                r_plan = num_values[0]
+                r_otros = num_values[1]
+                uso_add = num_values[2]
+                roam = num_values[3]
+                if len(num_values) > 4:
+                    if num_values[4] < 0:
+                        cred = num_values[4]
+                    else:
+                        finan = num_values[4]
+            elif len(num_values) >= 5:
+                r_plan = num_values[0]
+                uso_add = num_values[1]
+                roam = num_values[2]
+                if num_values[3] < 0:
+                    cred = num_values[3]
+                else:
+                    finan = num_values[3]
+            elif len(num_values) >= 1:
+                r_plan = num_values[0]
 
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:])
 
@@ -267,12 +294,12 @@ class FlotaFacturaConciliacion(models.Model):
                 'conciliacion_id': self.id,
                 'numero_flota': clean_phone,
                 'empleado_id': emp.id if emp else False,
-                'monto_renta_plan': renta,
-                'monto_otros_servicios': 0.0,
-                'monto_uso_adicional': uso_adicional,
-                'monto_roaming': roaming,
-                'monto_financiamiento': financiamiento,
-                'monto_creditos': creditos,
+                'monto_renta_plan': r_plan,
+                'monto_otros_servicios': r_otros,
+                'monto_uso_adicional': uso_add,
+                'monto_roaming': roam,
+                'monto_financiamiento': finan,
+                'monto_creditos': cred,
             })
 
         self.write({
