@@ -119,7 +119,6 @@ class FlotaFacturaConciliacion(models.Model):
                 dept_totals[dept_id]['monto_subtotal'] += linea.subtotal_linea
                 dept_totals[dept_id]['monto_total'] += linea.total_linea
 
-                # Actualizar última facturación en el registro del Empleado
                 if linea.empleado_id:
                     linea.empleado_id.write({
                         'ultima_facturacion_monto': linea.total_linea,
@@ -140,7 +139,6 @@ class FlotaFacturaConciliacion(models.Model):
                     'porcentaje_gasto': pct
                 }))
                 
-                # Actualizar historial de facturación en Departamento (últimos 2 registros)
                 if data['departamento_id']:
                     dept_rec = self.env['flota.departamento'].browse(data['departamento_id'])
                     if dept_rec.exists():
@@ -191,7 +189,7 @@ class FlotaFacturaConciliacion(models.Model):
         return text
 
     def action_procesar_pdf_nativo(self):
-        """ Extrae y concilia la factura PDF directamente en Odoo """
+        """ Extrae y concilia la factura PDF directamente en Odoo alineado a la estructura de Claro """
         self.ensure_one()
         if not self.archivo_pdf:
             raise UserError(_('Por favor adjunte el archivo PDF de la Factura de Claro antes de procesar.'))
@@ -230,28 +228,53 @@ class FlotaFacturaConciliacion(models.Model):
             cred_m = -val if 'CR' in m_cred.group(0).upper() or '-' in m_cred.group(0) else val
 
         lineas_vals = []
-        phone_matches = re.finditer(r'(8[029]\d[\s-]?\d{3}[\s-]?\d{4})[^\n]*?([0-9,]+\.[0-9]{2})', pdf_text)
-        
+        lines = pdf_text.split('\n')
         seen_phones = set()
-        for match in phone_matches:
-            raw_phone = match.group(1)
-            clean_phone = re.sub(r'\D', '', raw_phone)
-            monto_val = float(match.group(2).replace(',', ''))
 
-            if clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10 and clean_phone not in seen_phones:
-                seen_phones.add(clean_phone)
-                emp = _find_empleado_by_phone(self.env, clean_phone)
-                lineas_vals.append({
-                    'conciliacion_id': self.id,
-                    'numero_flota': clean_phone,
-                    'empleado_id': emp.id if emp else False,
-                    'monto_renta_plan': monto_val,
-                    'monto_otros_servicios': 0.0,
-                    'monto_uso_adicional': 0.0,
-                    'monto_roaming': 0.0,
-                    'monto_financiamiento': 0.0,
-                    'monto_creditos': 0.0,
-                })
+        for line_str in lines:
+            m_phone = re.search(r'(8[029]\d[\s-]?\d{3}[\s-]?\d{4})', line_str)
+            if not m_phone:
+                continue
+
+            raw_phone = m_phone.group(1)
+            clean_phone = re.sub(r'\D', '', raw_phone)
+            if not (clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10):
+                continue
+
+            if clean_phone in seen_phones:
+                continue
+            seen_phones.add(clean_phone)
+
+            # Extraer montos ordenados de la línea
+            amounts_matches = re.finditer(r'(-?\s*[0-9,]+\.[0-9]{2}\s*(?:CR)?)', line_str[m_phone.end():], re.IGNORECASE)
+            num_values = []
+            for am in amounts_matches:
+                t = am.group(1).strip()
+                is_cr = 'CR' in t.upper() or '-' in t
+                v = float(re.sub(r'[^0-9.]', '', t.replace(',', '')) or 0)
+                if is_cr:
+                    v = -abs(v)
+                num_values.append(v)
+
+            renta = num_values[0] if len(num_values) > 0 else 0.0
+            uso_adicional = num_values[1] if len(num_values) > 1 else 0.0
+            roaming = num_values[2] if len(num_values) > 2 else 0.0
+            financiamiento = num_values[3] if len(num_values) > 3 else 0.0
+            creditos = num_values[4] if len(num_values) > 4 else 0.0
+
+            emp = _find_empleado_by_phone(self.env, clean_phone)
+
+            lineas_vals.append({
+                'conciliacion_id': self.id,
+                'numero_flota': clean_phone,
+                'empleado_id': emp.id if emp else False,
+                'monto_renta_plan': renta,
+                'monto_otros_servicios': 0.0,
+                'monto_uso_adicional': uso_adicional,
+                'monto_roaming': roaming,
+                'monto_financiamiento': financiamiento,
+                'monto_creditos': creditos,
+            })
 
         self.write({
             'renta_mensual': renta_m,
@@ -300,13 +323,11 @@ class FlotaFacturaConciliacion(models.Model):
         summary_title_fill = PatternFill(start_color="374151", end_color="374151", fill_type="solid")
         total_fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
 
-        # Título
         ws["A1"] = f"CONCILIACIÓN FINANCIERA FACTURA CLARO — {self.name}"
         ws["A1"].font = title_font
         ws["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
         ws["A2"].font = Font(italic=True, color="4B5563")
 
-        # Tabla 1: Desglose por Empleado (Columnas principales)
         headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "TOTAL LÍNEA (RD$)"]
         for col_num, h in enumerate(headers_emp, 1):
             cell = ws.cell(row=4, column=col_num, value=h)
@@ -323,10 +344,8 @@ class FlotaFacturaConciliacion(models.Model):
             c_tot.number_format = '"RD$"#,##0.00'
             current_row += 1
 
-        # Espacio antes del resumen
         current_row += 2
 
-        # Tabla 2: Resumen General y Tributación de Factura Claro al final de la misma hoja
         ws.cell(row=current_row, column=1, value="RESUMEN GENERAL Y TRIBUTACIÓN FACTURA CLARO").font = bold_font
         ws.cell(row=current_row, column=1).fill = summary_title_fill
         ws.cell(row=current_row, column=1).font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
@@ -361,7 +380,6 @@ class FlotaFacturaConciliacion(models.Model):
 
             current_row += 1
 
-        # Ajustar ancho de columnas automáticamente
         for col in ws.columns:
             max_len = max(len(str(cell.value or '')) for cell in col)
             col_letter = openpyxl.utils.get_column_letter(col[0].column)
