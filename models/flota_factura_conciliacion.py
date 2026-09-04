@@ -39,7 +39,7 @@ class FlotaFacturaConciliacion(models.Model):
 
     name = fields.Char(string='Referencia / Folio', required=True, copy=False, default=lambda self: _('Nuevo'), index=True, tracking=True)
     proveedor = fields.Char(string='Proveedor Telecom', default='Claro Dominicana', required=True, tracking=True)
-    periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, index=True, tracking=True)
+    periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, default=lambda self: fields.Date.today().strftime('%Y-%m'), index=True, tracking=True)
     fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True)
     
     archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True)
@@ -100,7 +100,7 @@ class FlotaFacturaConciliacion(models.Model):
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.monto_uso_adicional + l.monto_roaming))
 
     def action_generar_resumen_departamentos(self):
-        """ Agrupa y consolida el gasto por Departamento / CEDI e impacta el historial en Empleados """
+        """ Agrupa y consolida el gasto por Departamento e impacta el historial en Empleados y Departamentos """
         for rec in self:
             rec.resumen_depto_ids.unlink()
             dept_totals = {}
@@ -123,7 +123,7 @@ class FlotaFacturaConciliacion(models.Model):
                 if linea.empleado_id:
                     linea.empleado_id.write({
                         'ultima_facturacion_monto': linea.total_linea,
-                        'ultima_facturacion_periodo': rec.periodo
+                        'ultima_facturacion_periodo': str(rec.periodo or '')
                     })
 
             resumen_vals = []
@@ -139,11 +139,19 @@ class FlotaFacturaConciliacion(models.Model):
                     'monto_total': data['monto_total'],
                     'porcentaje_gasto': pct
                 }))
-                # Actualizar última facturación en el registro del Departamento
+                
+                # Actualizar historial de facturación en Departamento (últimos 2 registros)
                 if data['departamento_id']:
                     dept_rec = self.env['flota.departamento'].browse(data['departamento_id'])
                     if dept_rec.exists():
-                        dept_rec.write({'ultima_facturacion_monto': data['monto_total']})
+                        new_vals = {
+                            'ultima_facturacion_monto': data['monto_total'],
+                            'ultima_facturacion_periodo': str(rec.periodo or '')
+                        }
+                        if dept_rec.ultima_facturacion_periodo and dept_rec.ultima_facturacion_periodo != str(rec.periodo or ''):
+                            new_vals['penultima_facturacion_monto'] = dept_rec.ultima_facturacion_monto
+                            new_vals['penultima_facturacion_periodo'] = dept_rec.ultima_facturacion_periodo
+                        dept_rec.write(new_vals)
 
             rec.write({'resumen_depto_ids': resumen_vals})
 
@@ -151,7 +159,7 @@ class FlotaFacturaConciliacion(models.Model):
         self.ensure_one()
         self.action_generar_resumen_departamentos()
         self.write({'estado': 'conciliado'})
-        self.message_post(body=_("Factura de Flota marcada como <b>Conciliada</b> correctamente."))
+        self.message_post(body=_("Factura de Flota marcada como Conciliada correctamente."))
 
     def _extract_pdf_text_native(self, pdf_bytes):
         text = ""
@@ -276,115 +284,88 @@ class FlotaFacturaConciliacion(models.Model):
         }
 
     def action_exportar_excel(self):
-        """ Exporta la Conciliación Completa a un libro formateado de Excel (.xlsx) """
+        """ Exporta la Conciliación Completa a una ÚNICA HOJA de Excel (.xlsx) """
         self.ensure_one()
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         wb = openpyxl.Workbook()
-        ws1 = wb.active
-        ws1.title = "Resumen Factura Claro"
+        ws = wb.active
+        ws.title = "Conciliación Factura Claro"
         
         header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
         header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
         title_font = Font(name="Calibri", size=14, bold=True, color="1F2937")
         bold_font = Font(name="Calibri", size=11, bold=True)
+        summary_title_fill = PatternFill(start_color="374151", end_color="374151", fill_type="solid")
+        total_fill = PatternFill(start_color="D1FAE5", end_color="D1FAE5", fill_type="solid")
 
-        ws1["A1"] = f"CONCILIACIÓN FINANCIERA FACTURA CLARO — {self.name}"
-        ws1["A1"].font = title_font
-        ws1["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
-        ws1["A2"].font = Font(italic=True, color="4B5563")
+        # Título
+        ws["A1"] = f"CONCILIACIÓN FINANCIERA FACTURA CLARO — {self.name}"
+        ws["A1"].font = title_font
+        ws["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
+        ws["A2"].font = Font(italic=True, color="4B5563")
 
-        ws1["A4"] = "RUBRO FACTURA CLARO"
-        ws1["B4"] = "MONTO (RD$)"
-        ws1["A4"].fill = header_fill
-        ws1["A4"].font = header_font
-        ws1["B4"].fill = header_fill
-        ws1["B4"].font = header_font
+        # Tabla 1: Desglose por Empleado (Columnas principales)
+        headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "TOTAL LÍNEA (RD$)"]
+        for col_num, h in enumerate(headers_emp, 1):
+            cell = ws.cell(row=4, column=col_num, value=h)
+            cell.fill = header_fill
+            cell.font = header_font
+
+        current_row = 5
+        for l in self.linea_ids:
+            ws.cell(row=current_row, column=1, value=l.empleado_id.name if l.empleado_id else 'NO REGISTRADO')
+            ws.cell(row=current_row, column=2, value=l.numero_flota)
+            ws.cell(row=current_row, column=3, value=l.cargo or '')
+            ws.cell(row=current_row, column=4, value=l.departamento_id.name if l.departamento_id else 'N/A')
+            c_tot = ws.cell(row=current_row, column=5, value=l.total_linea)
+            c_tot.number_format = '"RD$"#,##0.00'
+            current_row += 1
+
+        # Espacio antes del resumen
+        current_row += 2
+
+        # Tabla 2: Resumen General y Tributación de Factura Claro al final de la misma hoja
+        ws.cell(row=current_row, column=1, value="RESUMEN GENERAL Y TRIBUTACIÓN FACTURA CLARO").font = bold_font
+        ws.cell(row=current_row, column=1).fill = summary_title_fill
+        ws.cell(row=current_row, column=1).font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        ws.cell(row=current_row, column=2, value="MONTO (RD$)").fill = summary_title_fill
+        ws.cell(row=current_row, column=2).font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        current_row += 1
 
         rubros = [
             ("Renta Mensual", self.renta_mensual),
             ("Renta Otros Servicios", self.renta_otros_servicios),
-            ("Uso Data Móvil", self.uso_data_movil),
+            ("Uso Servicios Data Móvil", self.uso_data_movil),
             ("Llamadas Roaming", self.llamadas_roaming),
-            ("Otros Cargos / Créditos (CR)", self.otros_cargos_creditos),
+            ("Otros Cargos, Créditos o Descuentos (CR)", self.otros_cargos_creditos),
             ("SUBTOTAL", self.subtotal),
-            ("ITBIS (18%)", self.itbis_monto),
-            ("CDT (2%)", self.cdt_monto),
-            ("ISC (10%)", self.isc_monto),
+            ("ITBIS - 18%", self.itbis_monto),
+            ("CDT - 2%", self.cdt_monto),
+            ("ISC - 10%", self.isc_monto),
             ("TOTAL DEL MES", self.total_mes)
         ]
 
-        row = 5
         for name, val in rubros:
-            ws1.cell(row=row, column=1, value=name)
-            cell_val = ws1.cell(row=row, column=2, value=val)
-            cell_val.number_format = '"RD$"#,##0.00'
+            c_name = ws.cell(row=current_row, column=1, value=name)
+            c_val = ws.cell(row=current_row, column=2, value=val)
+            c_val.number_format = '"RD$"#,##0.00'
+            
             if name in ["SUBTOTAL", "TOTAL DEL MES"]:
-                ws1.cell(row=row, column=1).font = bold_font
-                cell_val.font = bold_font
-            row += 1
+                c_name.font = bold_font
+                c_val.font = bold_font
+            if name == "TOTAL DEL MES":
+                c_name.fill = total_fill
+                c_val.fill = total_fill
 
-        # Sheet 2: Consolidado por Departamento
-        ws2 = wb.create_sheet(title="Consolidado Departamento")
-        ws2["A1"] = f"RESUMEN GASTO POR DEPARTAMENTO Y CEDI — {self.name}"
-        ws2["A1"].font = title_font
-        
-        headers_depto = ["DEPARTAMENTO", "CEDI / UBICACIÓN", "EMPLEADOS", "SUBTOTAL (RD$)", "TOTAL (RD$)", "% DEL GASTO"]
-        for col_num, h in enumerate(headers_depto, 1):
-            cell = ws2.cell(row=3, column=col_num, value=h)
-            cell.fill = header_fill
-            cell.font = header_font
+            current_row += 1
 
-        row = 4
-        for d in self.resumen_depto_ids:
-            ws2.cell(row=row, column=1, value=d.departamento_id.name if d.departamento_id else 'N/A')
-            ws2.cell(row=row, column=2, value=d.ubicacion_id.name if d.ubicacion_id else 'N/A')
-            ws2.cell(row=row, column=3, value=d.cantidad_empleados)
-            c4 = ws2.cell(row=row, column=4, value=d.monto_subtotal)
-            c4.number_format = '"RD$"#,##0.00'
-            c5 = ws2.cell(row=row, column=5, value=d.monto_total)
-            c5.number_format = '"RD$"#,##0.00'
-            c6 = ws2.cell(row=row, column=6, value=d.porcentaje_gasto / 100.0)
-            c6.number_format = '0.00%'
-            row += 1
-
-        # Sheet 3: Detalle por Empleado
-        ws3 = wb.create_sheet(title="Detalle Empleados")
-        ws3["A1"] = f"DESGLOSE LÍNEA POR EMPLEADO — {self.name}"
-        ws3["A1"].font = title_font
-
-        headers_emp = ["NÚMERO FLOTA", "EMPLEADO", "DEPARTAMENTO", "CEDI / UBICACIÓN", "CARGO", "RENTA PLAN", "USO ADICIONAL", "ROAMING", "SUBTOTAL", "TOTAL LÍNEA", "ESTADO"]
-        for col_num, h in enumerate(headers_emp, 1):
-            cell = ws3.cell(row=3, column=col_num, value=h)
-            cell.fill = header_fill
-            cell.font = header_font
-
-        row = 4
-        for l in self.linea_ids:
-            ws3.cell(row=row, column=1, value=l.numero_flota)
-            ws3.cell(row=row, column=2, value=l.empleado_id.name if l.empleado_id else 'NO REGISTRADO')
-            ws3.cell(row=row, column=3, value=l.departamento_id.name if l.departamento_id else 'N/A')
-            ws3.cell(row=row, column=4, value=l.ubicacion_id.name if l.ubicacion_id else 'N/A')
-            ws3.cell(row=row, column=5, value=l.cargo or '')
-            c_renta = ws3.cell(row=row, column=6, value=l.monto_renta_plan)
-            c_renta.number_format = '"RD$"#,##0.00'
-            c_uso = ws3.cell(row=row, column=7, value=l.monto_uso_adicional)
-            c_uso.number_format = '"RD$"#,##0.00'
-            c_roam = ws3.cell(row=row, column=8, value=l.monto_roaming)
-            c_roam.number_format = '"RD$"#,##0.00'
-            c_sub = ws3.cell(row=row, column=9, value=l.subtotal_linea)
-            c_sub.number_format = '"RD$"#,##0.00'
-            c_tot = ws3.cell(row=row, column=10, value=l.total_linea)
-            c_tot.number_format = '"RD$"#,##0.00'
-            ws3.cell(row=row, column=11, value=l.estado_linea.upper())
-            row += 1
-
-        for ws in [ws1, ws2, ws3]:
-            for col in ws.columns:
-                max_len = max(len(str(cell.value or '')) for cell in col)
-                col_letter = openpyxl.utils.get_column_letter(col[0].column)
-                ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
+        # Ajustar ancho de columnas automáticamente
+        for col in ws.columns:
+            max_len = max(len(str(cell.value or '')) for cell in col)
+            col_letter = openpyxl.utils.get_column_letter(col[0].column)
+            ws.column_dimensions[col_letter].width = max(max_len + 3, 14)
 
         output = io.BytesIO()
         wb.save(output)
@@ -413,6 +394,8 @@ class FlotaFacturaLinea(models.Model):
     _order = 'total_linea desc, id asc'
 
     conciliacion_id = fields.Many2one('flota.factura.conciliacion', string='Factura Conciliación', ondelete='cascade', index=True)
+    periodo = fields.Char(string='Periodo', related='conciliacion_id.periodo', store=True, readonly=True)
+    fecha_factura = fields.Date(string='Fecha Factura', related='conciliacion_id.fecha_factura', store=True, readonly=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True)
     
     empleado_id = fields.Many2one('flota.empleado', string='Empleado', ondelete='set null', index=True)

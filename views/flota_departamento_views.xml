@@ -15,7 +15,7 @@
         </field>
     </record>
 
-    <!-- List View con Conteo de Inactivos y Fecha de Modificación -->
+    <!-- List View con Selector de Columnas y Facturación -->
     <record id="view_flota_departamento_list" model="ir.ui.view">
         <field name="name">flota.departamento.list</field>
         <field name="model">flota.departamento</field>
@@ -23,18 +23,21 @@
             <list decoration-muted="not active">
                 <field name="name"/>
                 <field name="code"/>
-                <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0"/>
+                <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0" optional="show"/>
                 <field name="empleados_activos_count" string="Activos" widget="badge" decoration-success="empleados_activos_count &gt; 0" optional="show"/>
                 <field name="empleados_inactivos_count" string="Inactivos" widget="badge" decoration-danger="empleados_inactivos_count &gt; 0" optional="show"/>
-                <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura Depto (RD$)" optional="show" sum="Total Deptos"/>
+                <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Última"/>
+                <field name="ultima_facturacion_periodo" string="Periodo Último" optional="show"/>
+                <field name="penultima_facturacion_monto" widget="monetary" string="Penúltima Factura (RD$)" optional="show" sum="Total Penúltima"/>
+                <field name="penultima_facturacion_periodo" string="Periodo Penúltimo" optional="show"/>
                 <field name="write_date" string="Última Modificación" widget="datetime" optional="hide"/>
                 <field name="write_uid" string="Modificado Por" optional="hide"/>
-                <field name="active" widget="boolean_toggle"/>
+                <field name="active" widget="boolean_toggle" optional="hide"/>
             </list>
         </field>
     </record>
 
-    <!-- Form View con Smart Buttons, Metricas de Inactivos y Chatter Nativo Odoo 19 -->
+    <!-- Form View -->
     <record id="view_flota_departamento_form" model="ir.ui.view">
         <field name="name">flota.departamento.form</field>
         <field name="model">flota.departamento</field>
@@ -60,22 +63,25 @@
                         <group string="Detalles Generales">
                             <field name="code" placeholder="Ej. CT-DN"/>
                             <field name="active" widget="boolean_toggle"/>
+                            <field name="currency_id" invisible="1"/>
                         </group>
-                        <group string="Resumen de Personal">
-                            <field name="total_empleados" readonly="1"/>
-                            <field name="empleados_activos_count" readonly="1"/>
-                            <field name="empleados_inactivos_count" readonly="1"/>
+                        <group string="Resumen de Facturación Reciente">
+                            <field name="ultima_facturacion_monto" widget="monetary" readonly="1"/>
+                            <field name="ultima_facturacion_periodo" readonly="1"/>
+                            <field name="penultima_facturacion_monto" widget="monetary" readonly="1"/>
+                            <field name="penultima_facturacion_periodo" readonly="1"/>
                         </group>
                     </group>
                     <notebook>
                         <page string="Empleados en este Departamento" name="employees">
                             <field name="empleado_ids" readonly="1">
                                 <list>
-                                    <field name="name"/>
-                                    <field name="ubicacion_id"/>
-                                    <field name="cargo"/>
-                                    <field name="numero_flota"/>
-                                    <field name="estado" widget="badge" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
+                                    <field name="name" optional="show"/>
+                                    <field name="ubicacion_id" optional="show"/>
+                                    <field name="cargo" optional="show"/>
+                                    <field name="numero_flota" optional="show"/>
+                                    <field name="ultima_facturacion_monto" widget="monetary" optional="show"/>
+                                    <field name="estado" widget="badge" optional="show" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
                                 </list>
                             </field>
                         </page>
@@ -86,7 +92,7 @@
         </field>
     </record>
 
-    <!-- Kanban View Profesional con Indicador de Inactivos -->
+    <!-- Kanban View con Resumen de Últimas Facturas -->
     <record id="view_flota_departamento_kanban" model="ir.ui.view">
         <field name="name">flota.departamento.kanban</field>
         <field name="model">flota.departamento</field>
@@ -98,6 +104,10 @@
                 <field name="total_empleados"/>
                 <field name="empleados_activos_count"/>
                 <field name="empleados_inactivos_count"/>
+                <field name="ultima_facturacion_monto"/>
+                <field name="ultima_facturacion_periodo"/>
+                <field name="penultima_facturacion_monto"/>
+                <field name="penultima_facturacion_periodo"/>
                 <field name="tiene_inactivos"/>
                 <field name="active"/>
                 <templates>
@@ -114,13 +124,23 @@
                                     </span>
                                 </div>
                             </div>
-                            <div class="mt-2">
-                                <div class="d-flex justify-content-between align-items-center">
+                            <div class="mt-1">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
                                     <span class="text-muted small">Total Empleados:</span>
                                     <span class="badge bg-primary text-white fs-6">
                                         <field name="total_empleados"/>
                                     </span>
                                 </div>
+                                <t t-if="record.ultima_facturacion_monto.raw_value">
+                                    <div class="text-success small fw-bold">
+                                        Última Factura: RD$<t t-esc="record.ultima_facturacion_monto.value"/> (<t t-esc="record.ultima_facturacion_periodo.value"/>)
+                                    </div>
+                                </t>
+                                <t t-if="record.penultima_facturacion_monto.raw_value">
+                                    <div class="text-muted small">
+                                        Anterior: RD$<t t-esc="record.penultima_facturacion_monto.value"/> (<t t-esc="record.penultima_facturacion_periodo.value"/>)
+                                    </div>
+                                </t>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
                                 <t t-if="record.empleados_inactivos_count.raw_value &gt; 0">

@@ -16,6 +16,19 @@ class FlotaDepartamento(models.Model):
         currency_field='currency_id',
         readonly=True
     )
+    ultima_facturacion_periodo = fields.Char(
+        string='Periodo Última Factura',
+        readonly=True
+    )
+    penultima_facturacion_monto = fields.Monetary(
+        string='Penúltima Facturación Depto (RD$)',
+        currency_field='currency_id',
+        readonly=True
+    )
+    penultima_facturacion_periodo = fields.Char(
+        string='Periodo Penúltima Factura',
+        readonly=True
+    )
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id)
     
     empleado_ids = fields.One2many(
