@@ -28,14 +28,39 @@
                                 <strong>Proveedor:</strong> <span t-field="doc.proveedor"/>
                             </div>
                             <div class="col-6 text-end">
-                                <strong>Fecha Factura:</strong> <span t-field="doc.fecha_factura"/><br/>
+                                <strong>Fecha:</strong> <span t-field="doc.fecha_factura"/><br/>
                                 <strong>Estado:</strong> <span t-field="doc.estado"/><br/>
                                 <strong>Total Empleados Auditados:</strong> <span t-field="doc.count_lineas"/>
                             </div>
                         </div>
 
-                        <!-- TOTALES FACTURA CLARO -->
-                        <h4 class="text-secondary border-bottom pb-2 mb-3">1. Resumen General de Factura y Tributación</h4>
+                        <!-- 1. DESGLOSE POR EMPLEADO -->
+                        <h4 class="text-secondary border-bottom pb-2 mb-3">1. Desglose por Empleado</h4>
+                        <table class="table table-sm table-striped mb-4">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Empleado</th>
+                                    <th>Número Flota</th>
+                                    <th>Cargo</th>
+                                    <th>Departamento</th>
+                                    <th class="text-end">Total Línea (RD$)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="doc.linea_ids" t-as="l">
+                                    <tr>
+                                        <td><span t-field="l.empleado_id.name"/></td>
+                                        <td><span t-field="l.numero_flota"/></td>
+                                        <td><span t-field="l.cargo"/></td>
+                                        <td><span t-field="l.departamento_id.name"/></td>
+                                        <td class="text-end"><span t-field="l.total_linea"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <!-- 2. TOTALES FACTURA CLARO AL FINAL -->
+                        <h4 class="text-secondary border-bottom pb-2 mb-3">2. Resumen General de Factura y Tributación Claro</h4>
                         <table class="table table-sm table-bordered mb-4">
                             <thead class="table-dark">
                                 <tr>
@@ -46,9 +71,9 @@
                             <tbody>
                                 <tr><td>Renta Mensual</td><td class="text-end"><span t-field="doc.renta_mensual"/></td></tr>
                                 <tr><td>Renta Otros Servicios</td><td class="text-end"><span t-field="doc.renta_otros_servicios"/></td></tr>
-                                <tr><td>Uso Data Móvil</td><td class="text-end"><span t-field="doc.uso_data_movil"/></td></tr>
+                                <tr><td>Uso Servicios Data Móvil</td><td class="text-end"><span t-field="doc.uso_data_movil"/></td></tr>
                                 <tr><td>Llamadas Roaming</td><td class="text-end"><span t-field="doc.llamadas_roaming"/></td></tr>
-                                <tr><td>Otros Cargos, Créditos o Descuentos</td><td class="text-end"><span t-field="doc.otros_cargos_creditos"/></td></tr>
+                                <tr><td>Otros Cargos, Créditos o Descuentos (CR)</td><td class="text-end"><span t-field="doc.otros_cargos_creditos"/></td></tr>
                                 <tr class="fw-bold table-secondary"><td>SUBTOTAL</td><td class="text-end"><span t-field="doc.subtotal"/></td></tr>
                                 <tr><td>ITBIS (18%)</td><td class="text-end"><span t-field="doc.itbis_monto"/></td></tr>
                                 <tr><td>CDT (2%)</td><td class="text-end"><span t-field="doc.cdt_monto"/></td></tr>
@@ -57,8 +82,8 @@
                             </tbody>
                         </table>
 
-                        <!-- CONSOLIDADO DEPARTAMENTOS -->
-                        <h4 class="text-secondary border-bottom pb-2 mb-3">2. Consolidado por Departamento y CEDI</h4>
+                        <!-- 3. CONSOLIDADO DEPARTAMENTOS -->
+                        <h4 class="text-secondary border-bottom pb-2 mb-3">3. Consolidado por Departamento</h4>
                         <table class="table table-sm table-striped mb-4">
                             <thead class="table-dark">
                                 <tr>
