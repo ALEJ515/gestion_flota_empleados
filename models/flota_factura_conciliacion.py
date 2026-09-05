@@ -31,6 +31,11 @@ def _build_empleado_phone_map(env):
                 emp_map[norm[-7:]] = emp
     return emp_map
 
+def _fix_claro_pdf_line(line_str):
+    if not line_str:
+        return ''
+    return re.sub(r'(\.\d{2}(?:CR)?)(?=[-\d])', r'\1 ', line_str, flags=re.IGNORECASE)
+
 
 class FlotaFacturaConciliacion(models.Model):
     _name = 'flota.factura.conciliacion'
@@ -371,7 +376,8 @@ class FlotaFacturaConciliacion(models.Model):
         lines = pdf_text.split('\n')
         seen_phones = set()
 
-        for line_str in lines:
+        for line_raw in lines:
+            line_str = _fix_claro_pdf_line(line_raw)
             m_phone = re.search(r'(?:1[\s-]?)?\(?(8[0249]\d)\)?[\s-]?(\d{3})[\s-]?(\d{4})', line_str)
             if not m_phone:
                 continue
@@ -390,10 +396,10 @@ class FlotaFacturaConciliacion(models.Model):
             tokens = line_str.split()
             num_values = []
             for tok in tokens:
-                m_val = re.search(r'(-?\s*[0-9,]+\.[0-9]{2}\s*(?:CR)?)', tok, re.IGNORECASE)
+                m_val = re.match(r'^(-?[0-9,]+\.[0-9]{2}(?:CR)?)$', tok, re.IGNORECASE)
                 if m_val:
                     t_str = m_val.group(1).upper()
-                    is_cr = 'CR' in t_str or '-' in t_str
+                    is_cr = 'CR' in t_str or t_str.startswith('-')
                     v = float(re.sub(r'[^0-9.]', '', t_str.replace(',', '')) or 0)
                     if is_cr:
                         v = -abs(v)

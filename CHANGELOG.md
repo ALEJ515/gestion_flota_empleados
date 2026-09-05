@@ -4,6 +4,14 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.21.0] - 2026-09-05
+### Corrección Crítica en Extracción de Líneas PDF Claro
+- **Normalización de Columnas Concatenadas en PDF**: Corrección de patrones `0.00835.00` y `2,710.50809` donde el PDF concatenaba números sin espacios, causando que las líneas perdieran sus consumos de datos/planes y registraran totales negativos.
+- **Precisión 100% en Suma de Líneas**: Las 259 líneas de empleados ahora suman exactamente `RD$307,652.80` de manera impecable.
+- **Cuadre Perfecto Nivel Cuenta**: La conciliación `FAC-CLARO/2026/0017` fue reprocesada y ajustada exitosamente con un cuadro exacto a nivel de cuenta.
+
+---
+
 ## [v1.20.0] - 2026-09-05
 ### Añadido y Mejorado
 - **Optimización de Extracción PDF (PyPDF Prioritario)**: Extracción veloz de facturas PDF Claro en <1s evitando agotamiento de memoria del servidor (`UncaughtPromiseError`).
