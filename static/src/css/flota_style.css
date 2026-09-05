@@ -2,3 +2,47 @@
 .o_form_view .o_form_sheet {
     box-sizing: border-box !important;
 }
+
+/* Auto-fit y ajuste dinámico de ancho de columnas según contenido en la Conciliación de Flota */
+.o_field_one2many[name="linea_ids"] .o_list_table {
+    table-layout: auto !important;
+    width: 100% !important;
+}
+
+.o_field_one2many[name="linea_ids"] .o_list_table th,
+.o_field_one2many[name="linea_ids"] .o_list_table td {
+    white-space: nowrap !important;
+    vertical-align: middle !important;
+}
+
+/* Columna de Nombre Empleado: adaptable al texto largo del empleado */
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="empleado_id"],
+.o_field_one2many[name="linea_ids"] .o_list_table td[data-name="empleado_id"] {
+    min-width: 180px !important;
+    white-space: normal !important;
+    word-break: break-word !important;
+}
+
+/* Columna de Número Flota: compacta y ajustada al tamaño exacto del teléfono */
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="numero_flota"],
+.o_field_one2many[name="linea_ids"] .o_list_table td[data-name="numero_flota"] {
+    width: 1% !important;
+    white-space: nowrap !important;
+    text-align: center !important;
+}
+
+/* Columna de Roaming / Larga Distancia: acomoda el encabezado completo */
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_roaming"],
+.o_field_one2many[name="linea_ids"] .o_list_table td[data-name="monto_roaming"] {
+    min-width: 170px !important;
+}
+
+/* Columnas numéricas con comportamiento ajustado sin saltos de línea */
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_renta_plan"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_uso_adicional"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_financiamiento"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_creditos"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_impuestos_pdf"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="total_linea"] {
+    white-space: nowrap !important;
+}
