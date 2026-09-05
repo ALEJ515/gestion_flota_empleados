@@ -130,8 +130,8 @@
                                     <field name="monto_renta_plan" string="Otros Servicio DM" widget="monetary" sum="Total Otros Servicio DM" optional="show"/>
                                     <!-- 3. Uso local DM -->
                                     <field name="monto_uso_adicional" string="Uso local DM" widget="monetary" sum="Total Uso local DM" optional="show"/>
-                                    <!-- 4. Llamadas larga distancia, Roaming y Otras llamadas -->
-                                    <field name="monto_roaming" string="Llamadas larga distancia, Roaming y Otras llamadas" widget="monetary" sum="Total Roaming / LD" optional="show"/>
+                                    <!-- 4. Llamadas larga distancia -->
+                                    <field name="monto_roaming" string="Llamadas larga distancia" widget="monetary" sum="Total Larga Distancia" optional="show"/>
                                     <!-- 5. Financiamiento -->
                                     <field name="monto_financiamiento" string="Financiamiento" widget="monetary" sum="Total Financiamiento" optional="show"/>
                                     <!-- 6. Otros cargos créditos o descuentos -->
