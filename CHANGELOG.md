@@ -4,6 +4,13 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.22.0] - 2026-09-05
+### Refinamiento de Extracción y Validación por Fórmulas
+- **Flexibilidad en Mapeo de Columnas**: Mapeo robusto para líneas de Claro con 6 o 7 columnas de consumo de forma dinámica.
+- **Cálculo Exacto de Subtotal e Impuestos**: `subtotal_linea` recalcula la suma exacta de Renta, Otros Servicios, Uso Data, Roaming, Financiamiento y Créditos, aplicando de forma limpia la tasa impositiva del 30% de ley de República Dominicana.
+
+---
+
 ## [v1.21.0] - 2026-09-05
 ### Corrección Crítica en Extracción de Líneas PDF Claro
 - **Normalización de Columnas Concatenadas en PDF**: Corrección de patrones `0.00835.00` y `2,710.50809` donde el PDF concatenaba números sin espacios, causando que las líneas perdieran sus consumos de datos/planes y registraran totales negativos.

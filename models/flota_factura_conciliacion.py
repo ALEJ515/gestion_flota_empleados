@@ -365,7 +365,7 @@ class FlotaFacturaConciliacion(models.Model):
         if m_roam:
             roam_m = float(m_roam.group(1).replace(',', ''))
 
-        m_cred = re.search(r'Otros\s+cargos,?\s+cr[eé]ditos.*?([0-9,]+\.[0-9]{2}\s*(?:CR)?)', pdf_text, re.IGNORECASE)
+        m_cred = re.search(r'Otros\s+cargos,?\s+cr[eé]ditos[^\n]*?([0-9,]+\.[0-9]{2}\s*(?:CR)?)', pdf_text, re.IGNORECASE)
         if m_cred:
             t_c = m_cred.group(1).upper()
             val = float(re.sub(r'[^0-9.]', '', t_c.replace(',', '')) or 0)
@@ -412,7 +412,7 @@ class FlotaFacturaConciliacion(models.Model):
             finan = 0.0
             cred = 0.0
 
-            if len(num_values) >= 7:
+            if len(num_values) >= 6:
                 r_plan = num_values[0]
                 r_otros = num_values[1]
                 uso_add = num_values[2]
