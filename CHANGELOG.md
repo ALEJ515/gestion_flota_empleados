@@ -4,6 +4,19 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.23.0 - Restauración a v1.4] - 2026-09-05
+### Restauración a Versión v1.4 (Commit 33c7d07)
+- **Motivo de Restauración**: Se revirtió la versión v1.5 que incrustaba un recuadro de mapeo visual de 8 columnas y rango de páginas (`page_start`/`page_end`) directamente dentro de la pestaña *Desglose por Empleado*.
+- **Causa y Decisión**: El usuario verificó la interfaz en Odoo y prefirió no mantener controles de formulario/selectores dentro de la pestaña para no recargar la vista, solicitando regresar al estado previo v1.4.
+- **Estado Técnico Vigente (v1.4)**:
+  1. **Vista limpia de 7 columnas principales**: `Otros Servicio DM`, `Uso local DM`, `Llamadas larga distancia`, `Financiamiento`, `Otros cargos, créditos o descuentos`, `Imp`, `Total (RD$)`.
+  2. **Extracción pos-teléfono (`post_phone_str`)**: Los montos se leen únicamente después del número para evitar corrimientos hacia roaming por texto/cálculos anteriores.
+  3. **Tratamiento tributario correcto**: Los impuestos (30%) se aplican solo sobre servicios de telecomunicaciones, excluyendo cuotas de financiamiento de equipos.
+  4. **Signos en créditos**: Valores con `CR` o `-` restan al total; valores positivos suman.
+  5. **Columnas redundantes removidas**: Se retiraron `subtotal_linea`, `itbis_linea`, `cdt_linea` e `isc_linea` de la vista de la tabla.
+
+---
+
 ## [v1.22.0] - 2026-09-05
 ### Refinamiento de Extracción y Validación por Fórmulas
 - **Flexibilidad en Mapeo de Columnas**: Mapeo robusto para líneas de Claro con 6 o 7 columnas de consumo de forma dinámica.
