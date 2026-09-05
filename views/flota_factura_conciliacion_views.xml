@@ -122,32 +122,36 @@
                         <page string="Desglose por Empleado (Líneas Factura)" name="lineas">
                             <field name="linea_ids">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea == 'desconocido'">
-                                    <!-- 1. Empleado -->
-                                    <field name="empleado_id" optional="show"/>
-                                    <!-- 2. Número Flota -->
-                                    <field name="numero_flota" optional="show"/>
-                                    <!-- 3. Cargo -->
-                                    <field name="cargo" optional="show"/>
-                                    <!-- 4. Departamento -->
-                                    <field name="departamento_id" optional="show"/>
-                                    <!-- 5. Total Línea -->
-                                    <field name="total_linea" widget="monetary" sum="Gran Total Líneas" optional="show"/>
+                                    <!-- 1. Nombre Empleado -->
+                                    <field name="empleado_id" string="Nombre Empleado" optional="show"/>
+                                    <!-- Número Flota -->
+                                    <field name="numero_flota" string="Número Flota" optional="show"/>
+                                    <!-- 2. Otros Servicio DM -->
+                                    <field name="monto_renta_plan" string="Otros Servicio DM" widget="monetary" sum="Total Otros Servicio DM" optional="show"/>
+                                    <!-- 3. Uso local DM -->
+                                    <field name="monto_uso_adicional" string="Uso local DM" widget="monetary" sum="Total Uso local DM" optional="show"/>
+                                    <!-- 4. Llamadas larga distancia, Roaming y Otras llamadas -->
+                                    <field name="monto_roaming" string="Llamadas larga distancia, Roaming y Otras llamadas" widget="monetary" sum="Total Roaming / LD" optional="show"/>
+                                    <!-- 5. Financiamiento -->
+                                    <field name="monto_financiamiento" string="Financiamiento" widget="monetary" sum="Total Financiamiento" optional="show"/>
+                                    <!-- 6. Otros cargos créditos o descuentos -->
+                                    <field name="monto_creditos" string="Otros cargos créditos o descuentos" widget="monetary" sum="Total Créditos / Ajustes" optional="show"/>
+                                    <!-- 7. Imp -->
+                                    <field name="monto_impuestos_pdf" string="Imp" widget="monetary" sum="Total Imp" optional="show"/>
+                                    <!-- 8. Total (RD$) -->
+                                    <field name="total_linea" string="Total (RD$)" widget="monetary" sum="Total General Líneas" optional="show"/>
                                     
-                                    <!-- Columnas adicionales configuradas para selector de filtros (optional=hide) con sumas totales -->
+                                    <!-- Columnas adicionales en selector (optional=hide) -->
+                                    <field name="cargo" optional="hide"/>
+                                    <field name="departamento_id" optional="hide"/>
                                     <field name="fecha_factura" optional="hide"/>
                                     <field name="fecha_subida" optional="hide"/>
                                     <field name="ubicacion_id" optional="hide"/>
-                                    <field name="monto_renta_plan" widget="monetary" sum="Total Renta Plan" optional="hide"/>
-                                    <field name="monto_otros_servicios" widget="monetary" sum="Total Otros Servicios" optional="hide"/>
-                                    <field name="monto_uso_adicional" widget="monetary" sum="Total Uso Adicional" optional="hide"/>
-                                    <field name="monto_roaming" widget="monetary" sum="Total Roaming / LD" optional="hide"/>
-                                    <field name="monto_financiamiento" widget="monetary" sum="Total Financiamiento" optional="hide"/>
-                                    <field name="monto_creditos" widget="monetary" sum="Total Créditos / Ajustes" optional="hide"/>
                                     <field name="subtotal_linea" widget="monetary" sum="Subtotal General Líneas" optional="hide"/>
                                     <field name="itbis_linea" widget="monetary" sum="Total ITBIS (18%)" optional="hide" string="ITBIS (18%)"/>
                                     <field name="cdt_linea" widget="monetary" sum="Total CDT (2%)" optional="hide" string="CDT (2%)"/>
                                     <field name="isc_linea" widget="monetary" sum="Total ISC (10%)" optional="hide" string="ISC (10%)"/>
-                                    <field name="estado_linea" widget="badge" optional="hide" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                    <field name="estado_linea" widget="badge" optional="show" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
                             </field>
                         </page>
