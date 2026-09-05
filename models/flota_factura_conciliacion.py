@@ -75,6 +75,32 @@ class FlotaFacturaConciliacion(models.Model):
     count_excesos = fields.Integer(string='Líneas con Exceso', compute='_compute_kpis', store=True)
     monto_excesos = fields.Monetary(string='Monto Total Excesos', compute='_compute_kpis', store=True, currency_field='currency_id')
 
+    total_lineas_sum = fields.Monetary(
+        string='Suma Consumo Líneas (RD$)',
+        compute='_compute_kpis',
+        store=True,
+        currency_field='currency_id',
+        tracking=True
+    )
+    diferencia_conciliacion = fields.Monetary(
+        string='Ajuste Nivel Cuenta (RD$)',
+        compute='_compute_kpis',
+        store=True,
+        currency_field='currency_id',
+        tracking=True
+    )
+    estado_cuadre = fields.Selection([
+        ('cuadrado', 'Cuadrado Exacto'),
+        ('ajuste_cuenta', 'Ajuste Corporativo Nivel Cuenta'),
+        ('desviacion', 'Desviación Significativa')
+    ], string='Estado de Conciliación', compute='_compute_kpis', store=True, tracking=True)
+
+    banner_conciliacion_html = fields.Html(
+        string='Resumen de Conciliación Nivel Cuenta vs. Líneas',
+        compute='_compute_kpis',
+        store=True
+    )
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
@@ -92,13 +118,69 @@ class FlotaFacturaConciliacion(models.Model):
             rec.isc_monto = sub * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.cdt_monto + rec.isc_monto
 
-    @api.depends('linea_ids', 'linea_ids.estado_linea', 'linea_ids.monto_uso_adicional', 'linea_ids.monto_roaming')
+    @api.depends('linea_ids', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.monto_uso_adicional', 'linea_ids.monto_roaming', 'total_mes')
     def _compute_kpis(self):
         for rec in self:
             rec.count_lineas = len(rec.linea_ids)
             excesos = rec.linea_ids.filtered(lambda l: l.estado_linea in ['exceso_data', 'exceso_roaming'])
             rec.count_excesos = len(excesos)
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.monto_uso_adicional + l.monto_roaming))
+
+            tot_lineas = sum(rec.linea_ids.mapped('total_linea'))
+            rec.total_lineas_sum = tot_lineas
+            diff = rec.total_mes - tot_lineas
+            rec.diferencia_conciliacion = diff
+
+            if abs(diff) < 0.01:
+                rec.estado_cuadre = 'cuadrado'
+                rec.banner_conciliacion_html = (
+                    '<div class="alert alert-success d-flex align-items-center mb-3 shadow-sm" role="alert">'
+                    '<i class="fa fa-check-circle fs-4 me-2"></i>'
+                    '<div><strong>Conciliación Perfecta:</strong> La suma de consumo de todas las líneas de empleados (RD$%s) coincide exactamente con el Total de la Factura Claro (RD$%s).</div>'
+                    '</div>'
+                ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}")
+            elif abs(diff) < 50000.0:
+                rec.estado_cuadre = 'ajuste_cuenta'
+                rec.banner_conciliacion_html = (
+                    '<div class="alert alert-info d-flex align-items-center mb-3 shadow-sm" role="alert">'
+                    '<i class="fa fa-info-circle fs-4 me-2"></i>'
+                    '<div>'
+                    '<strong>Conciliado con Ajuste Corporativo Nivel Cuenta:</strong><br/>'
+                    'Sumatoria Líneas Empleados: <strong>RD$%s</strong> | Total Factura Claro: <strong>RD$%s</strong> | '
+                    'Diferencia Nivel Cuenta (Descuento/Crédito Global): <strong>RD$%s</strong>.'
+                    '</div>'
+                    '</div>'
+                ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}", f"{diff:,.2f}")
+            else:
+                rec.estado_cuadre = 'desviacion'
+                rec.banner_conciliacion_html = (
+                    '<div class="alert alert-warning d-flex align-items-center mb-3 shadow-sm" role="alert">'
+                    '<i class="fa fa-exclamation-triangle fs-4 me-2"></i>'
+                    '<div>'
+                    '<strong>Desviación Significativa Nivel Cuenta:</strong><br/>'
+                    'Existe una diferencia de <strong>RD$%s</strong> entre el total de las líneas (RD$%s) y la factura general (RD$%s).'
+                    '</div>'
+                    '</div>'
+                ) % (f"{diff:,.2f}", f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}")
+
+    def action_aplicar_linea_ajuste_corporativo(self):
+        """ Agrega una línea de Ajuste Corporativo a Nivel de Cuenta para cuadre exacto al 100% """
+        for rec in self:
+            if abs(rec.diferencia_conciliacion) < 0.01:
+                raise UserError(_("La factura ya está totalmente cuadrada con las líneas de empleados."))
+            
+            linea_ajuste = rec.linea_ids.filtered(lambda l: l.numero_flota == 'CUENTA-GLOBAL')
+            base_credito = rec.diferencia_conciliacion / 1.30
+            if linea_ajuste:
+                linea_ajuste.write({'monto_creditos': base_credito})
+            else:
+                self.env['flota.factura.linea'].create({
+                    'conciliacion_id': rec.id,
+                    'numero_flota': 'CUENTA-GLOBAL',
+                    'monto_creditos': base_credito
+                })
+            rec._compute_kpis()
+            rec.message_post(body=_("Se aplicó la línea de <b>Ajuste Corporativo Nivel Cuenta</b> por RD$%s para cuadre exacto de la factura.") % f"{rec.diferencia_conciliacion:,.2f}")
 
     def action_generar_resumen_departamentos(self):
         """ Agrupa y consolida el gasto por Departamento, impacta historial y sincroniza estado (Activo/Inactivo) de Empleados """

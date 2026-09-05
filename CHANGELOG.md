@@ -4,6 +4,15 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.18.0] - 2026-09-04
+### Añadido y Mejorado
+- **Conciliación Financiera Nivel Cuenta vs. Líneas**: Campos `total_lineas_sum`, `diferencia_conciliacion` y `estado_cuadre` para diferenciar consumos de empleados vs. créditos/ajustes corporativos globales aplicados a nivel de contrato Claro.
+- **Banner Informativo de Conciliación**: Bloque de alerta visual interactivo que explica la conciliación perfecta o la presencia de notas de crédito/ajustes corporativos a nivel de cuenta.
+- **Botón de Ajuste Corporativo Nivel Cuenta (`CUENTA-GLOBAL`)**: Permite generar opcionalmente la línea de descuento/ajuste global para lograr un cuadre exacto al 100% con la factura de Claro.
+- **KPIs Superiores Actualizados**: Tarjetas en tiempo real de Total Factura Claro, Suma Líneas Empleados, Ajuste Nivel Cuenta y Excesos Data/Roaming.
+
+---
+
 ## [v1.17.0] - 2026-09-04
 ### Añadido y Mejorado
 - **Limpieza de Duplicados en Base de Datos**: Desduplicación completa de empleados por nombre y número de flota.
