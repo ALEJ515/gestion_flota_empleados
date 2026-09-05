@@ -64,7 +64,8 @@ class FlotaEmpleado(models.Model):
 
     comparativa_indicador_html = fields.Html(
         compute='_compute_comparativa_facturacion',
-        string='Tendencia Visual'
+        string='Tendencia Visual',
+        store=True
     )
 
     currency_id = fields.Many2one(
@@ -120,6 +121,8 @@ class FlotaEmpleado(models.Model):
 
     @api.constrains('numero_flota', 'name')
     def _check_unique_fields(self):
+        if self.env.context.get('install_mode'):
+            return
         for record in self:
             if record.numero_flota:
                 domain_phone = [('numero_flota', '=', record.numero_flota.strip()), ('id', '!=', record.id)]
