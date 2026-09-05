@@ -38,13 +38,13 @@
         <field name="arch" type="xml">
             <form string="Conciliación Financiera Factura Claro">
                 <header>
-                    <button name="action_procesar_pdf_nativo" string="Extraer y Conciliar PDF Nativo" type="object" class="btn-success shadow-sm" invisible="not archivo_pdf"/>
-                    <button name="action_exportar_excel" string="Exportar a Excel (.xlsx)" type="object" class="btn-info text-white shadow-sm"/>
-                    <button name="action_generar_resumen_departamentos" string="Re-Consolidar Departamentos" type="object" class="btn-secondary"/>
-                    <button name="action_aplicar_linea_ajuste_corporativo" string="Ajuste Nivel Cuenta" type="object" class="btn-outline-info" invisible="diferencia_conciliacion == 0"/>
-                    <button name="action_set_draft" string="Restablecer a Borrador" type="object" class="btn-outline-secondary" invisible="estado == 'draft'"/>
-                    <button name="action_set_procesando" string="Marcar como Procesando" type="object" class="btn-outline-info" invisible="estado == 'procesando'"/>
-                    <button name="action_marcar_conciliado" string="Marcar como Conciliado" type="object" class="btn-primary" invisible="estado == 'conciliado'"/>
+                   <button name="action_procesar_pdf_nativo" string="Extraer y Conciliar PDF" type="object" class="btn-primary" invisible="not archivo_pdf" help="Extrae los datos de la factura y compara el consumo por empleado."/>
+                   <button name="action_exportar_excel" string="Exportar Excel" type="object" class="btn-secondary" help="Descarga el desglose en un archivo Excel listo para revisar."/>
+                   <button name="action_generar_resumen_departamentos" string="Resumen por Departamento" type="object" class="btn-secondary" help="Actualiza la vista consolidada por departamento."/>
+                   <button name="action_aplicar_linea_ajuste_corporativo" string="Ajuste Nivel Cuenta" type="object" class="btn-light" invisible="diferencia_conciliacion == 0" help="Ajusta el balance general de la cuenta cuando hace falta conciliar."/>
+                   <button name="action_set_draft" string="Volver a Borrador" type="object" class="btn-light" invisible="estado == 'draft'" help="Devuelve la factura a edición para corregir detalles."/>
+                   <button name="action_set_procesando" string="Marcar como Procesando" type="object" class="btn-light" invisible="estado == 'procesando'" help="Marca la factura como en proceso de revisión."/>
+                   <button name="action_marcar_conciliado" string="Marcar como Conciliado" type="object" class="btn-primary" invisible="estado == 'conciliado'" help="Guarda la conciliación como finalizada."/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,procesando,conciliado" options="{'clickable': '1'}"/>
                 </header>
                 <sheet class="o_full_width">
@@ -125,33 +125,26 @@
                         <page string="Desglose por Empleado (Líneas Factura)" name="lineas">
                             <field name="linea_ids" readonly="estado != 'draft'">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
-                                    <!-- 1. Nombre Empleado (Fijo al inicio) -->
                                     <field name="empleado_id" string="Nombre Empleado" readonly="conciliacion_id.estado != 'draft'"/>
-                                    <!-- 2. Número Flota (Fijo en 2da posición) -->
                                     <field name="numero_flota" string="Número Flota" readonly="conciliacion_id.estado != 'draft'"/>
-                                    
-                                    <!-- Columnas Intermedias con Selector Dinámico -->
+                                    <field name="estado_linea" string="Estado Línea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'" optional="show" readonly="1"/>
+
                                     <field name="monto_otros_servicios" string="Otros Servicios y Data Móvil" widget="monetary" sum="Total Otros Servicios y Data Móvil" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_uso_adicional" string="Uso local y Data Móvil" widget="monetary" sum="Total Uso local y Data Móvil" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_renta_plan" string="Llamadas larga distancia, Roaming y otras llamadas" widget="monetary" sum="Total llamadas y roaming" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_financiamiento" string="Financiamiento equipos" widget="monetary" sum="Total Financiamiento equipos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_creditos" string="Otros cargos, créditos o descuentos" widget="monetary" sum="Total Cargos y créditos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_impuestos_pdf" string="Impuestos" widget="monetary" sum="Total Impuestos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
-                                    <field name="total_pdf" string="Total PDF" widget="monetary" sum="Total PDF" optional="hide" readonly="1"/>
-                                    <field name="diferencia_pdf" string="Diferencia PDF" widget="monetary" sum="Diferencia PDF" optional="hide" readonly="1"/>
-                                    
-                                    <!-- Columnas adicionales opcionales -->
-                                    <field name="monto_roaming" string="Roaming separado (no informado)" optional="hide" readonly="1"/>
+                                    <field name="total_pdf" string="Total (RD$)" widget="monetary" sum="Total PDF" optional="show" readonly="1"/>
+
+                                    <field name="monto_roaming" string="Roaming separado" optional="hide" readonly="1"/>
+                                    <field name="diferencia_pdf" string="Diferencia" widget="monetary" sum="Diferencia" optional="hide" readonly="1"/>
+                                    <field name="total_linea" string="Total calculado" widget="monetary" sum="Total calculado" optional="hide" readonly="1"/>
                                     <field name="cargo" optional="hide"/>
                                     <field name="departamento_id" optional="hide"/>
                                     <field name="fecha_factura" optional="hide"/>
                                     <field name="fecha_subida" optional="hide"/>
                                     <field name="ubicacion_id" optional="hide"/>
-
-                                    <!-- 8. Total (RD$) (Fijo antes del estado) -->
-                                    <field name="total_linea" string="Total (RD$)" widget="monetary" sum="Total General Líneas" readonly="1"/>
-                                    <!-- 9. Estado Línea (Fijo al final) -->
-                                    <field name="estado_linea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
                             </field>
                         </page>

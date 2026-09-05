@@ -445,6 +445,14 @@ class FlotaFacturaConciliacion(models.Model):
                         v = -abs(v)
                     num_values.append(v)
 
+            # Algunas facturas de Claro entregan las dos primeras columnas de consumo en orden invertido:
+            # [Uso local y Data Móvil, Otros Servicios y Data Móvil, Llamadas ...]
+            # En ese caso hay que normalizar para que la primera cifra corresponda a Otros Servicios y la segunda a Uso local.
+            if len(num_values) >= 3:
+                v1, v2, v3 = num_values[0], num_values[1], num_values[2]
+                if abs(v1) < abs(v2) and abs(v2) > 0 and abs(v1) > 0:
+                    num_values[0], num_values[1] = v2, v1
+
             r_plan = 0.0
             r_otros = 0.0
             uso_add = 0.0
