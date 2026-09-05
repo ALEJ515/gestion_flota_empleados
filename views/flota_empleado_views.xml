@@ -82,7 +82,7 @@
                                     <field name="periodo" string="Periodo" optional="show"/>
                                     <field name="fecha_factura" string="Fecha" optional="show"/>
                                     <field name="numero_flota" string="Número Flota" optional="show"/>
-                                    <field name="monto_renta_plan" widget="monetary" string="Renta Plan" sum="Total Renta" optional="show"/>
+                                    <field name="monto_renta_plan" widget="monetary" string="Otros Servicios y Data Móvil" sum="Total Renta" optional="show"/>
                                     <field name="monto_otros_servicios" widget="monetary" string="Otros Servicios" sum="Total Otros" optional="hide"/>
                                     <field name="monto_uso_adicional" widget="monetary" string="Uso Data/Voz" sum="Total Adicional" optional="hide"/>
                                     <field name="monto_roaming" widget="monetary" string="Roaming / LD" sum="Total Roaming" optional="hide"/>

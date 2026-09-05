@@ -131,8 +131,7 @@
                                     <field name="numero_flota" string="Número Flota"/>
                                     
                                     <!-- Columnas Intermedias con Selector Dinámico -->
-                                    <field name="monto_renta_plan" string="Renta Plan" widget="monetary" sum="Total Renta Plan" optional="show"/>
-                                    <field name="monto_otros_servicios" string="Otros Servicios y Data Móvil" widget="monetary" sum="Total Otros Servicios" optional="show"/>
+                                    <field name="monto_renta_plan" string="Otros Servicios y Data Móvil" widget="monetary" sum="Total Otros Servicios y Data Móvil" optional="show"/>
                                     <field name="monto_uso_adicional" string="Uso local y Data Móvil" widget="monetary" sum="Total Uso local y Data Móvil" optional="show"/>
                                     <field name="monto_roaming" string="Llamadas larga distancia" widget="monetary" sum="Total Larga Distancia" optional="show"/>
                                     <field name="monto_financiamiento" string="Financiamiento" widget="monetary" sum="Total Financiamiento" optional="show"/>
@@ -140,6 +139,7 @@
                                     <field name="monto_impuestos_pdf" string="Impuestos" widget="monetary" sum="Total Impuestos" optional="show"/>
                                     
                                     <!-- Columnas adicionales opcionales -->
+                                    <field name="monto_otros_servicios" optional="hide"/>
                                     <field name="cargo" optional="hide"/>
                                     <field name="departamento_id" optional="hide"/>
                                     <field name="fecha_factura" optional="hide"/>
