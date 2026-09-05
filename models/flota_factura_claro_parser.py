@@ -61,11 +61,29 @@ def parse_money_token(token):
 
 
 def normalize_claro_numeric_values(num_values):
-    if len(num_values) >= 3:
-        v1, v2, v3 = num_values[0], num_values[1], num_values[2]
-        if abs(v1) < abs(v2) and abs(v2) > 0 and abs(v1) > 0:
-            return [v2, v1] + num_values[2:]
-    return list(num_values)
+    values = list(num_values)
+    if len(values) < 7:
+        return values
+
+    v0, v1, v2, v3, v4, v5, v6 = values[:7]
+    abs_values = [abs(v) for v in values[:7]]
+
+    # Algunos PDFs de Claro invierten las dos primeras columnas del bloque de consumo
+    # (Otros servicios / Data Móvil) y (Uso local / Data Móvil). En ese caso el valor
+    # de uso local queda a la izquierda y el valor de otros servicios queda a la derecha,
+    # con el primero generalmente muy superior al segundo.
+    if (
+        abs_values[0] > 0 and abs_values[1] > 0 and
+        abs_values[0] > abs_values[1] and
+        abs_values[1] < abs_values[2] and
+        abs_values[0] >= abs_values[2] and
+        abs_values[1] < abs_values[6] * 0.75
+    ):
+        return [v1, v0] + values[2:]
+
+    # Caso de compatibilidad: si el PDF ya viene con el orden correcto, no alteramos
+    # el orden original.
+    return values
 
 
 def map_claro_columns(num_values):
