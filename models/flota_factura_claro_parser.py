@@ -66,23 +66,20 @@ def normalize_claro_numeric_values(num_values):
         return values
 
     v0, v1, v2, v3, v4, v5, v6 = values[:7]
-    abs_values = [abs(v) for v in values[:7]]
 
-    # Algunos PDFs de Claro invierten las dos primeras columnas del bloque de consumo
-    # (Otros servicios / Data Móvil) y (Uso local / Data Móvil). En ese caso el valor
-    # de uso local queda a la izquierda y el valor de otros servicios queda a la derecha,
-    # con el primero generalmente muy superior al segundo.
+    # Evitamos reordenar por defecto. El PDF real de Claro tiene este orden:
+    # [Otros servicios, Uso local, Llamadas/roaming, Financiamiento, Otros cargos, Impuestos, Total]
+    # Solo debemos hacer swap cuando la variante del PDF está claramente invertida,
+    # es decir, la columna de uso local queda a la izquierda con un valor real y la
+    # columna de otros servicios queda a la derecha en cero.
     if (
-        abs_values[0] > 0 and abs_values[1] > 0 and
-        abs_values[0] > abs_values[1] and
-        abs_values[1] < abs_values[2] and
-        abs_values[0] >= abs_values[2] and
-        abs_values[1] < abs_values[6] * 0.75
+        abs(v0) < 0.01 and abs(v1) > 0.01 and
+        abs(v2) < 0.01 and abs(v3) < 0.01 and
+        abs(v4) > 0.01
     ):
         return [v1, v0] + values[2:]
 
-    # Caso de compatibilidad: si el PDF ya viene con el orden correcto, no alteramos
-    # el orden original.
+    # Si el PDF viene con el orden correcto, no alteramos el orden original.
     return values
 
 
