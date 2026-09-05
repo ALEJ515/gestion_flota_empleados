@@ -371,6 +371,17 @@ class FlotaFacturaConciliacion(models.Model):
             val = float(re.sub(r'[^0-9.]', '', t_c.replace(',', '')) or 0)
             cred_m = -val if ('CR' in t_c or '-' in t_c) else val
 
+        # Ajuste automático del Total de Factura si viene especificado en la carátula de Claro
+        m_tot_pdf = re.search(r'(?:Total\s+del\s+Mes|Total\s+a\s+Pagar|Total\s+Factura)\s*[\$RD\s]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_tot_pdf:
+            pdf_total_mes_val = float(m_tot_pdf.group(1).replace(',', ''))
+            if pdf_total_mes_val > 0:
+                subtotal_prev = renta_m + renta_o + data_m + roam_m + cred_m
+                total_prev = subtotal_prev * 1.30
+                diff = pdf_total_mes_val - total_prev
+                if abs(diff) > 0.001 and abs(diff) < 10000.0:
+                    cred_m += (diff / 1.30)
+
         emp_map = _build_empleado_phone_map(self.env)
         lineas_vals = []
         lines = pdf_text.split('\n')
@@ -412,26 +423,54 @@ class FlotaFacturaConciliacion(models.Model):
             finan = 0.0
             cred = 0.0
 
-            if len(num_values) >= 6:
-                r_plan = num_values[0]
-                r_otros = num_values[1]
-                uso_add = num_values[2]
-                roam = num_values[3]
-                if len(num_values) > 4:
-                    if num_values[4] < 0:
-                        cred = num_values[4]
-                    else:
-                        finan = num_values[4]
-            elif len(num_values) >= 5:
-                r_plan = num_values[0]
-                uso_add = num_values[1]
-                roam = num_values[2]
-                if num_values[3] < 0:
-                    cred = num_values[3]
+            # Extraer componentes reales deduciendo si el último valor es el Total de Línea
+            components = num_values
+            if len(num_values) >= 2:
+                last_val = num_values[-1]
+                rest_sum = sum(num_values[:-1])
+                # Si el último valor es el total de la línea (igual a la suma o suma + 30% impuestos)
+                if abs(last_val - rest_sum) < 0.05 or abs(last_val - rest_sum * 1.30) < 1.0 or abs(last_val - rest_sum * 1.28) < 2.0:
+                    components = num_values[:-1]
+
+            if len(components) == 1:
+                r_plan = components[0]
+            elif len(components) == 2:
+                r_plan = components[0]
+                if components[1] < 0:
+                    cred = components[1]
                 else:
-                    finan = num_values[3]
-            elif len(num_values) >= 1:
-                r_plan = num_values[0]
+                    r_otros = components[1]
+            elif len(components) == 3:
+                r_plan = components[0]
+                r_otros = components[1]
+                if components[2] < 0:
+                    cred = components[2]
+                else:
+                    uso_add = components[2]
+            elif len(components) == 4:
+                r_plan = components[0]
+                r_otros = components[1]
+                uso_add = components[2]
+                if components[3] < 0:
+                    cred = components[3]
+                else:
+                    roam = components[3]
+            elif len(components) == 5:
+                r_plan = components[0]
+                r_otros = components[1]
+                uso_add = components[2]
+                roam = components[3]
+                if components[4] < 0:
+                    cred = components[4]
+                else:
+                    finan = components[4]
+            elif len(components) >= 6:
+                r_plan = components[0]
+                r_otros = components[1]
+                uso_add = components[2]
+                roam = components[3]
+                finan = components[4]
+                cred = components[5]
 
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
@@ -664,9 +703,9 @@ class FlotaFacturaLinea(models.Model):
                 rec.estado_linea = 'desconocido'
             elif rec.total_linea == 0:
                 rec.estado_linea = 'sin_consumo'
-            elif rec.monto_roaming > 0:
+            elif rec.monto_roaming > 0.01:
                 rec.estado_linea = 'exceso_roaming'
-            elif rec.monto_uso_adicional > 0:
+            elif rec.monto_uso_adicional > 0.01:
                 rec.estado_linea = 'exceso_data'
             else:
                 rec.estado_linea = 'ok'
