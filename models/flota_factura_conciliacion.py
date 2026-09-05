@@ -6,37 +6,28 @@ import re
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 
+from .flota_factura_claro_parser import (
+    CLARO_COLUMN_NAMES,
+    build_empleado_phone_map,
+    fix_claro_pdf_line,
+    map_claro_columns,
+    normalize_phone,
+    parse_money_token,
+)
+
 _logger = logging.getLogger(__name__)
 
+
 def _normalize_phone(phone_str):
-    if not phone_str:
-        return ''
-    digits = re.sub(r'\D', '', str(phone_str))
-    if len(digits) > 10 and digits.startswith('1'):
-        digits = digits[-10:]
-    return digits
+    return normalize_phone(phone_str)
+
 
 def _build_empleado_phone_map(env):
-    emp_map = {}
-    emps = env['flota.empleado'].with_context(active_test=False).search([])
-    for emp in emps:
-        if not emp.numero_flota:
-            continue
-        norm = _normalize_phone(emp.numero_flota)
-        if norm:
-            emp_map[norm] = emp
-            if len(norm) >= 10:
-                emp_map[norm[-10:]] = emp
-            if len(norm) >= 7:
-                emp_map[norm[-7:]] = emp
-    return emp_map
+    return build_empleado_phone_map(env)
+
 
 def _fix_claro_pdf_line(line_str):
-    if not line_str:
-        return ''
-    fixed = re.sub(r'(\.\d{2}(?:CR)?)(8[0249]\d)', r'\1 \2', line_str, flags=re.IGNORECASE)
-    fixed = re.sub(r'(\.\d{2}(?:CR)?)(?=[-\d])', r'\1 ', fixed, flags=re.IGNORECASE)
-    return fixed
+    return fix_claro_pdf_line(line_str)
 
 
 class FlotaFacturaConciliacion(models.Model):
@@ -427,7 +418,6 @@ class FlotaFacturaConciliacion(models.Model):
                 continue
             if clean_phone in ('8092201212', '8092201111'):
                 continue
-
             if clean_phone in seen_phones:
                 continue
             seen_phones.add(clean_phone)
@@ -436,72 +426,11 @@ class FlotaFacturaConciliacion(models.Model):
             tokens = line_no_phone.split()
             num_values = []
             for tok in tokens:
-                m_val = re.match(r'^(-?[0-9,]+\.[0-9]{2}(?:CR)?)$', tok, re.IGNORECASE)
-                if m_val:
-                    t_str = m_val.group(1).upper()
-                    is_cr = 'CR' in t_str or t_str.startswith('-')
-                    v = float(re.sub(r'[^0-9.]', '', t_str.replace(',', '')) or 0)
-                    if is_cr:
-                        v = -abs(v)
-                    num_values.append(v)
+                value = parse_money_token(tok)
+                if value:
+                    num_values.append(value)
 
-            # Algunas facturas de Claro entregan las dos primeras columnas de consumo en orden invertido:
-            # [Uso local y Data Móvil, Otros Servicios y Data Móvil, Llamadas ...]
-            # En ese caso hay que normalizar para que la primera cifra corresponda a Otros Servicios y la segunda a Uso local.
-            if len(num_values) >= 3:
-                v1, v2, v3 = num_values[0], num_values[1], num_values[2]
-                if abs(v1) < abs(v2) and abs(v2) > 0 and abs(v1) > 0:
-                    num_values[0], num_values[1] = v2, v1
-
-            r_plan = 0.0
-            r_otros = 0.0
-            uso_add = 0.0
-            roam = 0.0
-            finan = 0.0
-            cred = 0.0
-            imp_pdf = 0.0
-            total_pdf = 0.0
-
-            # Estructura exacta de la tabla de 7 columnas numéricas de Factura Claro Dominicana:
-            # Col 1: Otros Servicios y Data Móvil
-            # Col 2: Uso local y Data Móvil
-            # Col 3: Llamadas larga distancia, Roaming y otras llamadas
-            # Col 4: Financiamiento equipos
-            # Col 5: Otros cargos, créditos o descuentos (positivo o negativo con CR/-)
-            # Col 6: Impuestos
-            # Col 7: Total (RD$)
-            if len(num_values) == 7:
-                r_otros = num_values[0]
-                uso_add = num_values[1]
-                r_plan = num_values[2]
-                finan = num_values[3]
-                cred = num_values[4]
-                imp_pdf = num_values[5]
-                total_pdf = num_values[6]
-            elif len(num_values) == 6:
-                r_otros = num_values[0]
-                uso_add = num_values[1]
-                r_plan = num_values[2]
-                finan = num_values[3]
-                cred = num_values[4]
-                total_pdf = num_values[5]
-            elif len(num_values) == 5:
-                r_otros = num_values[0]
-                uso_add = num_values[1]
-                r_plan = num_values[2]
-                cred = num_values[3]
-            elif len(num_values) == 4:
-                r_otros = num_values[0]
-                uso_add = num_values[1]
-                cred = num_values[2]
-            elif len(num_values) == 3:
-                r_otros = num_values[0]
-                cred = num_values[1]
-            elif len(num_values) == 2:
-                r_plan = num_values[0]
-            elif len(num_values) == 1:
-                r_plan = num_values[0]
-
+            mapped_values = map_claro_columns(num_values)
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
                 default_dept = self.env['flota.departamento'].search([], limit=1)
@@ -529,14 +458,14 @@ class FlotaFacturaConciliacion(models.Model):
                 'conciliacion_id': self.id,
                 'numero_flota': clean_phone,
                 'empleado_id': emp.id,
-                'monto_renta_plan': r_plan,
-                'monto_otros_servicios': r_otros,
-                'monto_uso_adicional': uso_add,
-                'monto_roaming': roam,
-                'monto_financiamiento': finan,
-                'monto_creditos': cred,
-                'monto_impuestos_pdf': imp_pdf,
-                'total_pdf': total_pdf,
+                'monto_renta_plan': mapped_values.get('monto_renta_plan', 0.0),
+                'monto_otros_servicios': mapped_values.get('monto_otros_servicios', 0.0),
+                'monto_uso_adicional': mapped_values.get('monto_uso_adicional', 0.0),
+                'monto_roaming': mapped_values.get('monto_roaming', 0.0),
+                'monto_financiamiento': mapped_values.get('monto_financiamiento', 0.0),
+                'monto_creditos': mapped_values.get('monto_creditos', 0.0),
+                'monto_impuestos_pdf': mapped_values.get('monto_impuestos_pdf', 0.0),
+                'total_pdf': mapped_values.get('total_pdf', 0.0),
             })
 
         self.write({
@@ -686,13 +615,13 @@ class FlotaFacturaLinea(models.Model):
     ubicacion_id = fields.Many2one('flota.ubicacion', string='CEDI / Ubicación', related='empleado_id.ubicacion_id', store=True, readonly=True)
     cargo = fields.Char(string='Cargo', related='empleado_id.cargo', readonly=True)
 
-    monto_renta_plan = fields.Monetary(string='Renta Plan', currency_field='currency_id', default=0.0)
-    monto_otros_servicios = fields.Monetary(string='Otros Servicios', currency_field='currency_id', default=0.0)
-    monto_uso_adicional = fields.Monetary(string='Uso Data/Voz Adicional', currency_field='currency_id', default=0.0)
+    monto_renta_plan = fields.Monetary(string='Llamadas larga distancia, roaming y otras llamadas', currency_field='currency_id', default=0.0)
+    monto_otros_servicios = fields.Monetary(string='Otros servicios y data móvil', currency_field='currency_id', default=0.0)
+    monto_uso_adicional = fields.Monetary(string='Uso local y data móvil', currency_field='currency_id', default=0.0)
     monto_roaming = fields.Monetary(string='Roaming / LD', currency_field='currency_id', default=0.0)
-    monto_financiamiento = fields.Monetary(string='Financiamiento Equipo', currency_field='currency_id', default=0.0)
-    monto_creditos = fields.Monetary(string='Créditos / Ajustes', currency_field='currency_id', default=0.0)
-    monto_impuestos_pdf = fields.Monetary(string='Impuestos PDF', currency_field='currency_id', default=0.0)
+    monto_financiamiento = fields.Monetary(string='Financiamiento de equipos', currency_field='currency_id', default=0.0)
+    monto_creditos = fields.Monetary(string='Otros cargos, créditos o descuentos', currency_field='currency_id', default=0.0)
+    monto_impuestos_pdf = fields.Monetary(string='Impuestos', currency_field='currency_id', default=0.0)
     total_pdf = fields.Monetary(
         string='Total PDF',
         currency_field='currency_id',
