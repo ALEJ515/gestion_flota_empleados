@@ -21,12 +21,14 @@
         <field name="name">flota.empleado.list</field>
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
-            <list decoration-muted="estado == 'inactive' or not active">
+            <list decoration-danger="not en_ultima_factura" decoration-warning="es_nuevo_auto" decoration-muted="estado == 'inactive' or not active">
                 <field name="name"/>
                 <field name="departamento_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
+                <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
+                <field name="es_nuevo_auto" string="Registrado x Claro" widget="boolean" optional="show"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
                 <field name="penultima_facturacion_monto" widget="monetary" string="Factura Anterior (RD$)" optional="hide"/>
                 <field name="comparativa_indicador_html" widget="html" string="Tendencia" optional="show"/>

@@ -43,26 +43,28 @@ class FlotaFacturaConciliacion(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'periodo desc, id desc'
 
-    name = fields.Char(string='Referencia / Folio', required=True, copy=False, default=lambda self: _('Nuevo'), index=True, tracking=True)
-    proveedor = fields.Char(string='Proveedor', default='Claro Dominicana', required=True, tracking=True)
-    periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, default=lambda self: fields.Date.today().strftime('%Y-%m'), index=True, tracking=True)
-    fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True)
-    fecha_subida = fields.Datetime(string='Fecha de Subida', default=fields.Datetime.now, readonly=True)
+    name = fields.Char(string='Referencia / Folio', required=True, copy=False, default=lambda self: _('Nuevo'), index=True, tracking=True, help="Número de referencia o folio único asignado a la factura de flota.")
+    proveedor = fields.Char(string='Proveedor', default='Claro Dominicana', required=True, tracking=True, help="Empresa prestadora del servicio telefónico corporativo (Claro Dominicana).")
+    periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, default=lambda self: fields.Date.today().strftime('%Y-%m'), index=True, tracking=True, help="Año y mes fiscal correspondiente a esta conciliación (Ej. 2026-08).")
+    fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True, help="Fecha exacta de emisión o facturación impresa en el documento de Claro.")
+    fecha_subida = fields.Datetime(string='Fecha de Subida', default=fields.Datetime.now, readonly=True, help="Fecha y hora de registro y subida del PDF a Odoo.")
     
-    archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True)
+    archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True, help="Documento digital PDF de la factura corporativa Claro para extracción nativa.")
     pdf_filename = fields.Char(string='Nombre del Archivo PDF')
 
-    renta_mensual = fields.Monetary(string='Renta Mensual', currency_field='currency_id', default=0.0, tracking=True)
-    renta_otros_servicios = fields.Monetary(string='Renta Otros Servicios', currency_field='currency_id', default=0.0, tracking=True)
-    uso_data_movil = fields.Monetary(string='Uso Data Móvil', currency_field='currency_id', default=0.0, tracking=True)
-    llamadas_roaming = fields.Monetary(string='Llamadas Roaming', currency_field='currency_id', default=0.0, tracking=True)
-    otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Monto de descuentos o notas de crédito")
+    fecha_factura_str = fields.Char(string='Fecha / Mes Formateado', compute='_compute_fecha_factura_str', store=True, help="Fecha y mes en formato legible en español (ej. 15 de Agosto de 2026).")
 
-    subtotal = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
-    itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
-    cdt_monto = fields.Monetary(string='CDT (2%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
-    isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
-    total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True)
+    renta_mensual = fields.Monetary(string='Renta Mensual', currency_field='currency_id', default=0.0, tracking=True, help="Monto total acumulado por renta fija de planes corporativos de voz y data.")
+    renta_otros_servicios = fields.Monetary(string='Renta Otros Servicios', currency_field='currency_id', default=0.0, tracking=True, help="Servicios adicionales y paquetes complementarios contratados en la cuenta.")
+    uso_data_movil = fields.Monetary(string='Uso Data Móvil', currency_field='currency_id', default=0.0, tracking=True, help="Consumo excedente de datos móviles no incluidos en los planes fijos.")
+    llamadas_roaming = fields.Monetary(string='Llamadas Roaming', currency_field='currency_id', default=0.0, tracking=True, help="Consumos por llamadas de Larga Distancia Internacional (LDI) o Roaming.")
+    otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Cargos extraordinarios, notas de crédito o descuentos corporativos globales a nivel de cuenta.")
+
+    subtotal = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Base imponible de la factura antes de aplicar los impuestos de ley (RD$).")
+    itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%).")
+    cdt_monto = fields.Monetary(string='CDT (2%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Contribución al Desarrollo de las Telecomunicaciones (2%).")
+    isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
+    total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Gran Total final de la factura Claro en RD$ a pagar (Subtotal + Impuestos).")
 
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id)
     estado = fields.Selection([
@@ -113,6 +115,30 @@ class FlotaFacturaConciliacion(models.Model):
             if vals.get('name', _('Nuevo')) == _('Nuevo'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.factura.conciliacion') or _('FAC-CLARO-%s') % fields.Date.today()
         return super(FlotaFacturaConciliacion, self).create(vals_list)
+
+    @api.depends('fecha_factura')
+    def _compute_fecha_factura_str(self):
+        meses = {
+            1: 'Enero', 2: 'Febrero', 3: 'Marzo', 4: 'Abril',
+            5: 'Mayo', 6: 'Junio', 7: 'Julio', 8: 'Agosto',
+            9: 'Septiembre', 10: 'Octubre', 11: 'Noviembre', 12: 'Diciembre'
+        }
+        for rec in self:
+            if rec.fecha_factura:
+                m_name = meses.get(rec.fecha_factura.month, '')
+                rec.fecha_factura_str = f"{rec.fecha_factura.day} de {m_name} de {rec.fecha_factura.year}"
+            else:
+                rec.fecha_factura_str = ''
+
+    def action_set_draft(self):
+        self.ensure_one()
+        self.write({'estado': 'draft'})
+        self.message_post(body=_("El estado de la conciliación fue restablecido a <b>Borrador</b>."))
+
+    def action_set_procesando(self):
+        self.ensure_one()
+        self.write({'estado': 'procesando'})
+        self.message_post(body=_("El estado de la conciliación fue cambiado a <b>Procesando</b>."))
 
     @api.depends('renta_mensual', 'renta_otros_servicios', 'uso_data_movil', 'llamadas_roaming', 'otros_cargos_creditos')
     def _compute_totales_factura(self):
@@ -244,13 +270,13 @@ class FlotaFacturaConciliacion(models.Model):
                 )
 
                 if is_present:
-                    if emp.estado != 'active':
-                        emp.write({'estado': 'active'})
+                    if emp.estado != 'active' or not emp.en_ultima_factura:
+                        emp.write({'estado': 'active', 'en_ultima_factura': True})
                         emp.message_post(body=_("Estado del empleado actualizado a <b>Activo</b> al ser detectado en la conciliación de Claro (%s).") % rec.periodo)
                 else:
-                    if emp.estado != 'inactive':
-                        emp.write({'estado': 'inactive'})
-                        emp.message_post(body=_("Estado del empleado actualizado automáticamente a <b>Inactivo</b> por NO figurar en la factura de Claro (%s).") % rec.periodo)
+                    if emp.estado != 'inactive' or emp.en_ultima_factura:
+                        emp.write({'estado': 'inactive', 'en_ultima_factura': False})
+                        emp.message_post(body=_("<b>Revisión de Flota:</b> Empleado NO detectado en la factura Claro del periodo (%s). Marcado como Faltante / Inactivo.") % rec.periodo)
 
             resumen_vals = []
             tot_gral = rec.total_mes if rec.total_mes else 1.0
@@ -479,7 +505,9 @@ class FlotaFacturaConciliacion(models.Model):
                     'departamento_id': default_dept.id if default_dept else False,
                     'ubicacion_id': default_ubic.id if default_ubic else False,
                     'estado': 'active',
-                    'notas': f'Nuevo número registrado desde Factura Claro ({self.periodo}).'
+                    'en_ultima_factura': True,
+                    'es_nuevo_auto': True,
+                    'notas': f'Nuevo número registrado desde Factura Claro ({self.periodo}). Complete la ficha de empleado.'
                 })
                 emp.message_post(body=_("Empleado registrado automáticamente al aparecer un nuevo número en la factura de Claro (%s): <b>%s</b>.") % (self.periodo, clean_phone))
                 emp_map[clean_phone] = emp

@@ -45,6 +45,8 @@ class FlotaEmpleado(models.Model):
     
     notas = fields.Text(string='Notas')
     active = fields.Boolean(default=True, string='Activo en Sistema', tracking=True)
+    en_ultima_factura = fields.Boolean(string='Presente en Última Factura Claro', default=True, tracking=True, help="Indica si el número de flota de este empleado fue detectado en la última factura de Claro.")
+    es_nuevo_auto = fields.Boolean(string='Creado Automáticamente por Claro', default=False, tracking=True, help="Indica si el empleado fue registrado automáticamente desde una factura de Claro.")
 
     # Campos de Facturación y Consumos Telefónicos
     ultima_facturacion_monto = fields.Monetary(

@@ -3,14 +3,14 @@
     box-sizing: border-box !important;
 }
 
-/* Auto-fit y ajuste dinámico de ancho de columnas según contenido en la Conciliación de Flota */
-.o_field_one2many[name="linea_ids"] .o_list_table {
+/* Auto-fit dinámico de columnas para TODAS las listas del módulo (Empleados, Flotas, Conciliación) */
+.o_list_table {
     table-layout: auto !important;
     width: 100% !important;
 }
 
-.o_field_one2many[name="linea_ids"] .o_list_table th,
-.o_field_one2many[name="linea_ids"] .o_list_table td {
+.o_list_table th,
+.o_list_table td {
     white-space: nowrap !important;
     vertical-align: middle !important;
 }
@@ -31,13 +31,13 @@
     text-align: center !important;
 }
 
-/* Columna de Roaming / Larga Distancia: acomoda el encabezado completo */
+/* Columna de Roaming / Larga Distancia */
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_roaming"],
 .o_field_one2many[name="linea_ids"] .o_list_table td[data-name="monto_roaming"] {
     min-width: 170px !important;
 }
 
-/* Columnas numéricas con comportamiento ajustado sin saltos de línea */
+/* Columnas numéricas sin saltos de línea */
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_renta_plan"],
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_uso_adicional"],
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_financiamiento"],
@@ -45,4 +45,18 @@
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_impuestos_pdf"],
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="total_linea"] {
     white-space: nowrap !important;
+}
+
+/* Resaltado tenue rojizo pastel para empleados registrados que NO figuraron en la factura de Claro */
+.o_list_table tr.text-danger,
+.o_list_table tr.text-danger td {
+    background-color: #FFF1F2 !important;
+    color: #991B1B !important;
+}
+
+/* Resaltado amarillo tenue pastel para empleados creados automáticamente desde Claro */
+.o_list_table tr.text-warning,
+.o_list_table tr.text-warning td {
+    background-color: #FEFCE8 !important;
+    color: #854D0E !important;
 }
