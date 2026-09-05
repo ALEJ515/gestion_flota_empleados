@@ -123,23 +123,25 @@
                     <!-- TABLA DE MOVIMIENTOS PROTAGONISTA CON ORDEN SOLICITADO -->
                     <notebook class="mt-4">
                         <page string="Desglose por Empleado (Líneas Factura)" name="lineas">
-                            <field name="linea_ids">
-                                <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea == 'desconocido'">
+                            <field name="linea_ids" readonly="estado != 'draft'">
+                                <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
                                     <!-- 1. Nombre Empleado (Fijo al inicio) -->
-                                    <field name="empleado_id" string="Nombre Empleado"/>
+                                    <field name="empleado_id" string="Nombre Empleado" readonly="conciliacion_id.estado != 'draft'"/>
                                     <!-- 2. Número Flota (Fijo en 2da posición) -->
-                                    <field name="numero_flota" string="Número Flota"/>
+                                    <field name="numero_flota" string="Número Flota" readonly="conciliacion_id.estado != 'draft'"/>
                                     
                                     <!-- Columnas Intermedias con Selector Dinámico -->
-                                    <field name="monto_renta_plan" string="Otros Servicios y Data Móvil" widget="monetary" sum="Total Otros Servicios y Data Móvil" optional="show"/>
-                                    <field name="monto_uso_adicional" string="Uso local y Data Móvil" widget="monetary" sum="Total Uso local y Data Móvil" optional="show"/>
-                                    <field name="monto_roaming" string="Llamadas larga distancia" widget="monetary" sum="Total Larga Distancia" optional="show"/>
-                                    <field name="monto_financiamiento" string="Financiamiento" widget="monetary" sum="Total Financiamiento" optional="show"/>
-                                    <field name="monto_creditos" string="Otros cargos, créditos o descuentos" widget="monetary" sum="Total Créditos / Ajustes" optional="show"/>
-                                    <field name="monto_impuestos_pdf" string="Impuestos" widget="monetary" sum="Total Impuestos" optional="show"/>
+                                    <field name="monto_otros_servicios" string="Otros Servicios y Data Móvil" widget="monetary" sum="Total Otros Servicios y Data Móvil" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="monto_uso_adicional" string="Uso local y Data Móvil" widget="monetary" sum="Total Uso local y Data Móvil" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="monto_renta_plan" string="Llamadas larga distancia, Roaming y otras llamadas" widget="monetary" sum="Total llamadas y roaming" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="monto_financiamiento" string="Financiamiento equipos" widget="monetary" sum="Total Financiamiento equipos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="monto_creditos" string="Otros cargos, créditos o descuentos" widget="monetary" sum="Total Cargos y créditos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="monto_impuestos_pdf" string="Impuestos" widget="monetary" sum="Total Impuestos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="total_pdf" string="Total PDF" widget="monetary" sum="Total PDF" optional="hide" readonly="1"/>
+                                    <field name="diferencia_pdf" string="Diferencia PDF" widget="monetary" sum="Diferencia PDF" optional="hide" readonly="1"/>
                                     
                                     <!-- Columnas adicionales opcionales -->
-                                    <field name="monto_otros_servicios" optional="hide"/>
+                                    <field name="monto_roaming" string="Roaming separado (no informado)" optional="hide" readonly="1"/>
                                     <field name="cargo" optional="hide"/>
                                     <field name="departamento_id" optional="hide"/>
                                     <field name="fecha_factura" optional="hide"/>
@@ -147,9 +149,9 @@
                                     <field name="ubicacion_id" optional="hide"/>
 
                                     <!-- 8. Total (RD$) (Fijo antes del estado) -->
-                                    <field name="total_linea" string="Total (RD$)" widget="monetary" sum="Total General Líneas"/>
+                                    <field name="total_linea" string="Total (RD$)" widget="monetary" sum="Total General Líneas" readonly="1"/>
                                     <!-- 9. Estado Línea (Fijo al final) -->
-                                    <field name="estado_linea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                    <field name="estado_linea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
                             </field>
                         </page>

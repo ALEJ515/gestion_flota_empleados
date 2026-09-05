@@ -452,11 +452,12 @@ class FlotaFacturaConciliacion(models.Model):
             finan = 0.0
             cred = 0.0
             imp_pdf = 0.0
+            total_pdf = 0.0
 
             # Estructura exacta de la tabla de 7 columnas numéricas de Factura Claro Dominicana:
-            # Col 1: Otros Servicios y Data Móvil (Servicios fijos / Paquetes adicionales)
-            # Col 2: Uso local y Data Móvil (Exceso Data / Voz local)
-            # Col 3: Renta Plan / Llamadas larga distancia / Roaming
+            # Col 1: Otros Servicios y Data Móvil
+            # Col 2: Uso local y Data Móvil
+            # Col 3: Llamadas larga distancia, Roaming y otras llamadas
             # Col 4: Financiamiento equipos
             # Col 5: Otros cargos, créditos o descuentos (positivo o negativo con CR/-)
             # Col 6: Impuestos
@@ -465,16 +466,17 @@ class FlotaFacturaConciliacion(models.Model):
                 r_otros = num_values[0]
                 uso_add = num_values[1]
                 r_plan = num_values[2]
-                roam = 0.0
                 finan = num_values[3]
                 cred = num_values[4]
                 imp_pdf = num_values[5]
+                total_pdf = num_values[6]
             elif len(num_values) == 6:
                 r_otros = num_values[0]
                 uso_add = num_values[1]
                 r_plan = num_values[2]
                 finan = num_values[3]
                 cred = num_values[4]
+                total_pdf = num_values[5]
             elif len(num_values) == 5:
                 r_otros = num_values[0]
                 uso_add = num_values[1]
@@ -526,6 +528,7 @@ class FlotaFacturaConciliacion(models.Model):
                 'monto_financiamiento': finan,
                 'monto_creditos': cred,
                 'monto_impuestos_pdf': imp_pdf,
+                'total_pdf': total_pdf,
             })
 
         self.write({
@@ -682,6 +685,19 @@ class FlotaFacturaLinea(models.Model):
     monto_financiamiento = fields.Monetary(string='Financiamiento Equipo', currency_field='currency_id', default=0.0)
     monto_creditos = fields.Monetary(string='Créditos / Ajustes', currency_field='currency_id', default=0.0)
     monto_impuestos_pdf = fields.Monetary(string='Impuestos PDF', currency_field='currency_id', default=0.0)
+    total_pdf = fields.Monetary(
+        string='Total PDF',
+        currency_field='currency_id',
+        default=0.0,
+        help='Total de la línea tal como aparece en la factura PDF de Claro.'
+    )
+    diferencia_pdf = fields.Monetary(
+        string='Diferencia PDF',
+        compute='_compute_linea_totals',
+        store=True,
+        currency_field='currency_id',
+        help='Diferencia entre el total calculado por Odoo y el total impreso en el PDF.'
+    )
 
     subtotal_linea = fields.Monetary(string='Subtotal Línea', compute='_compute_linea_totals', store=True, currency_field='currency_id')
     itbis_linea = fields.Monetary(string='ITBIS (18%)', compute='_compute_linea_totals', store=True, currency_field='currency_id')
@@ -694,6 +710,7 @@ class FlotaFacturaLinea(models.Model):
     estado_linea = fields.Selection([
         ('ok', 'Normal'),
         ('sin_consumo', 'Sin Consumo / RD$0'),
+        ('exceso_data_roaming', 'Exceso Data y Roaming'),
         ('exceso_data', 'Exceso Data'),
         ('exceso_roaming', 'Exceso Roaming'),
         ('desconocido', 'Número No Registrado')
@@ -710,25 +727,43 @@ class FlotaFacturaLinea(models.Model):
                     vals['empleado_id'] = emp.id
         return super(FlotaFacturaLinea, self).create(vals_list)
 
-    @api.depends('monto_renta_plan', 'monto_otros_servicios', 'monto_uso_adicional', 'monto_roaming', 'monto_financiamiento', 'monto_creditos', 'monto_impuestos_pdf')
+    @api.depends('monto_renta_plan', 'monto_otros_servicios', 'monto_uso_adicional', 'monto_roaming', 'monto_financiamiento', 'monto_creditos', 'monto_impuestos_pdf', 'total_pdf')
     def _compute_linea_totals(self):
         for rec in self:
             sub = rec.monto_renta_plan + rec.monto_otros_servicios + rec.monto_uso_adicional + rec.monto_roaming + rec.monto_financiamiento + rec.monto_creditos
             rec.subtotal_linea = sub
             
-            imp = rec.monto_impuestos_pdf if rec.monto_impuestos_pdf > 0 else (sub * 0.30)
+            base_imponible = (
+                rec.monto_renta_plan
+                + rec.monto_otros_servicios
+                + rec.monto_uso_adicional
+                + rec.monto_roaming
+                + rec.monto_creditos
+            )
+            imp = rec.monto_impuestos_pdf if rec.monto_impuestos_pdf > 0 else (base_imponible * 0.30)
             rec.itbis_linea = imp * 0.60
             rec.cdt_linea = imp * (1.0 / 15.0)
             rec.isc_linea = imp * (1.0 / 3.0)
             rec.total_linea = sub + imp
+            rec.diferencia_pdf = rec.total_linea - rec.total_pdf if rec.total_pdf else 0.0
 
     @api.depends('empleado_id', 'total_linea', 'monto_uso_adicional', 'monto_roaming')
     def _compute_estado_linea(self):
         for rec in self:
             if not rec.empleado_id:
                 rec.estado_linea = 'desconocido'
-            elif rec.total_linea == 0:
+            elif all(abs(value) < 0.01 for value in (
+                rec.monto_renta_plan,
+                rec.monto_otros_servicios,
+                rec.monto_uso_adicional,
+                rec.monto_roaming,
+                rec.monto_financiamiento,
+                rec.monto_creditos,
+                rec.monto_impuestos_pdf,
+            )):
                 rec.estado_linea = 'sin_consumo'
+            elif rec.monto_roaming > 0.01 and rec.monto_uso_adicional > 0.01:
+                rec.estado_linea = 'exceso_data_roaming'
             elif rec.monto_roaming > 0.01:
                 rec.estado_linea = 'exceso_roaming'
             elif rec.monto_uso_adicional > 0.01:

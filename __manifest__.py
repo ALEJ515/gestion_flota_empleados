@@ -23,7 +23,6 @@
         'views/flota_ubicacion_views.xml',
         'views/flota_factura_conciliacion_views.xml',
         'reports/flota_factura_conciliacion_report.xml',
-        'views/res_config_settings_views.xml',
         'views/menu_views.xml',
         'data/demo_data.xml',
     ],

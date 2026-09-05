@@ -4,6 +4,26 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.29.0] - 2026-09-05
+### Corrección del Desglose por Empleado
+- Se corrigieron las etiquetas para diferenciar renta del plan y otros servicios.
+- Se conserva el total original de cada línea del PDF y se calcula su diferencia contra el total recalculado por Odoo.
+- El financiamiento de equipos queda excluido de la base imponible automática.
+- Se añadió el estado combinado de exceso de data y roaming.
+- Las líneas de factura quedan protegidas contra edición fuera del estado Borrador.
+- Las líneas sin consumo ahora se identifican por sus componentes, no solo por el total resultante.
+
+---
+
+## [v1.28.0] - 2026-09-05
+### Eliminación de Integración n8n
+- Se retiraron los endpoints HTTP públicos de sincronización.
+- Se eliminó la configuración, menú y acciones de n8n.
+- Se eliminó el paquete de controladores y la configuración de parámetros n8n.
+- La conciliación de facturas continúa funcionando exclusivamente dentro de Odoo mediante procesamiento nativo de PDF.
+
+---
+
 ## [v1.23.0 - Restauración a v1.4] - 2026-09-05
 ### Restauración a Versión v1.4 (Commit 33c7d07)
 - **Motivo de Restauración**: Se revirtió la versión v1.5 que incrustaba un recuadro de mapeo visual de 8 columnas y rango de páginas (`page_start`/`page_end`) directamente dentro de la pestaña *Desglose por Empleado*.

@@ -25,9 +25,4 @@
               action="action_flota_ubicacion"
               sequence="30"/>
 
-    <menuitem id="menu_flota_config"
-              name="Configuración n8n"
-              parent="menu_flota_root"
-              action="action_flota_config_settings"
-              sequence="90"/>
 </odoo>
