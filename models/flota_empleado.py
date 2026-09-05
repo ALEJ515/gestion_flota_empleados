@@ -1,8 +1,17 @@
 import logging
+import re
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
+
+def _normalize_phone(phone_str):
+    if not phone_str:
+        return ''
+    digits = re.sub(r'\D', '', str(phone_str))
+    if len(digits) > 10 and digits.startswith('1'):
+        digits = digits[-10:]
+    return digits
 
 class FlotaEmpleado(models.Model):
     _name = 'flota.empleado'
@@ -125,10 +134,14 @@ class FlotaEmpleado(models.Model):
             return
         for record in self:
             if record.numero_flota:
-                domain_phone = [('numero_flota', '=', record.numero_flota.strip()), ('id', '!=', record.id)]
-                if self.with_context(active_test=False).search_count(domain_phone) > 0:
-                    raise ValidationError(_('El número de flota (%s) ya pertenece a otro empleado registrado.') % record.numero_flota)
+                norm = _normalize_phone(record.numero_flota)
+                if norm:
+                    others = self.with_context(active_test=False).search([('id', '!=', record.id)])
+                    for ot in others:
+                        if ot.numero_flota and _normalize_phone(ot.numero_flota) == norm:
+                            raise ValidationError(_('El número de flota (%s) ya pertenece al empleado %s.') % (record.numero_flota, ot.name))
             if record.name:
-                domain_name = [('name', '=ilike', record.name.strip()), ('id', '!=', record.id)]
+                clean_n = record.name.strip()
+                domain_name = [('name', '=ilike', clean_n), ('id', '!=', record.id)]
                 if self.with_context(active_test=False).search_count(domain_name) > 0:
                     raise ValidationError(_('El nombre completo (%s) ya está registrado en el sistema.') % record.name)
