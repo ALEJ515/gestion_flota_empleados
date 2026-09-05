@@ -12,13 +12,13 @@ def _normalize_phone(phone_str):
     if not phone_str:
         return ''
     digits = re.sub(r'\D', '', str(phone_str))
-    if len(digits) == 11 and digits.startswith('1'):
-        digits = digits[1:]
+    if len(digits) > 10 and digits.startswith('1'):
+        digits = digits[-10:]
     return digits
 
 def _build_empleado_phone_map(env):
     emp_map = {}
-    emps = env['flota.empleado'].search([])
+    emps = env['flota.empleado'].with_context(active_test=False).search([])
     for emp in emps:
         if not emp.numero_flota:
             continue
@@ -27,6 +27,8 @@ def _build_empleado_phone_map(env):
             emp_map[norm] = emp
             if len(norm) >= 10:
                 emp_map[norm[-10:]] = emp
+            if len(norm) >= 7:
+                emp_map[norm[-7:]] = emp
     return emp_map
 
 
@@ -99,11 +101,30 @@ class FlotaFacturaConciliacion(models.Model):
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.monto_uso_adicional + l.monto_roaming))
 
     def action_generar_resumen_departamentos(self):
-        """ Agrupa y consolida el gasto por Departamento e impacta el historial en Empleados y Departamentos """
+        """ Agrupa y consolida el gasto por Departamento, impacta historial y sincroniza estado (Activo/Inactivo) de Empleados """
         for rec in self:
             rec.resumen_depto_ids.unlink()
             dept_totals = {}
+            seen_emp_ids = set()
+            seen_phones = set()
+
             for linea in rec.linea_ids:
+                if linea.numero_flota:
+                    norm = _normalize_phone(linea.numero_flota)
+                    if norm:
+                        seen_phones.add(norm)
+                        if len(norm) >= 10:
+                            seen_phones.add(norm[-10:])
+                        if len(norm) >= 7:
+                            seen_phones.add(norm[-7:])
+
+                if linea.empleado_id:
+                    seen_emp_ids.add(linea.empleado_id.id)
+                    linea.empleado_id.write({
+                        'ultima_facturacion_monto': linea.total_linea,
+                        'ultima_facturacion_periodo': str(rec.periodo or ''),
+                    })
+
                 dept_id = linea.departamento_id.id if linea.departamento_id else 0
                 
                 if dept_id not in dept_totals:
@@ -118,11 +139,30 @@ class FlotaFacturaConciliacion(models.Model):
                 dept_totals[dept_id]['monto_subtotal'] += linea.subtotal_linea
                 dept_totals[dept_id]['monto_total'] += linea.total_linea
 
-                if linea.empleado_id:
-                    linea.empleado_id.write({
-                        'ultima_facturacion_monto': linea.total_linea,
-                        'ultima_facturacion_periodo': str(rec.periodo or '')
-                    })
+            # Sincronización automática de estado de Empleados (Activo vs Inactivo)
+            all_emps = self.env['flota.empleado'].with_context(active_test=False).search([])
+            for emp in all_emps:
+                if not emp.numero_flota:
+                    continue
+                emp_norm = _normalize_phone(emp.numero_flota)
+                if not emp_norm:
+                    continue
+
+                is_present = (
+                    emp.id in seen_emp_ids or
+                    emp_norm in seen_phones or
+                    (len(emp_norm) >= 10 and emp_norm[-10:] in seen_phones) or
+                    (len(emp_norm) >= 7 and emp_norm[-7:] in seen_phones)
+                )
+
+                if is_present:
+                    if emp.estado != 'active':
+                        emp.write({'estado': 'active'})
+                        emp.message_post(body=_("Estado del empleado actualizado a <b>Activo</b> al ser detectado en la conciliación de Claro (%s).") % rec.periodo)
+                else:
+                    if emp.estado != 'inactive':
+                        emp.write({'estado': 'inactive'})
+                        emp.message_post(body=_("Estado del empleado actualizado automáticamente a <b>Inactivo</b> por NO figurar en la factura de Claro (%s).") % rec.periodo)
 
             resumen_vals = []
             tot_gral = rec.total_mes if rec.total_mes else 1.0
@@ -233,11 +273,11 @@ class FlotaFacturaConciliacion(models.Model):
         seen_phones = set()
 
         for line_str in lines:
-            m_phone = re.search(r'(8[029]\d[\s-]?\d{3}[\s-]?\d{4})', line_str)
+            m_phone = re.search(r'(?:1[\s-]?)?\(?(8[0249]\d)\)?[\s-]?(\d{3})[\s-]?(\d{4})', line_str)
             if not m_phone:
                 continue
 
-            raw_phone = m_phone.group(1)
+            raw_phone = m_phone.group(0)
             clean_phone = _normalize_phone(raw_phone)
             if not (clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10):
                 continue
@@ -288,7 +328,7 @@ class FlotaFacturaConciliacion(models.Model):
             elif len(num_values) >= 1:
                 r_plan = num_values[0]
 
-            emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:])
+            emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
 
             lineas_vals.append({
                 'conciliacion_id': self.id,

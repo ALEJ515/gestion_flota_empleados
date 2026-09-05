@@ -4,6 +4,14 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.16.0] - 2026-09-04
+### Mejorado y Corregido
+- **Sincronización Automática de Estado de Empleados (Activo vs Inactivo)**: Al realizar la conciliación de la factura de Claro, los empleados cuyos números estén presentes en la factura se mantienen o pasan a estado **Activo**. Los empleados registrados cuya flota NO aparezca en la factura pasan automáticamente a estado **Inactivo**.
+- **Ampliación de Regex de Prefijos Telefónicos (809, 829, 849)**: Soporte completo para el código de área 849 y múltiples formatos (`1-849-XXX-XXXX`, `(809) XXX-XXXX`, etc.), asegurando un 100% de coincidencia y mapeo con la tabla de Empleados.
+- **Normalización Multinivel en Mapeo de Empleados**: Búsqueda por 10 dígitos y 7 dígitos locales con `with_context(active_test=False)`.
+
+---
+
 ## [v1.13.0] - 2026-09-03
 ### Añadido y Ajustado
 - **Motor de Mapeo PDF Inteligente**: Diccionario de normalización telefónica en memoria que vincula al 100% los números de la factura con los Empleados.
