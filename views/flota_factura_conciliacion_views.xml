@@ -136,8 +136,8 @@
                                     <field name="monto_uso_adicional" string="Uso local y Data Móvil" widget="monetary" sum="Total Uso local y Data Móvil" optional="show"/>
                                     <field name="monto_roaming" string="Llamadas larga distancia" widget="monetary" sum="Total Larga Distancia" optional="show"/>
                                     <field name="monto_financiamiento" string="Financiamiento" widget="monetary" sum="Total Financiamiento" optional="show"/>
-                                    <field name="monto_creditos" string="Otros cargos créditos o descuentos" widget="monetary" sum="Total Créditos / Ajustes" optional="show"/>
-                                    <field name="monto_impuestos_pdf" string="Imp" widget="monetary" sum="Total Imp" optional="show"/>
+                                    <field name="monto_creditos" string="Otros cargos, créditos o descuentos" widget="monetary" sum="Total Créditos / Ajustes" optional="show"/>
+                                    <field name="monto_impuestos_pdf" string="Impuestos" widget="monetary" sum="Total Impuestos" optional="show"/>
                                     
                                     <!-- Columnas adicionales opcionales -->
                                     <field name="cargo" optional="hide"/>
