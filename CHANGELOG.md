@@ -4,6 +4,18 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.17.0] - 2026-09-04
+### Añadido y Mejorado
+- **Limpieza de Duplicados en Base de Datos**: Desduplicación completa de empleados por nombre y número de flota.
+- **Validación de Unicidad de Nombre y Teléfono**: Restricción SQL/Python `@api.constrains('numero_flota', 'name')` para impedir registros duplicados de nombres o teléfonos.
+- **Creación Automática de Empleados para Nuevos Números**: Al conciliar un PDF con números no registrados, se crea automáticamente el perfil del empleado con nota indicando "Nuevo número registrado desde Factura Claro".
+- **Indicador sutil de Tendencia de Consumo (▲ / ▼ / =)**: Comparativa automática entre la última facturación y la anterior con insignias en color (Azul=Nuevo cargo, Amarillo=Aumentó ▲, Verde=Disminuyó ▼, Gris=Sin variación).
+- **Desglose Completo en Perfil del Empleado**: Pestaña "Historial de Consumo Telefónico" ampliada con todas las columnas configurables (Renta Plan, Otros Servicios, Uso Data/Voz, Roaming/LD, Financiamiento, Créditos, Subtotal, ITBIS 18%, CDT 2%, ISC 10%, Total Línea).
+- **Sumas Totales Generales en Listas**: Inclusión de totales en el pie de tabla (`sum="..."`) para todas las columnas de la Conciliación de Facturas Claro.
+- **Estado de Líneas con Monto $0 (`sin_consumo`)**: Distintivo visual especial (Celeste/Info) para números con RD$0 sin consumo, diferenciándolos del color rojo.
+
+---
+
 ## [v1.16.0] - 2026-09-04
 ### Mejorado y Corregido
 - **Sincronización Automática de Estado de Empleados (Activo vs Inactivo)**: Al realizar la conciliación de la factura de Claro, los empleados cuyos números estén presentes en la factura se mantienen o pasan a estado **Activo**. Los empleados registrados cuya flota NO aparezca en la factura pasan automáticamente a estado **Inactivo**.

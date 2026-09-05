@@ -329,11 +329,30 @@ class FlotaFacturaConciliacion(models.Model):
                 r_plan = num_values[0]
 
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
+            if not emp:
+                default_dept = self.env['flota.departamento'].search([], limit=1)
+                default_ubic = self.env['flota.ubicacion'].search([], limit=1)
+                emp_name = f"Empleado Flota {clean_phone}"
+                emp = self.env['flota.empleado'].create({
+                    'name': emp_name,
+                    'numero_flota': clean_phone,
+                    'cargo': 'Asignación Automática Claro',
+                    'departamento_id': default_dept.id if default_dept else False,
+                    'ubicacion_id': default_ubic.id if default_ubic else False,
+                    'estado': 'active',
+                    'notas': f'Nuevo número registrado desde Factura Claro ({self.periodo}).'
+                })
+                emp.message_post(body=_("Empleado registrado automáticamente al aparecer un nuevo número en la factura de Claro (%s): <b>%s</b>.") % (self.periodo, clean_phone))
+                emp_map[clean_phone] = emp
+                if len(clean_phone) >= 10:
+                    emp_map[clean_phone[-10:]] = emp
+                if len(clean_phone) >= 7:
+                    emp_map[clean_phone[-7:]] = emp
 
             lineas_vals.append({
                 'conciliacion_id': self.id,
                 'numero_flota': clean_phone,
-                'empleado_id': emp.id if emp else False,
+                'empleado_id': emp.id,
                 'monto_renta_plan': r_plan,
                 'monto_otros_servicios': r_otros,
                 'monto_uso_adicional': uso_add,
@@ -505,6 +524,7 @@ class FlotaFacturaLinea(models.Model):
 
     estado_linea = fields.Selection([
         ('ok', 'Normal'),
+        ('sin_consumo', 'Sin Consumo / RD$0'),
         ('exceso_data', 'Exceso Data'),
         ('exceso_roaming', 'Exceso Roaming'),
         ('desconocido', 'Número No Registrado')
@@ -531,11 +551,13 @@ class FlotaFacturaLinea(models.Model):
             rec.isc_linea = sub * 0.10
             rec.total_linea = sub + rec.itbis_linea + rec.cdt_linea + rec.isc_linea
 
-    @api.depends('empleado_id', 'monto_uso_adicional', 'monto_roaming')
+    @api.depends('empleado_id', 'total_linea', 'monto_uso_adicional', 'monto_roaming')
     def _compute_estado_linea(self):
         for rec in self:
             if not rec.empleado_id:
                 rec.estado_linea = 'desconocido'
+            elif rec.total_linea == 0:
+                rec.estado_linea = 'sin_consumo'
             elif rec.monto_roaming > 0:
                 rec.estado_linea = 'exceso_roaming'
             elif rec.monto_uso_adicional > 0:

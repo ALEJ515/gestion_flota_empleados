@@ -125,21 +125,21 @@
                                     <!-- 4. Departamento -->
                                     <field name="departamento_id" optional="show"/>
                                     <!-- 5. Total Línea -->
-                                    <field name="total_linea" widget="monetary" sum="Total Líneas" optional="show"/>
+                                    <field name="total_linea" widget="monetary" sum="Gran Total Líneas" optional="show"/>
                                     
-                                    <!-- Columnas adicionales configuradas para selector de filtros (optional=hide) -->
+                                    <!-- Columnas adicionales configuradas para selector de filtros (optional=hide) con sumas totales -->
                                     <field name="ubicacion_id" optional="hide"/>
-                                    <field name="monto_renta_plan" widget="monetary" sum="Total Renta" optional="hide"/>
-                                    <field name="monto_otros_servicios" widget="monetary" optional="hide"/>
-                                    <field name="monto_uso_adicional" widget="monetary" sum="Total Adicional" optional="hide"/>
-                                    <field name="monto_roaming" widget="monetary" sum="Total Roaming" optional="hide"/>
-                                    <field name="monto_financiamiento" widget="monetary" optional="hide"/>
-                                    <field name="monto_creditos" widget="monetary" optional="hide"/>
-                                    <field name="subtotal_linea" widget="monetary" sum="Subtotal" optional="hide"/>
-                                    <field name="itbis_linea" widget="monetary" optional="hide" string="ITBIS (18%)"/>
-                                    <field name="cdt_linea" widget="monetary" optional="hide" string="CDT (2%)"/>
-                                    <field name="isc_linea" widget="monetary" optional="hide" string="ISC (10%)"/>
-                                    <field name="estado_linea" widget="badge" optional="hide" decoration-success="estado_linea=='ok'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                    <field name="monto_renta_plan" widget="monetary" sum="Total Renta Plan" optional="hide"/>
+                                    <field name="monto_otros_servicios" widget="monetary" sum="Total Otros Servicios" optional="hide"/>
+                                    <field name="monto_uso_adicional" widget="monetary" sum="Total Uso Adicional" optional="hide"/>
+                                    <field name="monto_roaming" widget="monetary" sum="Total Roaming / LD" optional="hide"/>
+                                    <field name="monto_financiamiento" widget="monetary" sum="Total Financiamiento" optional="hide"/>
+                                    <field name="monto_creditos" widget="monetary" sum="Total Créditos / Ajustes" optional="hide"/>
+                                    <field name="subtotal_linea" widget="monetary" sum="Subtotal General Líneas" optional="hide"/>
+                                    <field name="itbis_linea" widget="monetary" sum="Total ITBIS (18%)" optional="hide" string="ITBIS (18%)"/>
+                                    <field name="cdt_linea" widget="monetary" sum="Total CDT (2%)" optional="hide" string="CDT (2%)"/>
+                                    <field name="isc_linea" widget="monetary" sum="Total ISC (10%)" optional="hide" string="ISC (10%)"/>
+                                    <field name="estado_linea" widget="badge" optional="hide" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
                             </field>
                         </page>
