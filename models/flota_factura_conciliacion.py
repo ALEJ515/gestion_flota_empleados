@@ -41,7 +41,8 @@ class FlotaFacturaConciliacion(models.Model):
     name = fields.Char(string='Referencia / Folio', required=True, copy=False, default=lambda self: _('Nuevo'), index=True, tracking=True)
     proveedor = fields.Char(string='Proveedor', default='Claro Dominicana', required=True, tracking=True)
     periodo = fields.Char(string='Periodo / Mes (AAAA-MM)', required=True, default=lambda self: fields.Date.today().strftime('%Y-%m'), index=True, tracking=True)
-    fecha_factura = fields.Date(string='Fecha', default=fields.Date.context_today, required=True, tracking=True)
+    fecha_factura = fields.Date(string='Fecha de Factura', default=fields.Date.context_today, required=True, tracking=True)
+    fecha_subida = fields.Datetime(string='Fecha de Subida', default=fields.Datetime.now, readonly=True)
     
     archivo_pdf = fields.Binary(string='Adjuntar PDF Factura Claro', attachment=True)
     pdf_filename = fields.Char(string='Nombre del Archivo PDF')
@@ -164,23 +165,23 @@ class FlotaFacturaConciliacion(models.Model):
                 ) % (f"{diff:,.2f}", f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}")
 
     def action_aplicar_linea_ajuste_corporativo(self):
-        """ Agrega una línea de Ajuste Corporativo a Nivel de Cuenta para cuadre exacto al 100% """
+        """ Aplica la diferencia de Ajuste Corporativo Nivel Cuenta en Rubros Generales de Factura Claro sin alterar la lista de empleados """
         for rec in self:
-            if abs(rec.diferencia_conciliacion) < 0.01:
+            # Elimina cualquier línea fantasma CUENTA-GLOBAL previa si existiera
+            dummy_lines = rec.linea_ids.filtered(lambda l: l.numero_flota == 'CUENTA-GLOBAL')
+            if dummy_lines:
+                dummy_lines.unlink()
+
+            diff = rec.diferencia_conciliacion
+            if abs(diff) < 0.01:
                 raise UserError(_("La factura ya está totalmente cuadrada con las líneas de empleados."))
             
-            linea_ajuste = rec.linea_ids.filtered(lambda l: l.numero_flota == 'CUENTA-GLOBAL')
-            base_credito = rec.diferencia_conciliacion / 1.30
-            if linea_ajuste:
-                linea_ajuste.write({'monto_creditos': base_credito})
-            else:
-                self.env['flota.factura.linea'].create({
-                    'conciliacion_id': rec.id,
-                    'numero_flota': 'CUENTA-GLOBAL',
-                    'monto_creditos': base_credito
-                })
+            # Ajustar otros_cargos_creditos (Rubros Generales) descontando la base antes de impuestos (30%: ITBIS 18% + CDT 2% + ISC 10%)
+            base_ajuste = diff / 1.30
+            rec.otros_cargos_creditos -= base_ajuste
+            rec._compute_totales_factura()
             rec._compute_kpis()
-            rec.message_post(body=_("Se aplicó la línea de <b>Ajuste Corporativo Nivel Cuenta</b> por RD$%s para cuadre exacto de la factura.") % f"{rec.diferencia_conciliacion:,.2f}")
+            rec.message_post(body=_("Se aplicó el <b>Ajuste Corporativo Nivel Cuenta</b> de RD$%s directamente en Rubros Generales de Factura Claro.") % f"{diff:,.2f}")
 
     def action_generar_resumen_departamentos(self):
         """ Agrupa y consolida el gasto por Departamento, impacta historial y sincroniza estado (Activo/Inactivo) de Empleados """
@@ -282,30 +283,34 @@ class FlotaFacturaConciliacion(models.Model):
 
     def _extract_pdf_text_native(self, pdf_bytes):
         text = ""
+        # 1. Intentar primero con pypdf/PyPDF2 (Rápido, ultra liviano en RAM)
+        try:
+            import io
+            try:
+                from pypdf import PdfReader
+                reader = PdfReader(io.BytesIO(pdf_bytes))
+                for page in reader.pages:
+                    text += (page.extract_text() or "") + "\n"
+            except Exception:
+                from PyPDF2 import PdfFileReader
+                reader = PdfFileReader(io.BytesIO(pdf_bytes))
+                for i in range(reader.getNumPages()):
+                    text += (reader.getPage(i).extractText() or "") + "\n"
+        except Exception as e:
+            _logger.warning("Error extrayendo con PyPDF/PyPDF2: %s", str(e))
+
+        if text and len(text.strip()) >= 100:
+            return text
+
+        # 2. Fallback a pdfplumber si pypdf no extrajo texto completo
         try:
             import io
             import pdfplumber
             with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
                 for page in pdf.pages:
                     text += (page.extract_text() or "") + "\n"
-        except Exception as e:
-            _logger.warning("Error extrayendo con pdfplumber: %s", str(e))
-
-        if not text or len(text.strip()) < 50:
-            try:
-                import io
-                try:
-                    from pypdf import PdfReader
-                    reader = PdfReader(io.BytesIO(pdf_bytes))
-                    for page in reader.pages:
-                        text += (page.extract_text() or "") + "\n"
-                except Exception:
-                    from PyPDF2 import PdfFileReader
-                    reader = PdfFileReader(io.BytesIO(pdf_bytes))
-                    for i in range(reader.getNumPages()):
-                        text += (reader.getPage(i).extractText() or "") + "\n"
-            except Exception as e2:
-                _logger.error("Error extrayendo con PyPDF/PyPDF2: %s", str(e2))
+        except Exception as e2:
+            _logger.warning("Error extrayendo con pdfplumber: %s", str(e2))
                 
         return text
 
@@ -320,6 +325,18 @@ class FlotaFacturaConciliacion(models.Model):
 
         if not pdf_text or len(pdf_text.strip()) < 20:
             raise UserError(_('No se pudo extraer texto del archivo PDF adjunto.'))
+
+        # Extracción de Fecha de Factura desde el PDF si está presente (Ej. Fecha de Emisión: 13/08/2026)
+        import datetime
+        m_fecha = re.search(r'Fecha\s*(?:de\s*factura|facturaci[oó]n|emisi[oó]n)?:?\s*([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{2,4})', pdf_text, re.IGNORECASE)
+        if m_fecha:
+            d, m, y = int(m_fecha.group(1)), int(m_fecha.group(2)), int(m_fecha.group(3))
+            if y < 100:
+                y += 2000
+            try:
+                self.fecha_factura = datetime.date(y, m, d)
+            except Exception:
+                pass
 
         renta_m = 0.0
         renta_o = 0.0
@@ -581,7 +598,8 @@ class FlotaFacturaLinea(models.Model):
 
     conciliacion_id = fields.Many2one('flota.factura.conciliacion', string='Factura Conciliación', ondelete='cascade', index=True)
     periodo = fields.Char(string='Periodo', related='conciliacion_id.periodo', store=True, readonly=True)
-    fecha_factura = fields.Date(string='Fecha', related='conciliacion_id.fecha_factura', store=True, readonly=True)
+    fecha_factura = fields.Date(string='Fecha de Factura', related='conciliacion_id.fecha_factura', store=True, readonly=True)
+    fecha_subida = fields.Datetime(string='Fecha de Subida', related='conciliacion_id.fecha_subida', store=True, readonly=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True)
     
     empleado_id = fields.Many2one('flota.empleado', string='Empleado', ondelete='set null', index=True)

@@ -17,7 +17,8 @@
                 <field name="name"/>
                 <field name="periodo"/>
                 <field name="proveedor" string="Proveedor"/>
-                <field name="fecha_factura" string="Fecha"/>
+                <field name="fecha_factura" string="Fecha de Factura" optional="show"/>
+                <field name="fecha_subida" string="Fecha de Subida" optional="show"/>
                 <field name="count_lineas"/>
                 <field name="count_excesos" widget="badge" decoration-warning="count_excesos &gt; 0"/>
                 <field name="subtotal" widget="monetary" sum="Subtotal Total"/>
@@ -86,17 +87,18 @@
                     <group>
                         <group string="Información General Factura">
                             <field name="proveedor" string="Proveedor"/>
-                            <field name="fecha_factura" string="Fecha"/>
+                            <field name="fecha_factura" string="Fecha de Factura"/>
+                            <field name="fecha_subida" string="Fecha de Subida"/>
                             <field name="archivo_pdf" filename="pdf_filename" widget="binary"/>
                             <field name="pdf_filename" invisible="1"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                         <group string="Rubros Generales de Factura Claro">
-                            <field name="renta_mensual" widget="monetary"/>
-                            <field name="renta_otros_servicios" widget="monetary"/>
-                            <field name="uso_data_movil" widget="monetary"/>
-                            <field name="llamadas_roaming" widget="monetary"/>
-                            <field name="otros_cargos_creditos" widget="monetary"/>
+                            <field name="renta_mensual" widget="monetary" string="Renta Mensual Planes"/>
+                            <field name="renta_otros_servicios" widget="monetary" string="Renta Otros Servicios"/>
+                            <field name="uso_data_movil" widget="monetary" string="Uso Data Móvil"/>
+                            <field name="llamadas_roaming" widget="monetary" string="Llamadas Roaming / LD"/>
+                            <field name="otros_cargos_creditos" widget="monetary" string="Ajustes / Créditos Globales Nivel Cuenta"/>
                         </group>
                     </group>
 
@@ -132,6 +134,8 @@
                                     <field name="total_linea" widget="monetary" sum="Gran Total Líneas" optional="show"/>
                                     
                                     <!-- Columnas adicionales configuradas para selector de filtros (optional=hide) con sumas totales -->
+                                    <field name="fecha_factura" optional="hide"/>
+                                    <field name="fecha_subida" optional="hide"/>
                                     <field name="ubicacion_id" optional="hide"/>
                                     <field name="monto_renta_plan" widget="monetary" sum="Total Renta Plan" optional="hide"/>
                                     <field name="monto_otros_servicios" widget="monetary" sum="Total Otros Servicios" optional="hide"/>

@@ -28,7 +28,8 @@
                                 <strong>Proveedor:</strong> <span t-field="doc.proveedor"/>
                             </div>
                             <div class="col-6 text-end">
-                                <strong>Fecha:</strong> <span t-field="doc.fecha_factura"/><br/>
+                                <strong>Fecha de Factura:</strong> <span t-field="doc.fecha_factura"/><br/>
+                                <strong>Fecha de Subida:</strong> <span t-field="doc.fecha_subida"/><br/>
                                 <strong>Estado:</strong> <span t-field="doc.estado"/><br/>
                                 <strong>Total Empleados Auditados:</strong> <span t-field="doc.count_lineas"/>
                             </div>

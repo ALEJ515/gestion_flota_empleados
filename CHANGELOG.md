@@ -4,6 +4,21 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [v1.20.0] - 2026-09-05
+### Añadido y Mejorado
+- **Optimización de Extracción PDF (PyPDF Prioritario)**: Extracción veloz de facturas PDF Claro en <1s evitando agotamiento de memoria del servidor (`UncaughtPromiseError`).
+- **Fecha de Factura y Fecha de Subida**: Separación clara entre `fecha_factura` (Fecha emitida por Claro) y `fecha_subida` (Fecha/Hora de registro en el sistema). Extracción automática de fecha desde el PDF.
+- **Ajuste Nivel Cuenta Directo en Rubros Generales**: Eliminación de líneas artificiales (`CUENTA-GLOBAL`) en la lista de empleados. El ajuste corporativo a nivel de contrato se aplica directamente en `otros_cargos_creditos` dentro de *Rubros Generales de Factura Claro*.
+- **Selector de Columnas Opcionales (`optional="show" / optional="hide"`)**: Activación del menú de selección nativo de Odoo (3 puntos) en las tablas de conciliación de líneas para agregar o quitar cualquier columna disponible.
+
+---
+
+## [v1.19.0] - 2026-09-05
+### Correcciones
+- Normalización estricta de unicidad de flota y manifest bump.
+
+---
+
 ## [v1.18.0] - 2026-09-04
 ### Añadido y Mejorado
 - **Conciliación Financiera Nivel Cuenta vs. Líneas**: Campos `total_lineas_sum`, `diferencia_conciliacion` y `estado_cuadre` para diferenciar consumos de empleados vs. créditos/ajustes corporativos globales aplicados a nivel de contrato Claro.
