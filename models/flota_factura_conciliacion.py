@@ -422,55 +422,50 @@ class FlotaFacturaConciliacion(models.Model):
             roam = 0.0
             finan = 0.0
             cred = 0.0
+            imp_pdf = 0.0
 
-            # Extraer componentes reales deduciendo si el último valor es el Total de Línea
-            components = num_values
-            if len(num_values) >= 2:
-                last_val = num_values[-1]
-                rest_sum = sum(num_values[:-1])
-                # Si el último valor es el total de la línea (igual a la suma o suma + 30% impuestos)
-                if abs(last_val - rest_sum) < 0.05 or abs(last_val - rest_sum * 1.30) < 1.0 or abs(last_val - rest_sum * 1.28) < 2.0:
-                    components = num_values[:-1]
-
-            if len(components) == 1:
-                r_plan = components[0]
-            elif len(components) == 2:
-                r_plan = components[0]
-                if components[1] < 0:
-                    cred = components[1]
-                else:
-                    r_otros = components[1]
-            elif len(components) == 3:
-                r_plan = components[0]
-                r_otros = components[1]
-                if components[2] < 0:
-                    cred = components[2]
-                else:
-                    uso_add = components[2]
-            elif len(components) == 4:
-                r_plan = components[0]
-                r_otros = components[1]
-                uso_add = components[2]
-                if components[3] < 0:
-                    cred = components[3]
-                else:
-                    roam = components[3]
-            elif len(components) == 5:
-                r_plan = components[0]
-                r_otros = components[1]
-                uso_add = components[2]
-                roam = components[3]
-                if components[4] < 0:
-                    cred = components[4]
-                else:
-                    finan = components[4]
-            elif len(components) >= 6:
-                r_plan = components[0]
-                r_otros = components[1]
-                uso_add = components[2]
-                roam = components[3]
-                finan = components[4]
-                cred = components[5]
+            # Estructura exacta de la tabla de 7 columnas numéricas de Claro Dominicana:
+            # 1: Otros Servicios y Data Móvil (Renta Plan / Servicios)
+            # 2: Uso local y Data Móvil (Exceso Data)
+            # 3: Roaming / LDI / Otras llamadas
+            # 4: Financiamiento equipos
+            # 5: Otros cargos, créditos o descuentos (positivo o negativo con CR/-)
+            # 6: Impuestos
+            # 7: Total (RD$)
+            if len(num_values) == 7:
+                r_plan = num_values[0]
+                uso_add = num_values[1]
+                roam = num_values[2]
+                finan = num_values[3]
+                cred = num_values[4]
+                imp_pdf = num_values[5]
+            elif len(num_values) == 6:
+                # 6 valores: Renta, UsoAdd, Roaming, Finan, Cred, Total
+                r_plan = num_values[0]
+                uso_add = num_values[1]
+                roam = num_values[2]
+                finan = num_values[3]
+                cred = num_values[4]
+            elif len(num_values) == 5:
+                # 5 valores: Renta, UsoAdd, Roaming, Cred, Total
+                r_plan = num_values[0]
+                uso_add = num_values[1]
+                roam = num_values[2]
+                cred = num_values[3]
+            elif len(num_values) == 4:
+                # 4 valores: Renta, UsoAdd, Cred, Total
+                r_plan = num_values[0]
+                uso_add = num_values[1]
+                cred = num_values[2]
+            elif len(num_values) == 3:
+                # 3 valores: Renta, Cred, Total
+                r_plan = num_values[0]
+                cred = num_values[1]
+            elif len(num_values) == 2:
+                # 2 valores: Renta, Total
+                r_plan = num_values[0]
+            elif len(num_values) == 1:
+                r_plan = num_values[0]
 
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
@@ -503,6 +498,7 @@ class FlotaFacturaConciliacion(models.Model):
                 'monto_roaming': roam,
                 'monto_financiamiento': finan,
                 'monto_creditos': cred,
+                'monto_impuestos_pdf': imp_pdf,
             })
 
         self.write({
@@ -658,6 +654,7 @@ class FlotaFacturaLinea(models.Model):
     monto_roaming = fields.Monetary(string='Roaming / LD', currency_field='currency_id', default=0.0)
     monto_financiamiento = fields.Monetary(string='Financiamiento Equipo', currency_field='currency_id', default=0.0)
     monto_creditos = fields.Monetary(string='Créditos / Ajustes', currency_field='currency_id', default=0.0)
+    monto_impuestos_pdf = fields.Monetary(string='Impuestos PDF', currency_field='currency_id', default=0.0)
 
     subtotal_linea = fields.Monetary(string='Subtotal Línea', compute='_compute_linea_totals', store=True, currency_field='currency_id')
     itbis_linea = fields.Monetary(string='ITBIS (18%)', compute='_compute_linea_totals', store=True, currency_field='currency_id')
@@ -686,15 +683,17 @@ class FlotaFacturaLinea(models.Model):
                     vals['empleado_id'] = emp.id
         return super(FlotaFacturaLinea, self).create(vals_list)
 
-    @api.depends('monto_renta_plan', 'monto_otros_servicios', 'monto_uso_adicional', 'monto_roaming', 'monto_financiamiento', 'monto_creditos')
+    @api.depends('monto_renta_plan', 'monto_otros_servicios', 'monto_uso_adicional', 'monto_roaming', 'monto_financiamiento', 'monto_creditos', 'monto_impuestos_pdf')
     def _compute_linea_totals(self):
         for rec in self:
             sub = rec.monto_renta_plan + rec.monto_otros_servicios + rec.monto_uso_adicional + rec.monto_roaming + rec.monto_financiamiento + rec.monto_creditos
             rec.subtotal_linea = sub
-            rec.itbis_linea = sub * 0.18
-            rec.cdt_linea = sub * 0.02
-            rec.isc_linea = sub * 0.10
-            rec.total_linea = sub + rec.itbis_linea + rec.cdt_linea + rec.isc_linea
+            
+            imp = rec.monto_impuestos_pdf if rec.monto_impuestos_pdf > 0 else (sub * 0.30)
+            rec.itbis_linea = imp * 0.60
+            rec.cdt_linea = imp * (1.0 / 15.0)
+            rec.isc_linea = imp * (1.0 / 3.0)
+            rec.total_linea = sub + imp
 
     @api.depends('empleado_id', 'total_linea', 'monto_uso_adicional', 'monto_roaming')
     def _compute_estado_linea(self):
