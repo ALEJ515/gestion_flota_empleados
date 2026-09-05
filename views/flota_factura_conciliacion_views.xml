@@ -131,8 +131,8 @@
                                     <field name="numero_flota" string="Número Flota"/>
                                     
                                     <!-- Columnas Intermedias con Selector Dinámico -->
-                                    <field name="monto_renta_plan" string="Otros Servicio DM" widget="monetary" sum="Total Otros Servicio DM" optional="show"/>
-                                    <field name="monto_uso_adicional" string="Uso local DM" widget="monetary" sum="Total Uso local DM" optional="show"/>
+                                    <field name="monto_renta_plan" string="Otros Servicios y Data Móvil" widget="monetary" sum="Total Otros Servicios y Data Móvil" optional="show"/>
+                                    <field name="monto_uso_adicional" string="Uso local y Data Móvil" widget="monetary" sum="Total Uso local y Data Móvil" optional="show"/>
                                     <field name="monto_roaming" string="Llamadas larga distancia" widget="monetary" sum="Total Larga Distancia" optional="show"/>
                                     <field name="monto_financiamiento" string="Financiamiento" widget="monetary" sum="Total Financiamiento" optional="show"/>
                                     <field name="monto_creditos" string="Otros cargos créditos o descuentos" widget="monetary" sum="Total Créditos / Ajustes" optional="show"/>
@@ -144,10 +144,6 @@
                                     <field name="fecha_factura" optional="hide"/>
                                     <field name="fecha_subida" optional="hide"/>
                                     <field name="ubicacion_id" optional="hide"/>
-                                    <field name="subtotal_linea" widget="monetary" sum="Subtotal General Líneas" optional="hide"/>
-                                    <field name="itbis_linea" widget="monetary" sum="Total ITBIS (18%)" optional="hide" string="ITBIS (18%)"/>
-                                    <field name="cdt_linea" widget="monetary" sum="Total CDT (2%)" optional="hide" string="CDT (2%)"/>
-                                    <field name="isc_linea" widget="monetary" sum="Total ISC (10%)" optional="hide" string="ISC (10%)"/>
 
                                     <!-- 8. Total (RD$) (Fijo antes del estado) -->
                                     <field name="total_linea" string="Total (RD$)" widget="monetary" sum="Total General Líneas"/>

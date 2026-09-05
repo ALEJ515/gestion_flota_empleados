@@ -430,7 +430,9 @@ class FlotaFacturaConciliacion(models.Model):
                 continue
             seen_phones.add(clean_phone)
 
-            tokens = line_str.split()
+            # Extracción estricta de valores numéricos posteriores al teléfono para evitar desplazamientos por índices pre-teléfono
+            post_phone_str = line_str[m_phone.end():]
+            tokens = post_phone_str.split()
             num_values = []
             for tok in tokens:
                 m_val = re.match(r'^(-?[0-9,]+\.[0-9]{2}(?:CR)?)$', tok, re.IGNORECASE)

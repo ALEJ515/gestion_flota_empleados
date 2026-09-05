@@ -88,10 +88,6 @@
                                     <field name="monto_roaming" widget="monetary" string="Roaming / LD" sum="Total Roaming" optional="hide"/>
                                     <field name="monto_financiamiento" widget="monetary" string="Financiamiento Equipo" sum="Total Financiamiento" optional="hide"/>
                                     <field name="monto_creditos" widget="monetary" string="Créditos / Ajustes" sum="Total Créditos" optional="hide"/>
-                                    <field name="subtotal_linea" widget="monetary" string="Subtotal Línea" sum="Subtotal Total" optional="hide"/>
-                                    <field name="itbis_linea" widget="monetary" string="ITBIS (18%)" sum="Total ITBIS" optional="hide"/>
-                                    <field name="cdt_linea" widget="monetary" string="CDT (2%)" sum="Total CDT" optional="hide"/>
-                                    <field name="isc_linea" widget="monetary" string="ISC (10%)" sum="Total ISC" optional="hide"/>
                                     <field name="total_linea" widget="monetary" string="Total Línea (RD$)" sum="Gran Total Histórico" optional="show"/>
                                     <field name="estado_linea" widget="badge" optional="show" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
