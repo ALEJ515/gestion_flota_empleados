@@ -465,6 +465,7 @@ class FlotaFacturaConciliacion(models.Model):
                 r_otros = num_values[0]
                 uso_add = num_values[1]
                 r_plan = num_values[2]
+                roam = 0.0
                 finan = num_values[3]
                 cred = num_values[4]
                 imp_pdf = num_values[5]
