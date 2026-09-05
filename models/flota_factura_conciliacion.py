@@ -9,6 +9,7 @@ from odoo.exceptions import UserError, ValidationError
 from .flota_factura_claro_parser import (
     CLARO_COLUMN_NAMES,
     build_empleado_phone_map,
+    extract_claro_phone_row,
     fix_claro_pdf_line,
     map_claro_columns,
     normalize_phone,
@@ -403,34 +404,30 @@ class FlotaFacturaConciliacion(models.Model):
 
         emp_map = _build_empleado_phone_map(self.env)
         lineas_vals = []
-        lines = pdf_text.split('\n')
         seen_phones = set()
 
-        for line_raw in lines:
-            line_str = _fix_claro_pdf_line(line_raw)
-            m_phone = re.search(r'(?:1[\s-]?)?\(?(8[0249]\d)\)?[\s-]?(\d{3})[\s-]?(\d{4})', line_str)
-            if not m_phone:
+        for line_raw in pdf_text.split('\n'):
+            row = extract_claro_phone_row(line_raw)
+            if not row:
                 continue
 
-            raw_phone = m_phone.group(0)
-            clean_phone = _normalize_phone(raw_phone)
-            if not (clean_phone.startswith(('809', '829', '849')) and len(clean_phone) == 10):
-                continue
+            clean_phone = row['phone']
             if clean_phone in ('8092201212', '8092201111'):
                 continue
             if clean_phone in seen_phones:
                 continue
             seen_phones.add(clean_phone)
 
-            line_no_phone = line_str[:m_phone.start()] + ' ' + line_str[m_phone.end():]
-            tokens = line_no_phone.split()
-            num_values = []
-            for tok in tokens:
-                value = parse_money_token(tok)
-                if value:
-                    num_values.append(value)
+            values = row['values']
+            if len(values) < 4:
+                continue
 
-            mapped_values = map_claro_columns(num_values)
+            if len(values) >= 7:
+                ordered_values = values[:7]
+            else:
+                ordered_values = values[:4]
+
+            mapped_values = map_claro_columns(ordered_values)
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
                 default_dept = self.env['flota.departamento'].search([], limit=1)

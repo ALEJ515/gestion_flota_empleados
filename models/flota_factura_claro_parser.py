@@ -11,6 +11,8 @@ CLARO_COLUMN_NAMES = [
     'Total (RD$)',
 ]
 
+PHONE_RE = re.compile(r'(?:1[\s-]?)?(?:\()?((?:8[0249]\d))(?:\))?[\s-]?(\d{3})[\s-]?(\d{4})')
+
 
 def normalize_phone(phone_str):
     if not phone_str:
@@ -60,6 +62,42 @@ def parse_money_token(token):
     return value
 
 
+def extract_claro_money_values(text):
+    if not text:
+        return []
+    raw_tokens = re.findall(r'-?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{2})?(?:CR)?', str(text), flags=re.IGNORECASE)
+    values = []
+    for token in raw_tokens:
+        value = parse_money_token(token)
+        if value:
+            values.append(value)
+    return values
+
+
+def extract_claro_phone_row(line_text):
+    if not line_text:
+        return None
+    line = fix_claro_pdf_line(line_text)
+    m_phone = PHONE_RE.search(line)
+    if not m_phone:
+        return None
+    phone = normalize_phone(m_phone.group(0))
+    if not (phone.startswith(('809', '829', '849')) and len(phone) == 10):
+        return None
+
+    row_values = extract_claro_money_values(line[m_phone.end():])
+    if len(row_values) < 4:
+        row_values = extract_claro_money_values(line)
+
+    if len(row_values) < 4:
+        return None
+
+    return {
+        'phone': phone,
+        'values': row_values,
+    }
+
+
 def normalize_claro_numeric_values(num_values):
     values = list(num_values)
     if len(values) < 7:
@@ -67,11 +105,8 @@ def normalize_claro_numeric_values(num_values):
 
     v0, v1, v2, v3, v4, v5, v6 = values[:7]
 
-    # Evitamos reordenar por defecto. El PDF real de Claro tiene este orden:
-    # [Otros servicios, Uso local, Llamadas/roaming, Financiamiento, Otros cargos, Impuestos, Total]
-    # Solo debemos hacer swap cuando la variante del PDF está claramente invertida,
-    # es decir, la columna de uso local queda a la izquierda con un valor real y la
-    # columna de otros servicios queda a la derecha en cero.
+    # El PDF realmente de Claro sigue este orden: [Otros servicios, Uso local, Llamadas/roaming, Financiamiento, Otros cargos, Impuestos, Total]
+    # Solo se hace swap cuando la variante está claramente invertida: la primera posición aparece en cero y la segunda contiene el uso local real.
     if (
         abs(v0) < 0.01 and abs(v1) > 0.01 and
         abs(v2) < 0.01 and abs(v3) < 0.01 and
@@ -79,7 +114,6 @@ def normalize_claro_numeric_values(num_values):
     ):
         return [v1, v0] + values[2:]
 
-    # Si el PDF viene con el orden correcto, no alteramos el orden original.
     return values
 
 
