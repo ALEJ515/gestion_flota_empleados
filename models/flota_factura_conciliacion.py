@@ -34,7 +34,9 @@ def _build_empleado_phone_map(env):
 def _fix_claro_pdf_line(line_str):
     if not line_str:
         return ''
-    return re.sub(r'(\.\d{2}(?:CR)?)(?=[-\d])', r'\1 ', line_str, flags=re.IGNORECASE)
+    fixed = re.sub(r'(\.\d{2}(?:CR)?)(8[0249]\d)', r'\1 \2', line_str, flags=re.IGNORECASE)
+    fixed = re.sub(r'(\.\d{2}(?:CR)?)(?=[-\d])', r'\1 ', fixed, flags=re.IGNORECASE)
+    return fixed
 
 
 class FlotaFacturaConciliacion(models.Model):
@@ -430,9 +432,8 @@ class FlotaFacturaConciliacion(models.Model):
                 continue
             seen_phones.add(clean_phone)
 
-            # Extracción estricta de valores numéricos posteriores al teléfono para evitar desplazamientos por índices pre-teléfono
-            post_phone_str = line_str[m_phone.end():]
-            tokens = post_phone_str.split()
+            line_no_phone = line_str[:m_phone.start()] + ' ' + line_str[m_phone.end():]
+            tokens = line_no_phone.split()
             num_values = []
             for tok in tokens:
                 m_val = re.match(r'^(-?[0-9,]+\.[0-9]{2}(?:CR)?)$', tok, re.IGNORECASE)
@@ -452,45 +453,40 @@ class FlotaFacturaConciliacion(models.Model):
             cred = 0.0
             imp_pdf = 0.0
 
-            # Estructura exacta de la tabla de 7 columnas numéricas de Claro Dominicana:
-            # 1: Otros Servicios y Data Móvil (Renta Plan / Servicios)
-            # 2: Uso local y Data Móvil (Exceso Data)
-            # 3: Roaming / LDI / Otras llamadas
-            # 4: Financiamiento equipos
-            # 5: Otros cargos, créditos o descuentos (positivo o negativo con CR/-)
-            # 6: Impuestos
-            # 7: Total (RD$)
+            # Estructura exacta de la tabla de 7 columnas numéricas de Factura Claro Dominicana:
+            # Col 1: Otros Servicios y Data Móvil (Servicios fijos / Paquetes adicionales)
+            # Col 2: Uso local y Data Móvil (Exceso Data / Voz local)
+            # Col 3: Renta Plan / Llamadas larga distancia / Roaming
+            # Col 4: Financiamiento equipos
+            # Col 5: Otros cargos, créditos o descuentos (positivo o negativo con CR/-)
+            # Col 6: Impuestos
+            # Col 7: Total (RD$)
             if len(num_values) == 7:
-                r_plan = num_values[0]
+                r_otros = num_values[0]
                 uso_add = num_values[1]
-                roam = num_values[2]
+                r_plan = num_values[2]
                 finan = num_values[3]
                 cred = num_values[4]
                 imp_pdf = num_values[5]
             elif len(num_values) == 6:
-                # 6 valores: Renta, UsoAdd, Roaming, Finan, Cred, Total
-                r_plan = num_values[0]
+                r_otros = num_values[0]
                 uso_add = num_values[1]
-                roam = num_values[2]
+                r_plan = num_values[2]
                 finan = num_values[3]
                 cred = num_values[4]
             elif len(num_values) == 5:
-                # 5 valores: Renta, UsoAdd, Roaming, Cred, Total
-                r_plan = num_values[0]
+                r_otros = num_values[0]
                 uso_add = num_values[1]
-                roam = num_values[2]
+                r_plan = num_values[2]
                 cred = num_values[3]
             elif len(num_values) == 4:
-                # 4 valores: Renta, UsoAdd, Cred, Total
-                r_plan = num_values[0]
+                r_otros = num_values[0]
                 uso_add = num_values[1]
                 cred = num_values[2]
             elif len(num_values) == 3:
-                # 3 valores: Renta, Cred, Total
-                r_plan = num_values[0]
+                r_otros = num_values[0]
                 cred = num_values[1]
             elif len(num_values) == 2:
-                # 2 valores: Renta, Total
                 r_plan = num_values[0]
             elif len(num_values) == 1:
                 r_plan = num_values[0]
