@@ -14,19 +14,20 @@
         <field name="model">flota.factura.conciliacion</field>
         <field name="arch" type="xml">
             <list string="Conciliaciones de Factura Claro" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'">
-                <field name="name"/>
-                <field name="periodo"/>
-                <field name="proveedor" string="Proveedor"/>
+                <field name="name" optional="show"/>
+                <field name="periodo" optional="show"/>
+                <field name="proveedor" string="Proveedor" optional="show"/>
                 <field name="fecha_factura" string="Fecha de Factura" optional="show"/>
                 <field name="fecha_subida" string="Fecha de Subida" optional="show"/>
-                <field name="count_lineas"/>
-                <field name="count_excesos" widget="badge" decoration-warning="count_excesos &gt; 0"/>
-                <field name="subtotal" widget="monetary" sum="Subtotal Total"/>
-                <field name="itbis_monto" widget="monetary" sum="ITBIS Total"/>
-                <field name="cdt_monto" widget="monetary" sum="CDT Total"/>
-                <field name="isc_monto" widget="monetary" sum="ISC Total"/>
-                <field name="total_mes" widget="monetary" sum="Gran Total"/>
-                <field name="estado" widget="badge" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'"/>
+                <field name="count_lineas" optional="show"/>
+                <field name="count_excesos" widget="badge" decoration-warning="count_excesos &gt; 0" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="subtotal" widget="monetary" sum="Subtotal Total" optional="show"/>
+                <field name="itbis_monto" widget="monetary" sum="ITBIS Total" optional="show"/>
+                <field name="cdt_monto" widget="monetary" sum="CDT Total" optional="show"/>
+                <field name="isc_monto" widget="monetary" sum="ISC Total" optional="show"/>
+                <field name="total_mes" widget="monetary" sum="Gran Total" optional="show"/>
+                <field name="estado" widget="badge" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'" optional="show"/>
             </list>
         </field>
     </record>
@@ -125,9 +126,10 @@
                         <page string="Desglose por empleado" name="lineas">
                             <field name="linea_ids" readonly="estado != 'draft'">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
-                                    <field name="empleado_id" string="Nombre Empleado" readonly="conciliacion_id.estado != 'draft'"/>
-                                    <field name="numero_flota" string="Número Flota" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="empleado_id" string="Nombre Empleado" optional="show" readonly="conciliacion_id.estado != 'draft'" options="{'no_create': True}"/>
+                                    <field name="numero_flota" string="Número Flota" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="estado_linea" string="Estado Línea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'" optional="show" readonly="1"/>
+                                    <field name="currency_id" column_invisible="1"/>
 
                                     <field name="monto_otros_servicios" string="Otros servicios y datos" widget="monetary" sum="Total otros servicios y datos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_uso_adicional" string="Uso local y datos" widget="monetary" sum="Total uso local y datos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
@@ -140,11 +142,6 @@
                                     <field name="monto_roaming" string="Roaming separado" optional="hide" readonly="1"/>
                                     <field name="diferencia_pdf" string="Diferencia" widget="monetary" sum="Diferencia" optional="hide" readonly="1"/>
                                     <field name="total_linea" string="Total calculado" widget="monetary" sum="Total calculado" optional="hide" readonly="1"/>
-                                    <field name="cargo" optional="hide"/>
-                                    <field name="departamento_id" optional="hide"/>
-                                    <field name="fecha_factura" optional="hide"/>
-                                    <field name="fecha_subida" optional="hide"/>
-                                    <field name="ubicacion_id" optional="hide"/>
                                 </list>
                             </field>
                         </page>

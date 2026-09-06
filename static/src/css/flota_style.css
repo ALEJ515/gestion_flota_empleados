@@ -15,6 +15,20 @@
     vertical-align: middle !important;
 }
 
+/* Permite seleccionar y copiar nombres, teléfonos y referencias desde las listas. */
+.o_list_table td[data-name="name"],
+.o_list_table td[data-name="empleado_id"],
+.o_list_table td[data-name="numero_flota"],
+.o_list_table td[data-name="conciliacion_id"] {
+    user-select: text !important;
+    cursor: text;
+}
+
+/* Los enlaces de empleado siguen abriendo su ficha, pero permiten seleccionar el texto. */
+.o_list_table td[data-name="empleado_id"] a {
+    user-select: text !important;
+}
+
 /* Columna de Nombre Empleado: adaptable al texto largo del empleado */
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="empleado_id"],
 .o_field_one2many[name="linea_ids"] .o_list_table td[data-name="empleado_id"] {

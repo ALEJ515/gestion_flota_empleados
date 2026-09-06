@@ -21,21 +21,19 @@
         <field name="name">flota.empleado.list</field>
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
-            <list decoration-danger="not en_ultima_factura" decoration-warning="es_nuevo_auto" decoration-muted="estado == 'inactive' or not active">
-                <field name="name"/>
+            <list decoration-danger="not en_ultima_factura" decoration-muted="estado == 'inactive' or not active">
+                <field name="name" optional="show"/>
                 <field name="departamento_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
-                <field name="es_nuevo_auto" string="Registrado x Claro" widget="boolean" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
                 <field name="penultima_facturacion_monto" widget="monetary" string="Factura Anterior (RD$)" optional="hide"/>
                 <field name="comparativa_indicador_html" widget="html" string="Tendencia" optional="show"/>
                 <field name="ultima_facturacion_periodo" string="Periodo Factura" optional="show"/>
                 <field name="estado" widget="badge" optional="show" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
-                <field name="write_date" string="Última Modificación" widget="datetime" optional="hide"/>
-                <field name="write_uid" string="Modificado Por" optional="hide"/>
                 <field name="active" string="Archivado" widget="boolean" optional="hide"/>
             </list>
         </field>
@@ -82,13 +80,14 @@
                                     <field name="periodo" string="Periodo" optional="show"/>
                                     <field name="fecha_factura" string="Fecha" optional="show"/>
                                     <field name="numero_flota" string="Número Flota" optional="show"/>
-                                    <field name="monto_otros_servicios" widget="monetary" string="Otros Servicios y Data Móvil" sum="Total Otros Servicios y Data Móvil" optional="show"/>
-                                    <field name="monto_uso_adicional" widget="monetary" string="Uso local y Data Móvil" sum="Total Uso local y Data Móvil" optional="hide"/>
-                                    <field name="monto_renta_plan" widget="monetary" string="Llamadas larga distancia, Roaming y otras llamadas" sum="Total llamadas y roaming" optional="show"/>
-                                    <field name="monto_financiamiento" widget="monetary" string="Financiamiento equipos" sum="Total Financiamiento equipos" optional="hide"/>
-                                    <field name="monto_creditos" widget="monetary" string="Otros cargos, créditos o descuentos" sum="Total Cargos y créditos" optional="hide"/>
-                                    <field name="monto_roaming" widget="monetary" string="Roaming separado (no informado)" sum="Total Roaming separado" optional="hide"/>
-                                    <field name="total_linea" widget="monetary" string="Total (RD$)" sum="Gran Total Histórico" optional="show"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="monto_otros_servicios" widget="monetary" string="Otros Servicios y Data Móvil" optional="show"/>
+                                    <field name="monto_uso_adicional" widget="monetary" string="Uso local y Data Móvil" optional="hide"/>
+                                    <field name="monto_renta_plan" widget="monetary" string="Llamadas larga distancia, Roaming y otras llamadas" optional="show"/>
+                                    <field name="monto_financiamiento" widget="monetary" string="Financiamiento equipos" optional="hide"/>
+                                    <field name="monto_creditos" widget="monetary" string="Otros cargos, créditos o descuentos" optional="hide"/>
+                                    <field name="monto_roaming" widget="monetary" string="Roaming separado (no informado)" optional="hide"/>
+                                    <field name="total_linea" widget="monetary" string="Total (RD$)" optional="show"/>
                                     <field name="estado_linea" widget="badge" optional="show" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'"/>
                                 </list>
                             </field>

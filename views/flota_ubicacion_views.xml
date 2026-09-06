@@ -15,20 +15,18 @@
         </field>
     </record>
 
-    <!-- List View con Conteo de Inactivos y Fecha de Modificación -->
+    <!-- List View operativa -->
     <record id="view_flota_ubicacion_list" model="ir.ui.view">
         <field name="name">flota.ubicacion.list</field>
         <field name="model">flota.ubicacion</field>
         <field name="arch" type="xml">
             <list decoration-muted="not active">
-                <field name="name"/>
-                <field name="code"/>
-                <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0"/>
+                <field name="name" optional="show"/>
+                <field name="code" optional="show"/>
+                <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0" optional="show"/>
                 <field name="empleados_activos_count" string="Activos" widget="badge" decoration-success="empleados_activos_count &gt; 0" optional="show"/>
                 <field name="empleados_inactivos_count" string="Inactivos" widget="badge" decoration-danger="empleados_inactivos_count &gt; 0" optional="show"/>
-                <field name="write_date" string="Última Modificación" widget="datetime" optional="show"/>
-                <field name="write_uid" string="Modificado Por" optional="hide"/>
-                <field name="active" widget="boolean_toggle"/>
+                <field name="active" widget="boolean_toggle" optional="hide"/>
             </list>
         </field>
     </record>
@@ -70,11 +68,11 @@
                         <page string="Personal Asignado a esta Ubicación" name="employees">
                             <field name="empleado_ids" readonly="1">
                                 <list>
-                                    <field name="name"/>
-                                    <field name="departamento_id"/>
-                                    <field name="cargo"/>
-                                    <field name="numero_flota"/>
-                                    <field name="estado" widget="badge" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
+                                    <field name="name" optional="show"/>
+                                    <field name="departamento_id" optional="show"/>
+                                    <field name="cargo" optional="show"/>
+                                    <field name="numero_flota" optional="show"/>
+                                    <field name="estado" widget="badge" optional="show" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
                                 </list>
                             </field>
                         </page>
