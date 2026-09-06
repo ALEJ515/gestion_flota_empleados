@@ -69,8 +69,8 @@ def extract_claro_money_values(text):
     values = []
     for token in raw_tokens:
         value = parse_money_token(token)
-        if value:
-            values.append(value)
+        # Preserve zero-valued PDF cells so later columns keep their positions.
+        values.append(value)
     return values
 
 

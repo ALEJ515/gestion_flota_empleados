@@ -126,22 +126,18 @@
                         <page string="Desglose por empleado" name="lineas">
                             <field name="linea_ids" readonly="estado != 'draft'">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
+                                    <field name="currency_id" column_invisible="1"/>
                                     <field name="empleado_id" string="Nombre Empleado" optional="show" readonly="conciliacion_id.estado != 'draft'" options="{'no_create': True}"/>
                                     <field name="numero_flota" string="Número Flota" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
-                                    <field name="estado_linea" string="Estado Línea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'" optional="show" readonly="1"/>
-                                    <field name="currency_id" column_invisible="1"/>
 
                                     <field name="monto_otros_servicios" string="Otros servicios y datos" widget="monetary" sum="Total otros servicios y datos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
-                                    <field name="monto_uso_adicional" string="Uso local y datos" widget="monetary" sum="Total uso local y datos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
+                                    <field name="monto_uso_adicional" string="Uso local y data móvil" widget="monetary" sum="Total uso local y data móvil" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_renta_plan" string="Llamadas, roaming y otras llamadas" widget="monetary" sum="Total llamadas y roaming" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_financiamiento" string="Financiamiento de equipos" widget="monetary" sum="Total financiamiento" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_creditos" string="Otros cargos y descuentos" widget="monetary" sum="Total cargos y descuentos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="monto_impuestos_pdf" string="Impuestos" widget="monetary" sum="Total impuestos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
-                                    <field name="total_pdf" string="Total final" widget="monetary" sum="Total final" optional="show" readonly="1"/>
-
-                                    <field name="monto_roaming" string="Roaming separado" optional="hide" readonly="1"/>
-                                    <field name="diferencia_pdf" string="Diferencia" widget="monetary" sum="Diferencia" optional="hide" readonly="1"/>
-                                    <field name="total_linea" string="Total calculado" widget="monetary" sum="Total calculado" optional="hide" readonly="1"/>
+                                    <field name="total_pdf" string="Total" widget="monetary" sum="Total" optional="show" readonly="1"/>
+                                    <field name="estado_linea" string="Estado Línea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'" optional="show" readonly="1"/>
                                 </list>
                             </field>
                         </page>
