@@ -100,21 +100,13 @@ def extract_claro_phone_row(line_text):
 
 def normalize_claro_numeric_values(num_values):
     values = list(num_values)
-    if len(values) < 7:
+    if len(values) < 3:
         return values
 
-    v0, v1, v2, v3, v4, v5, v6 = values[:7]
-
-    # El PDF realmente de Claro sigue este orden: [Otros servicios, Uso local, Llamadas/roaming, Financiamiento, Otros cargos, Impuestos, Total]
-    # Solo se hace swap cuando la variante está claramente invertida: la primera posición aparece en cero y la segunda contiene el uso local real.
-    if (
-        abs(v0) < 0.01 and abs(v1) > 0.01 and
-        abs(v2) < 0.01 and abs(v3) < 0.01 and
-        abs(v4) > 0.01
-    ):
-        return [v1, v0] + values[2:]
-
-    return values
+    # Claro entrega estas tres columnas en el orden: Uso local, Llamadas/roaming,
+    # Otros servicios. Odoo las presenta como: Otros servicios, Uso local,
+    # Llamadas/roaming.
+    return [values[2], values[0], values[1]] + values[3:]
 
 
 def map_claro_columns(num_values):
@@ -130,35 +122,18 @@ def map_claro_columns(num_values):
         'total': 0.0,
     }
 
-    if len(values) == 7:
+    if len(values) >= 1:
         line['otros_servicios_datos'] = values[0]
+    if len(values) >= 2:
         line['uso_local_data_movil'] = values[1]
+    if len(values) >= 3:
         line['llamadas_roaming_otras_llamadas'] = values[2]
+    if len(values) >= 4:
         line['financiamiento_equipos'] = values[3]
+    if len(values) >= 5:
         line['otros_cargos_descuentos'] = values[4]
+    if len(values) >= 6:
         line['impuestos'] = values[5]
+    if len(values) >= 7:
         line['total'] = values[6]
-    elif len(values) == 6:
-        line['otros_servicios_datos'] = values[0]
-        line['uso_local_data_movil'] = values[1]
-        line['llamadas_roaming_otras_llamadas'] = values[2]
-        line['financiamiento_equipos'] = values[3]
-        line['otros_cargos_descuentos'] = values[4]
-        line['total'] = values[5]
-    elif len(values) == 5:
-        line['otros_servicios_datos'] = values[0]
-        line['uso_local_data_movil'] = values[1]
-        line['llamadas_roaming_otras_llamadas'] = values[2]
-        line['otros_cargos_descuentos'] = values[3]
-    elif len(values) == 4:
-        line['otros_servicios_datos'] = values[0]
-        line['uso_local_data_movil'] = values[1]
-        line['otros_cargos_descuentos'] = values[2]
-    elif len(values) == 3:
-        line['otros_servicios_datos'] = values[0]
-        line['otros_cargos_descuentos'] = values[1]
-    elif len(values) == 2:
-        line['llamadas_roaming_otras_llamadas'] = values[0]
-    elif len(values) == 1:
-        line['llamadas_roaming_otras_llamadas'] = values[0]
     return line

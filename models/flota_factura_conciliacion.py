@@ -422,10 +422,7 @@ class FlotaFacturaConciliacion(models.Model):
             if len(values) < 4:
                 continue
 
-            if len(values) >= 7:
-                ordered_values = values[:7]
-            else:
-                ordered_values = values[:4]
+            ordered_values = values[:7]
 
             mapped_values = map_claro_columns(ordered_values)
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
