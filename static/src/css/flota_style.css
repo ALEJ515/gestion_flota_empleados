@@ -52,11 +52,11 @@
 }
 
 /* Columnas numéricas sin saltos de línea */
-.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_renta_plan"],
-.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_uso_adicional"],
-.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_financiamiento"],
-.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_creditos"],
-.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="monto_impuestos_pdf"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="llamadas_roaming_otras_llamadas"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="uso_local_data_movil"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="financiamiento_equipos"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="otros_cargos_descuentos"],
+.o_field_one2many[name="linea_ids"] .o_list_table th[data-name="impuestos"],
 .o_field_one2many[name="linea_ids"] .o_list_table th[data-name="total_linea"] {
     white-space: nowrap !important;
 }

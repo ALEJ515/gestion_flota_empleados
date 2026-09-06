@@ -120,45 +120,45 @@ def normalize_claro_numeric_values(num_values):
 def map_claro_columns(num_values):
     values = normalize_claro_numeric_values(list(num_values))
     line = {
-        'monto_otros_servicios': 0.0,
-        'monto_uso_adicional': 0.0,
-        'monto_renta_plan': 0.0,
+        'otros_servicios_datos': 0.0,
+        'uso_local_data_movil': 0.0,
+        'llamadas_roaming_otras_llamadas': 0.0,
         'monto_roaming': 0.0,
-        'monto_financiamiento': 0.0,
-        'monto_creditos': 0.0,
-        'monto_impuestos_pdf': 0.0,
-        'total_pdf': 0.0,
+        'financiamiento_equipos': 0.0,
+        'otros_cargos_descuentos': 0.0,
+        'impuestos': 0.0,
+        'total': 0.0,
     }
 
     if len(values) == 7:
-        line['monto_otros_servicios'] = values[0]
-        line['monto_uso_adicional'] = values[1]
-        line['monto_renta_plan'] = values[2]
-        line['monto_financiamiento'] = values[3]
-        line['monto_creditos'] = values[4]
-        line['monto_impuestos_pdf'] = values[5]
-        line['total_pdf'] = values[6]
+        line['otros_servicios_datos'] = values[0]
+        line['uso_local_data_movil'] = values[1]
+        line['llamadas_roaming_otras_llamadas'] = values[2]
+        line['financiamiento_equipos'] = values[3]
+        line['otros_cargos_descuentos'] = values[4]
+        line['impuestos'] = values[5]
+        line['total'] = values[6]
     elif len(values) == 6:
-        line['monto_otros_servicios'] = values[0]
-        line['monto_uso_adicional'] = values[1]
-        line['monto_renta_plan'] = values[2]
-        line['monto_financiamiento'] = values[3]
-        line['monto_creditos'] = values[4]
-        line['total_pdf'] = values[5]
+        line['otros_servicios_datos'] = values[0]
+        line['uso_local_data_movil'] = values[1]
+        line['llamadas_roaming_otras_llamadas'] = values[2]
+        line['financiamiento_equipos'] = values[3]
+        line['otros_cargos_descuentos'] = values[4]
+        line['total'] = values[5]
     elif len(values) == 5:
-        line['monto_otros_servicios'] = values[0]
-        line['monto_uso_adicional'] = values[1]
-        line['monto_renta_plan'] = values[2]
-        line['monto_creditos'] = values[3]
+        line['otros_servicios_datos'] = values[0]
+        line['uso_local_data_movil'] = values[1]
+        line['llamadas_roaming_otras_llamadas'] = values[2]
+        line['otros_cargos_descuentos'] = values[3]
     elif len(values) == 4:
-        line['monto_otros_servicios'] = values[0]
-        line['monto_uso_adicional'] = values[1]
-        line['monto_creditos'] = values[2]
+        line['otros_servicios_datos'] = values[0]
+        line['uso_local_data_movil'] = values[1]
+        line['otros_cargos_descuentos'] = values[2]
     elif len(values) == 3:
-        line['monto_otros_servicios'] = values[0]
-        line['monto_creditos'] = values[1]
+        line['otros_servicios_datos'] = values[0]
+        line['otros_cargos_descuentos'] = values[1]
     elif len(values) == 2:
-        line['monto_renta_plan'] = values[0]
+        line['llamadas_roaming_otras_llamadas'] = values[0]
     elif len(values) == 1:
-        line['monto_renta_plan'] = values[0]
+        line['llamadas_roaming_otras_llamadas'] = values[0]
     return line

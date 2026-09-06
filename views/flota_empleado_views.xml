@@ -81,11 +81,11 @@
                                     <field name="fecha_factura" string="Fecha" optional="show"/>
                                     <field name="numero_flota" string="Número Flota" optional="show"/>
                                     <field name="currency_id" column_invisible="1"/>
-                                    <field name="monto_otros_servicios" widget="monetary" string="Otros Servicios y Data Móvil" optional="show"/>
-                                    <field name="monto_uso_adicional" widget="monetary" string="Uso local y Data Móvil" optional="hide"/>
-                                    <field name="monto_renta_plan" widget="monetary" string="Llamadas larga distancia, Roaming y otras llamadas" optional="show"/>
-                                    <field name="monto_financiamiento" widget="monetary" string="Financiamiento equipos" optional="hide"/>
-                                    <field name="monto_creditos" widget="monetary" string="Otros cargos, créditos o descuentos" optional="hide"/>
+                                    <field name="otros_servicios_datos" widget="monetary" string="Otros Servicios y Data Móvil" optional="show"/>
+                                    <field name="uso_local_data_movil" widget="monetary" string="Uso local y Data Móvil" optional="hide"/>
+                                    <field name="llamadas_roaming_otras_llamadas" widget="monetary" string="Llamadas, roaming y otras llamadas" optional="show"/>
+                                    <field name="financiamiento_equipos" widget="monetary" string="Financiamiento equipos" optional="hide"/>
+                                    <field name="otros_cargos_descuentos" widget="monetary" string="Otros cargos y descuentos" optional="hide"/>
                                     <field name="monto_roaming" widget="monetary" string="Roaming separado (no informado)" optional="hide"/>
                                     <field name="total_linea" widget="monetary" string="Total (RD$)" optional="show"/>
                                     <field name="estado_linea" widget="badge" optional="show" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'"/>

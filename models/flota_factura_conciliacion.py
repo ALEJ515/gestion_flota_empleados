@@ -144,13 +144,13 @@ class FlotaFacturaConciliacion(models.Model):
             rec.isc_monto = sub * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.cdt_monto + rec.isc_monto
 
-    @api.depends('linea_ids', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.monto_uso_adicional', 'linea_ids.monto_roaming', 'total_mes')
+    @api.depends('linea_ids', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes')
     def _compute_kpis(self):
         for rec in self:
             rec.count_lineas = len(rec.linea_ids)
             excesos = rec.linea_ids.filtered(lambda l: l.estado_linea in ['exceso_data', 'exceso_roaming'])
             rec.count_excesos = len(excesos)
-            rec.monto_excesos = sum(excesos.mapped(lambda l: l.monto_uso_adicional + l.monto_roaming))
+            rec.monto_excesos = sum(excesos.mapped(lambda l: l.uso_local_data_movil + l.monto_roaming))
 
             tot_lineas = sum(rec.linea_ids.mapped('total_linea'))
             rec.total_lineas_sum = tot_lineas
@@ -455,14 +455,14 @@ class FlotaFacturaConciliacion(models.Model):
                 'conciliacion_id': self.id,
                 'numero_flota': clean_phone,
                 'empleado_id': emp.id,
-                'monto_renta_plan': mapped_values.get('monto_renta_plan', 0.0),
-                'monto_otros_servicios': mapped_values.get('monto_otros_servicios', 0.0),
-                'monto_uso_adicional': mapped_values.get('monto_uso_adicional', 0.0),
+                'llamadas_roaming_otras_llamadas': mapped_values.get('llamadas_roaming_otras_llamadas', 0.0),
+                'otros_servicios_datos': mapped_values.get('otros_servicios_datos', 0.0),
+                'uso_local_data_movil': mapped_values.get('uso_local_data_movil', 0.0),
                 'monto_roaming': mapped_values.get('monto_roaming', 0.0),
-                'monto_financiamiento': mapped_values.get('monto_financiamiento', 0.0),
-                'monto_creditos': mapped_values.get('monto_creditos', 0.0),
-                'monto_impuestos_pdf': mapped_values.get('monto_impuestos_pdf', 0.0),
-                'total_pdf': mapped_values.get('total_pdf', 0.0),
+                'financiamiento_equipos': mapped_values.get('financiamiento_equipos', 0.0),
+                'otros_cargos_descuentos': mapped_values.get('otros_cargos_descuentos', 0.0),
+                'impuestos': mapped_values.get('impuestos', 0.0),
+                'total': mapped_values.get('total', 0.0),
             })
 
         self.write({
@@ -612,15 +612,15 @@ class FlotaFacturaLinea(models.Model):
     ubicacion_id = fields.Many2one('flota.ubicacion', string='CEDI / Ubicación', related='empleado_id.ubicacion_id', store=True, readonly=True)
     cargo = fields.Char(string='Cargo', related='empleado_id.cargo', readonly=True)
 
-    monto_renta_plan = fields.Monetary(string='Llamadas larga distancia, roaming y otras llamadas', currency_field='currency_id', default=0.0)
-    monto_otros_servicios = fields.Monetary(string='Otros servicios y data móvil', currency_field='currency_id', default=0.0)
-    monto_uso_adicional = fields.Monetary(string='Uso local y data móvil', currency_field='currency_id', default=0.0)
+    llamadas_roaming_otras_llamadas = fields.Monetary(string='Llamadas, roaming y otras llamadas', currency_field='currency_id', default=0.0)
+    otros_servicios_datos = fields.Monetary(string='Otros servicios y datos', currency_field='currency_id', default=0.0)
+    uso_local_data_movil = fields.Monetary(string='Uso local y data móvil', currency_field='currency_id', default=0.0)
     monto_roaming = fields.Monetary(string='Roaming / LD', currency_field='currency_id', default=0.0)
-    monto_financiamiento = fields.Monetary(string='Financiamiento de equipos', currency_field='currency_id', default=0.0)
-    monto_creditos = fields.Monetary(string='Otros cargos, créditos o descuentos', currency_field='currency_id', default=0.0)
-    monto_impuestos_pdf = fields.Monetary(string='Impuestos', currency_field='currency_id', default=0.0)
-    total_pdf = fields.Monetary(
-        string='Total PDF',
+    financiamiento_equipos = fields.Monetary(string='Financiamiento de equipos', currency_field='currency_id', default=0.0)
+    otros_cargos_descuentos = fields.Monetary(string='Otros cargos y descuentos', currency_field='currency_id', default=0.0)
+    impuestos = fields.Monetary(string='Impuestos', currency_field='currency_id', default=0.0)
+    total = fields.Monetary(
+        string='Total',
         currency_field='currency_id',
         default=0.0,
         help='Total de la línea tal como aparece en la factura PDF de Claro.'
@@ -661,46 +661,46 @@ class FlotaFacturaLinea(models.Model):
                     vals['empleado_id'] = emp.id
         return super(FlotaFacturaLinea, self).create(vals_list)
 
-    @api.depends('monto_renta_plan', 'monto_otros_servicios', 'monto_uso_adicional', 'monto_roaming', 'monto_financiamiento', 'monto_creditos', 'monto_impuestos_pdf', 'total_pdf')
+    @api.depends('llamadas_roaming_otras_llamadas', 'otros_servicios_datos', 'uso_local_data_movil', 'monto_roaming', 'financiamiento_equipos', 'otros_cargos_descuentos', 'impuestos', 'total')
     def _compute_linea_totals(self):
         for rec in self:
-            sub = rec.monto_renta_plan + rec.monto_otros_servicios + rec.monto_uso_adicional + rec.monto_roaming + rec.monto_financiamiento + rec.monto_creditos
+            sub = rec.llamadas_roaming_otras_llamadas + rec.otros_servicios_datos + rec.uso_local_data_movil + rec.monto_roaming + rec.financiamiento_equipos + rec.otros_cargos_descuentos
             rec.subtotal_linea = sub
             
             base_imponible = (
-                rec.monto_renta_plan
-                + rec.monto_otros_servicios
-                + rec.monto_uso_adicional
+                rec.llamadas_roaming_otras_llamadas
+                + rec.otros_servicios_datos
+                + rec.uso_local_data_movil
                 + rec.monto_roaming
-                + rec.monto_creditos
+                + rec.otros_cargos_descuentos
             )
-            imp = rec.monto_impuestos_pdf if rec.monto_impuestos_pdf > 0 else (base_imponible * 0.30)
+            imp = rec.impuestos if rec.impuestos > 0 else (base_imponible * 0.30)
             rec.itbis_linea = imp * 0.60
             rec.cdt_linea = imp * (1.0 / 15.0)
             rec.isc_linea = imp * (1.0 / 3.0)
             rec.total_linea = sub + imp
-            rec.diferencia_pdf = rec.total_linea - rec.total_pdf if rec.total_pdf else 0.0
+            rec.diferencia_pdf = rec.total_linea - rec.total if rec.total else 0.0
 
-    @api.depends('empleado_id', 'total_linea', 'monto_uso_adicional', 'monto_roaming')
+    @api.depends('empleado_id', 'total_linea', 'uso_local_data_movil', 'monto_roaming')
     def _compute_estado_linea(self):
         for rec in self:
             if not rec.empleado_id:
                 rec.estado_linea = 'desconocido'
             elif all(abs(value) < 0.01 for value in (
-                rec.monto_renta_plan,
-                rec.monto_otros_servicios,
-                rec.monto_uso_adicional,
+                rec.llamadas_roaming_otras_llamadas,
+                rec.otros_servicios_datos,
+                rec.uso_local_data_movil,
                 rec.monto_roaming,
-                rec.monto_financiamiento,
-                rec.monto_creditos,
-                rec.monto_impuestos_pdf,
+                rec.financiamiento_equipos,
+                rec.otros_cargos_descuentos,
+                rec.impuestos,
             )):
                 rec.estado_linea = 'sin_consumo'
-            elif rec.monto_roaming > 0.01 and rec.monto_uso_adicional > 0.01:
+            elif rec.monto_roaming > 0.01 and rec.uso_local_data_movil > 0.01:
                 rec.estado_linea = 'exceso_data_roaming'
             elif rec.monto_roaming > 0.01:
                 rec.estado_linea = 'exceso_roaming'
-            elif rec.monto_uso_adicional > 0.01:
+            elif rec.uso_local_data_movil > 0.01:
                 rec.estado_linea = 'exceso_data'
             else:
                 rec.estado_linea = 'ok'
