@@ -755,4 +755,4 @@ class FlotaFacturaDepartamentoResumen(models.Model):
     monto_subtotal = fields.Monetary(string='Subtotal Depto', currency_field='currency_id')
     monto_total = fields.Monetary(string='Total Depto (RD$)', currency_field='currency_id')
     porcentaje_gasto = fields.Float(string='% del Total General', digits=(5, 2))
-    currency_id = fields.Many2one('res.currency', string='Moneda', related='conciliacion_id.currency_id')
+    currency_id = fields.Many2one('res.currency', string='Moneda', related='conciliacion_id.currency_id', store=True, readonly=True)

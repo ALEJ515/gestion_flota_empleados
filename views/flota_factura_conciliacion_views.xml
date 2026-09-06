@@ -144,7 +144,7 @@
 
                         <page string="Consolidado por departamento" name="resumen_depto">
                             <field name="resumen_depto_ids" readonly="1">
-                                <list string="Resumen por Departamento">
+                                <list string="Resumen por Departamento" create="false" delete="false" edit="false">
                                     <field name="currency_id" column_invisible="1"/>
                                     <field name="departamento_id" optional="show"/>
                                     <field name="ubicacion_id" optional="show"/>
@@ -153,6 +153,24 @@
                                     <field name="monto_total" widget="monetary" optional="show"/>
                                     <field name="porcentaje_gasto" widget="percentage" optional="show"/>
                                 </list>
+                                <form string="Resumen por Departamento">
+                                    <sheet>
+                                        <group>
+                                            <group string="Información General">
+                                                <field name="conciliacion_id" readonly="1"/>
+                                                <field name="departamento_id" readonly="1"/>
+                                                <field name="ubicacion_id" readonly="1"/>
+                                                <field name="cantidad_empleados" readonly="1"/>
+                                            </group>
+                                            <group string="Consumo y Participación">
+                                                <field name="currency_id" invisible="1"/>
+                                                <field name="monto_subtotal" widget="monetary" readonly="1"/>
+                                                <field name="monto_total" widget="monetary" readonly="1"/>
+                                                <field name="porcentaje_gasto" widget="percentage" readonly="1"/>
+                                            </group>
+                                        </group>
+                                    </sheet>
+                                </form>
                             </field>
                         </page>
 
