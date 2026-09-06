@@ -273,9 +273,9 @@ class FlotaFacturaConciliacion(models.Model):
                         emp.message_post(body=_("<b>Revisión de Flota:</b> Empleado NO detectado en la factura Claro del periodo (%s). Marcado como Faltante / Inactivo.") % rec.periodo)
 
             resumen_vals = []
-            tot_gral = rec.total_mes if rec.total_mes else 1.0
+            tot_gral = rec.total_mes
             for d_id, data in dept_totals.items():
-                pct = (data['monto_total'] / tot_gral) * 100.0
+                pct = (data['monto_total'] / tot_gral) if tot_gral else 0.0
                 resumen_vals.append((0, 0, {
                     'conciliacion_id': rec.id,
                     'departamento_id': data['departamento_id'],

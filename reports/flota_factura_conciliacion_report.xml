@@ -104,7 +104,7 @@
                                         <td class="text-center"><span t-field="d.cantidad_empleados"/></td>
                                         <td class="text-end"><span t-field="d.monto_subtotal"/></td>
                                         <td class="text-end"><span t-field="d.monto_total"/></td>
-                                        <td class="text-end"><span t-field="d.porcentaje_gasto"/>%</td>
+                                        <td class="text-end"><span t-esc="'%.2f' % (d.porcentaje_gasto * 100.0)"/>%</td>
                                     </tr>
                                 </t>
                             </tbody>
