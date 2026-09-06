@@ -149,9 +149,9 @@
                                     <field name="currency_id" column_invisible="1"/>
                                     <field name="departamento_id" optional="show"/>
                                     <field name="ubicacion_id" optional="show"/>
-                                    <field name="cantidad_empleados" sum="Total Empleados" optional="show"/>
-                                    <field name="monto_subtotal" widget="monetary" sum="Total Subtotal" optional="show"/>
-                                    <field name="monto_total" widget="monetary" sum="Total General" optional="show"/>
+                                    <field name="cantidad_empleados" optional="show"/>
+                                    <field name="monto_subtotal" widget="monetary" optional="show"/>
+                                    <field name="monto_total" widget="monetary" optional="show"/>
                                     <field name="porcentaje_gasto" widget="percentage" optional="show"/>
                                 </list>
                             </field>
