@@ -493,7 +493,7 @@ class FlotaFacturaConciliacion(models.Model):
         }
 
     def action_exportar_excel(self):
-        """ Exporta la Conciliación Completa a una ÚNICA HOJA de Excel (.xlsx) """
+        """Exporta la factura y el consolidado departamental a un libro Excel."""
         self.ensure_one()
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -530,6 +530,36 @@ class FlotaFacturaConciliacion(models.Model):
             c_tot = ws.cell(row=current_row, column=5, value=l.total_linea)
             c_tot.number_format = '"RD$"#,##0.00'
             current_row += 1
+
+        ws_dept = wb.create_sheet("Consolidado por Departamento")
+        dept_headers = [
+            "DEPARTAMENTO",
+            "CEDI / UBICACIÓN",
+            "EMPLEADOS",
+            "SUBTOTAL (RD$)",
+            "TOTAL DEPTO (RD$)",
+            "% DEL TOTAL GENERAL",
+        ]
+        for col_num, header in enumerate(dept_headers, 1):
+            cell = ws_dept.cell(row=1, column=col_num, value=header)
+            cell.fill = header_fill
+            cell.font = header_font
+
+        for row_num, summary in enumerate(self.resumen_depto_ids, 2):
+            ws_dept.cell(row=row_num, column=1, value=summary.departamento_id.name or "Sin departamento")
+            ws_dept.cell(row=row_num, column=2, value=summary.ubicacion_id.name or "Sin ubicación")
+            ws_dept.cell(row=row_num, column=3, value=summary.cantidad_empleados)
+            subtotal_cell = ws_dept.cell(row=row_num, column=4, value=summary.monto_subtotal)
+            total_cell = ws_dept.cell(row=row_num, column=5, value=summary.monto_total)
+            subtotal_cell.number_format = '"RD$"#,##0.00'
+            total_cell.number_format = '"RD$"#,##0.00'
+            pct_cell = ws_dept.cell(row=row_num, column=6, value=summary.porcentaje_gasto)
+            pct_cell.number_format = '0.00%'
+
+        for column_cells in ws_dept.columns:
+            max_len = max(len(str(cell.value or '')) for cell in column_cells)
+            column_letter = openpyxl.utils.get_column_letter(column_cells[0].column)
+            ws_dept.column_dimensions[column_letter].width = max(max_len + 3, 16)
 
         current_row += 2
 
@@ -578,8 +608,13 @@ class FlotaFacturaConciliacion(models.Model):
         file_data = base64.b64encode(output.read())
         output.close()
 
+        month_names = (
+            "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+            "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+        )
+        month_name = month_names[self.fecha_factura.month - 1] if self.fecha_factura else (self.periodo or "Sin fecha")
         attachment = self.env['ir.attachment'].create({
-            'name': f'Conciliacion_Claro_{self.periodo}_{self.name}.xlsx',
+            'name': f'Factura Claro {month_name}.xlsx',
             'datas': file_data,
             'res_model': self._name,
             'res_id': self.id,
