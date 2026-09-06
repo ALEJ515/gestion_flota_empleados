@@ -19,6 +19,13 @@ class FlotaEmpleado(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'name asc, id desc'
 
+    def _auto_init(self):
+        self.env.cr.execute("""
+            ALTER TABLE flota_empleado 
+            ADD COLUMN IF NOT EXISTS penultima_facturacion_periodo VARCHAR;
+        """)
+        return super()._auto_init()
+
     name = fields.Char(string='Nombre Completo', required=True, index=True, tracking=True)
     departamento_id = fields.Many2one(
         'flota.departamento', 

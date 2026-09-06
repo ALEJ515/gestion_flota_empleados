@@ -748,6 +748,13 @@ class FlotaFacturaDepartamentoResumen(models.Model):
     _description = 'Resumen Consolidado de Factura por Departamento'
     _order = 'monto_total desc'
 
+    def _auto_init(self):
+        self.env.cr.execute("""
+            ALTER TABLE flota_factura_departamento_resumen 
+            ADD COLUMN IF NOT EXISTS currency_id INTEGER;
+        """)
+        return super()._auto_init()
+
     conciliacion_id = fields.Many2one('flota.factura.conciliacion', string='Factura Conciliación', ondelete='cascade', index=True)
     departamento_id = fields.Many2one('flota.departamento', string='Departamento')
     ubicacion_id = fields.Many2one('flota.ubicacion', string='CEDI / Ubicación')
