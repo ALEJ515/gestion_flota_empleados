@@ -61,6 +61,11 @@ class FlotaEmpleado(models.Model):
         readonly=True,
         tracking=True
     )
+    penultima_facturacion_periodo = fields.Char(
+        string='Periodo Penúltima Factura',
+        readonly=True,
+        tracking=True
+    )
     ultima_facturacion_periodo = fields.Char(
         string='Periodo Última Factura',
         readonly=True,
@@ -97,6 +102,40 @@ class FlotaEmpleado(models.Model):
         compute='_compute_companeros_departamento',
         string='Compañeros de Departamento'
     )
+
+    def _update_facturacion_stats(self):
+        """ Actualiza los montos y periodos de la última y penúltima facturación basándose en su historial """
+        for rec in self:
+            lines = rec.historial_factura_linea_ids.sorted(
+                key=lambda l: (
+                    l.conciliacion_id.fecha_factura or fields.Date.today(),
+                    l.conciliacion_id.id or 0,
+                    l.id or 0
+                ),
+                reverse=True
+            )
+            periodos_seen = []
+            distinct_lines = []
+            for line in lines:
+                p = line.conciliacion_id.periodo or line.periodo or f"conc_{line.conciliacion_id.id}"
+                if p not in periodos_seen:
+                    periodos_seen.append(p)
+                    distinct_lines.append(line)
+
+            if distinct_lines:
+                latest = distinct_lines[0]
+                vals = {
+                    'ultima_facturacion_monto': latest.total_linea,
+                    'ultima_facturacion_periodo': str(latest.periodo or latest.conciliacion_id.periodo or ''),
+                }
+                if len(distinct_lines) > 1:
+                    prev = distinct_lines[1]
+                    vals['penultima_facturacion_monto'] = prev.total_linea
+                    vals['penultima_facturacion_periodo'] = str(prev.periodo or prev.conciliacion_id.periodo or '')
+                else:
+                    vals['penultima_facturacion_monto'] = 0.0
+                    vals['penultima_facturacion_periodo'] = ''
+                rec.write(vals)
 
     @api.depends('ultima_facturacion_monto', 'penultima_facturacion_monto')
     def _compute_comparativa_facturacion(self):

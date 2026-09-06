@@ -228,10 +228,6 @@ class FlotaFacturaConciliacion(models.Model):
 
                 if linea.empleado_id:
                     seen_emp_ids.add(linea.empleado_id.id)
-                    linea.empleado_id.write({
-                        'ultima_facturacion_monto': linea.total_linea,
-                        'ultima_facturacion_periodo': str(rec.periodo or ''),
-                    })
 
                 dept_id = linea.departamento_id.id if linea.departamento_id else 0
                 
@@ -246,6 +242,9 @@ class FlotaFacturaConciliacion(models.Model):
                 dept_totals[dept_id]['cantidad_empleados'] += 1
                 dept_totals[dept_id]['monto_subtotal'] += linea.subtotal_linea
                 dept_totals[dept_id]['monto_total'] += linea.total_linea
+
+            if seen_emp_ids:
+                self.env['flota.empleado'].browse(list(seen_emp_ids))._update_facturacion_stats()
 
             # Sincronización automática de estado de Empleados (Activo vs Inactivo)
             all_emps = self.env['flota.empleado'].with_context(active_test=False).search([])
@@ -495,6 +494,12 @@ class FlotaFacturaConciliacion(models.Model):
     def action_exportar_excel(self):
         """Exporta la factura y el consolidado departamental a un libro Excel."""
         self.ensure_one()
+        if abs(self.diferencia_conciliacion) >= 0.01:
+            raise UserError(_(
+                "No se puede exportar la factura a Excel porque existe una diferencia de RD$%s entre el Total de la Factura (RD$%s) y la Suma de Líneas por Empleado (RD$%s).\n\n"
+                "Por favor, utilice el botón 'Ajuste de cuenta' o revise las líneas para que ambos montos coincidan antes de exportar el documento."
+            ) % (f"{self.diferencia_conciliacion:,.2f}", f"{self.total_mes:,.2f}", f"{self.total_lineas_sum:,.2f}"))
+
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 

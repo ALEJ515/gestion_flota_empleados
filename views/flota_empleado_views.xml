@@ -30,7 +30,7 @@
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
-                <field name="penultima_facturacion_monto" widget="monetary" string="Factura Anterior (RD$)" optional="hide"/>
+                <field name="penultima_facturacion_monto" widget="monetary" string="Factura Anterior (RD$)" optional="show"/>
                 <field name="comparativa_indicador_html" widget="html" string="Tendencia" optional="show"/>
                 <field name="ultima_facturacion_periodo" string="Periodo Factura" optional="show"/>
                 <field name="estado" widget="badge" optional="show" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
