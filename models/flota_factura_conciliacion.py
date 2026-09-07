@@ -282,7 +282,8 @@ class FlotaFacturaConciliacion(models.Model):
                     'cantidad_empleados': data['cantidad_empleados'],
                     'monto_subtotal': data['monto_subtotal'],
                     'monto_total': data['monto_total'],
-                    'porcentaje_gasto': pct
+                    'porcentaje_gasto': pct,
+                    'currency_id': rec.currency_id.id
                 }))
                 
                 if data['departamento_id']:
