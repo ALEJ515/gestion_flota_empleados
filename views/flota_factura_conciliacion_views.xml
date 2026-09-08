@@ -41,7 +41,6 @@
                 <header>
                    <button name="action_procesar_pdf_nativo" string="Extraer PDF" type="object" class="btn-primary" invisible="not archivo_pdf" confirm="Esta acción volverá a extraer el PDF y reemplazará el desglose actual. ¿Desea continuar?"/>
                    <button name="action_exportar_excel" string="Exportar" type="object" class="btn-secondary"/>
-                   <button name="action_aplicar_linea_ajuste_corporativo" string="Ajuste de cuenta" type="object" class="btn-light" invisible="diferencia_conciliacion == 0"/>
                    <button name="action_set_draft" string="Volver a borrador" type="object" class="btn-light" invisible="estado == 'draft'"/>
                    <button name="action_set_procesando" string="Procesando" type="object" class="btn-light" invisible="estado == 'procesando'"/>
                    <button name="action_marcar_conciliado" string="Conciliar" type="object" class="btn-primary" invisible="estado == 'conciliado'"/>
@@ -60,25 +59,19 @@
 
                     <!-- BANNER KPIS SUPERIOR -->
                     <div class="row text-center mb-4 g-2">
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="p-3 border rounded bg-light shadow-sm">
                                 <span class="text-muted d-block small">TOTAL FACTURA CLARO</span>
                                 <strong class="fs-4 text-success"><field name="total_mes" widget="monetary"/></strong>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="p-3 border rounded bg-light shadow-sm">
                                 <span class="text-muted d-block small">SUMA LÍNEAS EMPLEADOS</span>
                                 <strong class="fs-4 text-primary"><field name="total_lineas_sum" widget="monetary"/></strong>
                             </div>
                         </div>
-                        <div class="col-md-3">
-                            <div class="p-3 border rounded bg-light shadow-sm">
-                                <span class="text-muted d-block small">AJUSTE NIVEL CUENTA</span>
-                                <strong class="fs-4 text-info"><field name="diferencia_conciliacion" widget="monetary"/></strong>
-                            </div>
-                        </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <div class="p-3 border rounded bg-light shadow-sm">
                                 <span class="text-muted d-block small">EXCESOS DATA / ROAMING</span>
                                 <strong class="fs-4 text-warning"><field name="count_excesos"/> línea(s)</strong>
@@ -118,7 +111,6 @@
                             <field name="cdt_monto" widget="monetary" readonly="1" class="fw-bold text-success" string="CDT Calculado (2%)"/>
                             <field name="isc_monto" widget="monetary" readonly="1" string="ISC (10%)"/>
                             <field name="total_mes" widget="monetary" readonly="1" class="fw-bold fs-5 text-success" string="TOTAL DEL MES"/>
-                            <field name="diferencia_conciliacion" widget="monetary" readonly="1" string="Diferencia Conciliación"/>
                         </group>
                     </group>
 

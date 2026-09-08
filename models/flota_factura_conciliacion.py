@@ -91,21 +91,13 @@ class FlotaFacturaConciliacion(models.Model):
         currency_field='currency_id',
         tracking=True
     )
-    diferencia_conciliacion = fields.Monetary(
-        string='Ajuste Nivel Cuenta (RD$)',
-        compute='_compute_kpis',
-        store=True,
-        currency_field='currency_id',
-        tracking=True
-    )
     estado_cuadre = fields.Selection([
         ('cuadrado', 'Cuadrado Exacto'),
-        ('ajuste_cuenta', 'Ajuste Corporativo Nivel Cuenta'),
-        ('desviacion', 'Desviación Significativa')
+        ('desviacion', 'Con Diferencia')
     ], string='Estado de Conciliación', compute='_compute_kpis', store=True, tracking=True)
 
     banner_conciliacion_html = fields.Html(
-        string='Resumen de Conciliación Nivel Cuenta vs. Líneas',
+        string='Resumen de Conciliación Factura vs. Líneas',
         compute='_compute_kpis',
         store=True
     )
@@ -180,58 +172,27 @@ class FlotaFacturaConciliacion(models.Model):
             tot_lineas = sum(rec.linea_ids.mapped('total_linea'))
             rec.total_lineas_sum = tot_lineas
             diff = rec.total_mes - tot_lineas
-            rec.diferencia_conciliacion = diff
 
             if abs(diff) < 0.01:
                 rec.estado_cuadre = 'cuadrado'
                 rec.banner_conciliacion_html = (
                     '<div class="alert alert-success d-flex align-items-center mb-3 shadow-sm" role="alert">'
                     '<i class="fa fa-check-circle fs-4 me-2"></i>'
-                    '<div><strong>Conciliación Perfecta:</strong> La suma de consumo de todas las líneas de empleados (RD$%s) coincide exactamente con el Total de la Factura Claro (RD$%s).</div>'
+                    '<div><strong>Conciliación Exacta:</strong> La suma de consumo de todas las líneas de empleados (RD$%s) coincide con el Total de la Factura Claro (RD$%s).</div>'
                     '</div>'
                 ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}")
-            elif abs(diff) < 50000.0:
-                rec.estado_cuadre = 'ajuste_cuenta'
-                rec.banner_conciliacion_html = (
-                    '<div class="alert alert-info d-flex align-items-center mb-3 shadow-sm" role="alert">'
-                    '<i class="fa fa-info-circle fs-4 me-2"></i>'
-                    '<div>'
-                    '<strong>Conciliado con Ajuste Corporativo Nivel Cuenta:</strong><br/>'
-                    'Sumatoria Líneas Empleados: <strong>RD$%s</strong> | Total Factura Claro: <strong>RD$%s</strong> | '
-                    'Diferencia Nivel Cuenta (Descuento/Crédito Global): <strong>RD$%s</strong>.'
-                    '</div>'
-                    '</div>'
-                ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}", f"{diff:,.2f}")
             else:
                 rec.estado_cuadre = 'desviacion'
                 rec.banner_conciliacion_html = (
                     '<div class="alert alert-warning d-flex align-items-center mb-3 shadow-sm" role="alert">'
                     '<i class="fa fa-exclamation-triangle fs-4 me-2"></i>'
                     '<div>'
-                    '<strong>Desviación Significativa Nivel Cuenta:</strong><br/>'
-                    'Existe una diferencia de <strong>RD$%s</strong> entre el total de las líneas (RD$%s) y la factura general (RD$%s).'
+                    '<strong>Diferencia Detectada:</strong><br/>'
+                    'Sumatoria Líneas Empleados: <strong>RD$%s</strong> | Total Factura Claro: <strong>RD$%s</strong> | '
+                    'Diferencia: <strong>RD$%s</strong>.'
                     '</div>'
                     '</div>'
-                ) % (f"{diff:,.2f}", f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}")
-
-    def action_aplicar_linea_ajuste_corporativo(self):
-        """ Aplica la diferencia de Ajuste Corporativo Nivel Cuenta en Rubros Generales de Factura Claro sin alterar la lista de empleados """
-        for rec in self:
-            # Elimina cualquier línea fantasma CUENTA-GLOBAL previa si existiera
-            dummy_lines = rec.linea_ids.filtered(lambda l: l.numero_flota == 'CUENTA-GLOBAL')
-            if dummy_lines:
-                dummy_lines.unlink()
-
-            diff = rec.diferencia_conciliacion
-            if abs(diff) < 0.01:
-                raise UserError(_("La factura ya está totalmente cuadrada con las líneas de empleados."))
-            
-            # Ajustar otros_cargos_creditos (Rubros Generales) descontando la base antes de impuestos (30%: ITBIS 18% + CDT 2% + ISC 10%)
-            base_ajuste = diff / 1.30
-            rec.otros_cargos_creditos -= base_ajuste
-            rec._compute_totales_factura()
-            rec._compute_kpis()
-            rec.message_post(body=_("Se aplicó el <b>Ajuste Corporativo Nivel Cuenta</b> de RD$%s directamente en Rubros Generales de Factura Claro.") % f"{diff:,.2f}")
+                ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}", f"{diff:,.2f}")
 
     def action_generar_resumen_departamentos(self):
         """ Agrupa y consolida el gasto por Departamento, impacta historial y sincroniza estado (Activo/Inactivo) de Empleados """
@@ -520,11 +481,12 @@ class FlotaFacturaConciliacion(models.Model):
     def action_exportar_excel(self):
         """Exporta la factura y el consolidado departamental a un libro Excel."""
         self.ensure_one()
-        if abs(self.diferencia_conciliacion) >= 0.01:
+        diff = self.total_mes - self.total_lineas_sum
+        if abs(diff) >= 0.01:
             raise UserError(_(
                 "No se puede exportar la factura a Excel porque existe una diferencia de RD$%s entre el Total de la Factura (RD$%s) y la Suma de Líneas por Empleado (RD$%s).\n\n"
-                "Por favor, utilice el botón 'Ajuste de cuenta' o revise las líneas para que ambos montos coincidan antes de exportar el documento."
-            ) % (f"{self.diferencia_conciliacion:,.2f}", f"{self.total_mes:,.2f}", f"{self.total_lineas_sum:,.2f}"))
+                "Por favor, revise las líneas para que ambos montos coincidan antes de exportar el documento."
+            ) % (f"{diff:,.2f}", f"{self.total_mes:,.2f}", f"{self.total_lineas_sum:,.2f}"))
 
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -614,7 +576,6 @@ class FlotaFacturaConciliacion(models.Model):
             ("CDT - 2%", self.cdt_monto),
             ("ISC - 10%", self.isc_monto),
             ("TOTAL DEL MES", self.total_mes),
-            ("Diferencia Conciliación (Ajuste)", self.diferencia_conciliacion)
         ]
 
         for name, val in rubros:
