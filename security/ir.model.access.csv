@@ -6,3 +6,4 @@ access_flota_empleado_mass_update_wizard_user,flota.empleado.mass.update.wizard.
 access_flota_factura_conciliacion_user,flota.factura.conciliacion.user,model_flota_factura_conciliacion,base.group_user,1,1,1,1
 access_flota_factura_linea_user,flota.factura.linea.user,model_flota_factura_linea,base.group_user,1,1,1,1
 access_flota_factura_departamento_resumen_user,flota.factura.departamento.resumen.user,model_flota_factura_departamento_resumen,base.group_user,1,1,1,1
+access_flota_factura_concepto_user,flota.factura.concepto.user,model_flota_factura_concepto,base.group_user,1,1,1,1

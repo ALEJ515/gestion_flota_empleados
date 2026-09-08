@@ -75,7 +75,9 @@
                                 <tr><td>Uso Servicios Data Móvil</td><td class="text-end"><span t-field="doc.uso_data_movil"/></td></tr>
                                 <tr><td>Llamadas Roaming</td><td class="text-end"><span t-field="doc.llamadas_roaming"/></td></tr>
                                 <tr><td>Otros Cargos, Créditos o Descuentos (CR)</td><td class="text-end"><span t-field="doc.otros_cargos_creditos"/></td></tr>
-                                <tr class="fw-bold table-secondary"><td>SUBTOTAL</td><td class="text-end"><span t-field="doc.subtotal"/></td></tr>
+                                <tr class="fw-bold table-secondary"><td>SUBTOTAL FACTURA</td><td class="text-end"><span t-field="doc.subtotal_factura"/></td></tr>
+                                <tr><td>(-) Conceptos Excluidos CDT</td><td class="text-end"><span t-field="doc.ajustes_excluidos_cdt"/></td></tr>
+                                <tr class="fw-bold"><td>(=) Base Gravable CDT</td><td class="text-end"><span t-field="doc.base_gravable_cdt"/></td></tr>
                                 <tr><td>ITBIS (18%)</td><td class="text-end"><span t-field="doc.itbis_monto"/></td></tr>
                                 <tr><td>CDT (2%)</td><td class="text-end"><span t-field="doc.cdt_monto"/></td></tr>
                                 <tr><td>ISC (10%)</td><td class="text-end"><span t-field="doc.isc_monto"/></td></tr>

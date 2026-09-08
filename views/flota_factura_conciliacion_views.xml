@@ -105,15 +105,20 @@
                         </group>
                     </group>
 
-                    <group string="Impuestos Aplicados (República Dominicana)">
-                        <group>
-                            <field name="subtotal" widget="monetary" readonly="1"/>
-                            <field name="itbis_monto" widget="monetary" readonly="1" string="ITBIS (18%)"/>
+                    <group string="Impuestos Aplicados y Desglose CDT (República Dominicana)">
+                        <group string="Bases Gravables y Exclusiones CDT">
+                            <field name="subtotal_factura" widget="monetary" readonly="1" string="Subtotal Factura"/>
+                            <field name="ajustes_excluidos_cdt" widget="monetary" readonly="estado != 'draft'" string="(-) Conceptos Excluidos CDT" help="Monto de conceptos como Cargo por Pago Atrasado / Moras que NO gravan 2% de CDT."/>
+                            <field name="base_gravable_cdt" widget="monetary" readonly="1" class="fw-bold text-primary" string="(=) Base Gravable CDT"/>
+                            <field name="base_gravable_itbis" widget="monetary" readonly="1" string="Base Gravable ITBIS"/>
+                            <field name="base_gravable_isc" widget="monetary" readonly="1" string="Base Gravable ISC"/>
                         </group>
-                        <group>
-                            <field name="cdt_monto" widget="monetary" readonly="1" string="CDT (2%)"/>
+                        <group string="Impuestos Calculados">
+                            <field name="itbis_monto" widget="monetary" readonly="1" string="ITBIS (18%)"/>
+                            <field name="cdt_monto" widget="monetary" readonly="1" class="fw-bold text-success" string="CDT Calculado (2%)"/>
                             <field name="isc_monto" widget="monetary" readonly="1" string="ISC (10%)"/>
                             <field name="total_mes" widget="monetary" readonly="1" class="fw-bold fs-5 text-success" string="TOTAL DEL MES"/>
+                            <field name="diferencia_conciliacion" widget="monetary" readonly="1" string="Diferencia Conciliación"/>
                         </group>
                     </group>
 
@@ -171,6 +176,20 @@
                                         </group>
                                     </sheet>
                                 </form>
+                            </field>
+                        </page>
+
+                        <page string="Conceptos y Ajustes Factura (CDT)" name="conceptos">
+                            <field name="concepto_ids" readonly="estado != 'draft'">
+                                <list string="Conceptos y Ajustes de Factura" editable="bottom" decoration-muted="not grava_cdt">
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="nombre_concepto" placeholder="Ej. Cargo por Pago Atrasado / Plan Servicios"/>
+                                    <field name="monto" widget="monetary" sum="Monto Total"/>
+                                    <field name="grava_itbis"/>
+                                    <field name="grava_cdt"/>
+                                    <field name="grava_isc"/>
+                                    <field name="notas"/>
+                                </list>
                             </field>
                         </page>
 

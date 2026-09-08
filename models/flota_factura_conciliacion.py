@@ -55,6 +55,12 @@ class FlotaFacturaConciliacion(models.Model):
     otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Cargos extraordinarios, notas de crédito o descuentos corporativos globales a nivel de cuenta.")
 
     subtotal = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Base imponible de la factura antes de aplicar los impuestos de ley (RD$).")
+    subtotal_factura = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Base imponible de la factura antes de aplicar los impuestos de ley (RD$).")
+    base_gravable_itbis = fields.Monetary(string='Base Gravable ITBIS', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 18% de ITBIS.")
+    base_gravable_cdt = fields.Monetary(string='Base Gravable CDT', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 2% de CDT (Subtotal menos Conceptos Excluidos).")
+    base_gravable_isc = fields.Monetary(string='Base Gravable ISC', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 10% de ISC.")
+    ajustes_excluidos_cdt = fields.Monetary(string='Conceptos Excluidos CDT', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', help="Conceptos/Ajustes que NO gravan CDT (ej. Cargo por Pago Atrasado / Mora).")
+
     itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%).")
     cdt_monto = fields.Monetary(string='CDT (2%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Contribución al Desarrollo de las Telecomunicaciones (2%).")
     isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
@@ -72,6 +78,7 @@ class FlotaFacturaConciliacion(models.Model):
 
     linea_ids = fields.One2many('flota.factura.linea', 'conciliacion_id', string='Desglose por Empleado / Número')
     resumen_depto_ids = fields.One2many('flota.factura.departamento.resumen', 'conciliacion_id', string='Resumen por Departamento')
+    concepto_ids = fields.One2many('flota.factura.concepto', 'conciliacion_id', string='Conceptos y Ajustes de Factura')
 
     count_lineas = fields.Integer(string='Total Líneas', compute='_compute_kpis', store=True)
     count_excesos = fields.Integer(string='Líneas con Exceso', compute='_compute_kpis', store=True)
@@ -134,14 +141,32 @@ class FlotaFacturaConciliacion(models.Model):
         self.write({'estado': 'procesando'})
         self.message_post(body=_("El estado de la conciliación fue cambiado a <b>Procesando</b>."))
 
-    @api.depends('renta_mensual', 'renta_otros_servicios', 'uso_data_movil', 'llamadas_roaming', 'otros_cargos_creditos')
+    @api.depends(
+        'renta_mensual', 'renta_otros_servicios', 'uso_data_movil', 'llamadas_roaming',
+        'otros_cargos_creditos', 'ajustes_excluidos_cdt',
+        'concepto_ids', 'concepto_ids.monto', 'concepto_ids.grava_cdt', 'concepto_ids.grava_itbis', 'concepto_ids.grava_isc'
+    )
     def _compute_totales_factura(self):
         for rec in self:
             sub = rec.renta_mensual + rec.renta_otros_servicios + rec.uso_data_movil + rec.llamadas_roaming + rec.otros_cargos_creditos
             rec.subtotal = sub
-            rec.itbis_monto = sub * 0.18
-            rec.cdt_monto = sub * 0.02
-            rec.isc_monto = sub * 0.10
+            rec.subtotal_factura = sub
+
+            if rec.concepto_ids:
+                excl = sum(c.monto for c in rec.concepto_ids if not c.grava_cdt)
+                rec.ajustes_excluidos_cdt = excl
+                rec.base_gravable_itbis = sum(c.monto for c in rec.concepto_ids if c.grava_itbis)
+                rec.base_gravable_cdt = sum(c.monto for c in rec.concepto_ids if c.grava_cdt)
+                rec.base_gravable_isc = sum(c.monto for c in rec.concepto_ids if c.grava_isc)
+            else:
+                excl = rec.ajustes_excluidos_cdt or 0.0
+                rec.base_gravable_itbis = sub
+                rec.base_gravable_cdt = max(0.0, sub - excl)
+                rec.base_gravable_isc = sub
+
+            rec.itbis_monto = rec.base_gravable_itbis * 0.18
+            rec.cdt_monto = rec.base_gravable_cdt * 0.02
+            rec.isc_monto = rec.base_gravable_isc * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.cdt_monto + rec.isc_monto
 
     @api.depends('linea_ids', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes')
@@ -582,11 +607,14 @@ class FlotaFacturaConciliacion(models.Model):
             ("Uso Servicios Data Móvil", self.uso_data_movil),
             ("Llamadas Roaming", self.llamadas_roaming),
             ("Otros Cargos, Créditos o Descuentos (CR)", self.otros_cargos_creditos),
-            ("SUBTOTAL", self.subtotal),
+            ("SUBTOTAL FACTURA", self.subtotal_factura),
+            ("(-) Conceptos Excluidos CDT", self.ajustes_excluidos_cdt),
+            ("(=) Base Gravable CDT", self.base_gravable_cdt),
             ("ITBIS - 18%", self.itbis_monto),
             ("CDT - 2%", self.cdt_monto),
             ("ISC - 10%", self.isc_monto),
-            ("TOTAL DEL MES", self.total_mes)
+            ("TOTAL DEL MES", self.total_mes),
+            ("Diferencia Conciliación (Ajuste)", self.diferencia_conciliacion)
         ]
 
         for name, val in rubros:
@@ -594,7 +622,7 @@ class FlotaFacturaConciliacion(models.Model):
             c_val = ws.cell(row=current_row, column=2, value=val)
             c_val.number_format = '"RD$"#,##0.00'
             
-            if name in ["SUBTOTAL", "TOTAL DEL MES"]:
+            if name in ["SUBTOTAL FACTURA", "(=) Base Gravable CDT", "TOTAL DEL MES"]:
                 c_name.font = bold_font
                 c_val.font = bold_font
             if name == "TOTAL DEL MES":
@@ -764,3 +792,28 @@ class FlotaFacturaDepartamentoResumen(models.Model):
     monto_total = fields.Monetary(string='Total Depto (RD$)', currency_field='currency_id')
     porcentaje_gasto = fields.Float(string='% del Total General', digits=(5, 2))
     currency_id = fields.Many2one('res.currency', string='Moneda', related='conciliacion_id.currency_id', store=True, readonly=True)
+
+
+class FlotaFacturaConcepto(models.Model):
+    _name = 'flota.factura.concepto'
+    _description = 'Concepto o Ajuste de Factura (Grava / Excluido de CDT)'
+    _order = 'id asc'
+
+    conciliacion_id = fields.Many2one('flota.factura.conciliacion', string='Factura Conciliación', ondelete='cascade', index=True)
+    nombre_concepto = fields.Char(string='Concepto / Detalle', required=True)
+    monto = fields.Monetary(string='Monto (RD$)', currency_field='currency_id', default=0.0)
+    currency_id = fields.Many2one('res.currency', related='conciliacion_id.currency_id', store=True, readonly=True)
+    grava_itbis = fields.Boolean(string='Grava ITBIS (18%)', default=True)
+    grava_cdt = fields.Boolean(string='Grava CDT (2%)', default=True)
+    grava_isc = fields.Boolean(string='Grava ISC (10%)', default=True)
+    notas = fields.Char(string='Observaciones')
+
+    @api.onchange('nombre_concepto')
+    def _onchange_nombre_concepto(self):
+        if self.nombre_concepto:
+            nombre = self.nombre_concepto.lower()
+            keywords_excluidos_cdt = ['pago atrasado', 'mora', 'recargo', 'multa', 'interes', 'atraso', 'cargo por pago']
+            if any(kw in nombre for kw in keywords_excluidos_cdt):
+                self.grava_cdt = False
+                self.notas = _("Excluido automáticamente de CDT (Concepto no gravado con 2% CDT)")
+
