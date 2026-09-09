@@ -52,7 +52,7 @@ class FlotaFacturaConciliacion(models.Model):
     renta_otros_servicios = fields.Monetary(string='Renta Otros Servicios', currency_field='currency_id', default=0.0, tracking=True, help="Servicios adicionales y paquetes complementarios contratados en la cuenta.")
     uso_data_movil = fields.Monetary(string='Uso Data Móvil', currency_field='currency_id', default=0.0, tracking=True, help="Consumo excedente de datos móviles no incluidos en los planes fijos.")
     llamadas_roaming = fields.Monetary(string='Llamadas Roaming', currency_field='currency_id', default=0.0, tracking=True, help="Consumos por llamadas de Larga Distancia Internacional (LDI) o Roaming.")
-    otros_cargos_creditos = fields.Monetary(string='Otros Cargos / Créditos (CR)', currency_field='currency_id', default=0.0, tracking=True, help="Cargos extraordinarios, notas de crédito o descuentos corporativos globales a nivel de cuenta.")
+    otros_cargos_creditos = fields.Monetary(string='Otros cargos, créditos o descuentos', currency_field='currency_id', default=0.0, tracking=True, help="Cargos extraordinarios, notas de crédito o descuentos corporativos globales a nivel de cuenta.")
 
     subtotal = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Base imponible de la factura antes de aplicar los impuestos de ley (RD$).")
     subtotal_factura = fields.Monetary(string='Subtotal Factura', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Base imponible de la factura antes de aplicar los impuestos de ley (RD$).")
@@ -187,12 +187,22 @@ class FlotaFacturaConciliacion(models.Model):
                     '<div class="alert alert-warning d-flex align-items-center mb-3 shadow-sm" role="alert">'
                     '<i class="fa fa-exclamation-triangle fs-4 me-2"></i>'
                     '<div>'
-                    '<strong>Diferencia Detectada:</strong><br/>'
-                    'Sumatoria Líneas Empleados: <strong>RD$%s</strong> | Total Factura Claro: <strong>RD$%s</strong> | '
-                    'Diferencia: <strong>RD$%s</strong>.'
+                    '<strong>Diferencia Detectada en Conciliación:</strong><br/>'
+                    'El Total de la Factura Claro (<strong>RD$%s</strong>) se calcula sumando el Subtotal (<strong>RD$%s</strong>) más los impuestos '
+                    '(ITBIS 18%%: <strong>RD$%s</strong>, ISC 10%%: <strong>RD$%s</strong> y CDT 2%%: <strong>RD$%s</strong>).<br/>'
+                    'Actualmente, la suma del consumo asignado a las líneas de los empleados es de <strong>RD$%s</strong>, '
+                    'presentando una diferencia de <strong>RD$%s</strong> contra la factura.'
                     '</div>'
                     '</div>'
-                ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}", f"{diff:,.2f}")
+                ) % (
+                    f"{rec.total_mes:,.2f}",
+                    f"{rec.subtotal:,.2f}",
+                    f"{rec.itbis_monto:,.2f}",
+                    f"{rec.isc_monto:,.2f}",
+                    f"{rec.cdt_monto:,.2f}",
+                    f"{tot_lineas:,.2f}",
+                    f"{abs(diff):,.2f}"
+                )
 
     def action_generar_resumen_departamentos(self):
         """ Agrupa y consolida el gasto por Departamento, impacta historial y sincroniza estado (Activo/Inactivo) de Empleados """

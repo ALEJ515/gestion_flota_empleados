@@ -94,13 +94,13 @@
                             <field name="renta_otros_servicios" widget="monetary" string="Renta Otros Servicios"/>
                             <field name="uso_data_movil" widget="monetary" string="Uso Data Móvil"/>
                             <field name="llamadas_roaming" widget="monetary" string="Llamadas Roaming / LD"/>
-                            <field name="otros_cargos_creditos" widget="monetary" string="Ajustes / Créditos Globales Nivel Cuenta"/>
+                            <field name="otros_cargos_creditos" widget="monetary" string="Otros cargos, créditos o descuentos"/>
+                            <field name="subtotal_factura" widget="monetary" readonly="1" string="Subtotal Factura" class="fw-bold"/>
                         </group>
                     </group>
 
                     <group string="Impuestos Aplicados y Desglose CDT (República Dominicana)">
                         <group string="Bases Gravables y Exclusiones CDT">
-                            <field name="subtotal_factura" widget="monetary" readonly="1" string="Subtotal Factura"/>
                             <field name="ajustes_excluidos_cdt" widget="monetary" readonly="estado != 'draft'" string="(-) Conceptos Excluidos CDT" help="Monto de conceptos como Cargo por Pago Atrasado / Moras que NO gravan 2% de CDT."/>
                             <field name="base_gravable_cdt" widget="monetary" readonly="1" class="fw-bold text-primary" string="(=) Base Gravable CDT"/>
                             <field name="base_gravable_itbis" widget="monetary" readonly="1" string="Base Gravable ITBIS"/>
