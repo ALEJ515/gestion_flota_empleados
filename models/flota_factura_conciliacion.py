@@ -379,7 +379,10 @@ class FlotaFacturaConciliacion(models.Model):
             val = float(re.sub(r'[^0-9.]', '', t_c.replace(',', '')) or 0)
             cred_m = -val if ('CR' in t_c or '-' in t_c) else val
 
+        # El monto puede aparecer antes o después de la etiqueta "CDT - 2%" según el layout del PDF de Claro
         m_cdt = re.search(r'CDT\s*(?:-|:)\s*2%[^0-9]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if not m_cdt:
+            m_cdt = re.search(r'([0-9,]+\.[0-9]{2})\s*CDT\s*(?:-|:)\s*2%', pdf_text, re.IGNORECASE)
         if m_cdt:
             cdt_m = float(m_cdt.group(1).replace(',', ''))
 
