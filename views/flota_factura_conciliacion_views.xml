@@ -108,7 +108,7 @@
                         </group>
                         <group string="Impuestos Calculados">
                             <field name="itbis_monto" widget="monetary" readonly="1" string="ITBIS (18%)"/>
-                            <field name="cdt_monto" widget="monetary" readonly="1" class="fw-bold text-success" string="CDT Calculado (2%)"/>
+                            <field name="cdt_monto" widget="monetary" readonly="estado != 'draft'" class="fw-bold text-success" string="CDT (2%)"/>
                             <field name="isc_monto" widget="monetary" readonly="1" string="ISC (10%)"/>
                             <field name="total_mes" widget="monetary" readonly="1" class="fw-bold fs-5 text-success" string="TOTAL DEL MES"/>
                         </group>
@@ -168,20 +168,6 @@
                                         </group>
                                     </sheet>
                                 </form>
-                            </field>
-                        </page>
-
-                        <page string="Conceptos y Ajustes Factura (CDT)" name="conceptos">
-                            <field name="concepto_ids" readonly="estado != 'draft'">
-                                <list string="Conceptos y Ajustes de Factura" editable="bottom" decoration-muted="not grava_cdt">
-                                    <field name="currency_id" column_invisible="1"/>
-                                    <field name="nombre_concepto" placeholder="Ej. Cargo por Pago Atrasado / Plan Servicios"/>
-                                    <field name="monto" widget="monetary" sum="Monto Total"/>
-                                    <field name="grava_itbis"/>
-                                    <field name="grava_cdt"/>
-                                    <field name="grava_isc"/>
-                                    <field name="notas"/>
-                                </list>
                             </field>
                         </page>
 

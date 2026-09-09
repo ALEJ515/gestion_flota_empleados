@@ -62,7 +62,7 @@ class FlotaFacturaConciliacion(models.Model):
     ajustes_excluidos_cdt = fields.Monetary(string='Conceptos Excluidos CDT', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', help="Conceptos/Ajustes que NO gravan CDT (ej. Cargo por Pago Atrasado / Mora).")
 
     itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%).")
-    cdt_monto = fields.Monetary(string='CDT (2%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Contribución al Desarrollo de las Telecomunicaciones (2%).")
+    cdt_monto = fields.Monetary(string='CDT informado (2%)', currency_field='currency_id', default=0.0, tracking=True, help="Monto CDT usado para obtener la base gravable mediante CDT / 2%.")
     isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
     total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Gran Total final de la factura Claro en RD$ a pagar (Subtotal + Impuestos).")
 
@@ -135,33 +135,29 @@ class FlotaFacturaConciliacion(models.Model):
 
     @api.depends(
         'renta_mensual', 'renta_otros_servicios', 'uso_data_movil', 'llamadas_roaming',
-        'otros_cargos_creditos', 'ajustes_excluidos_cdt',
-        'concepto_ids', 'concepto_ids.monto', 'concepto_ids.grava_cdt', 'concepto_ids.grava_itbis', 'concepto_ids.grava_isc'
+        'otros_cargos_creditos', 'cdt_monto'
     )
     def _compute_totales_factura(self):
         for rec in self:
-            sub = rec.renta_mensual + rec.renta_otros_servicios + rec.uso_data_movil + rec.llamadas_roaming + rec.otros_cargos_creditos
+            # Los créditos y descuentos se almacenan negativos y se suman al subtotal.
+            sub = (
+                rec.renta_mensual
+                + rec.renta_otros_servicios
+                + rec.uso_data_movil
+                + rec.llamadas_roaming
+                + rec.otros_cargos_creditos
+            )
             rec.subtotal = sub
             rec.subtotal_factura = sub
+            rec.base_gravable_itbis = sub
+            rec.base_gravable_isc = sub
+            rec.base_gravable_cdt = rec.cdt_monto / 0.02 if rec.cdt_monto else 0.0
+            rec.ajustes_excluidos_cdt = sub - rec.base_gravable_cdt
+            rec.itbis_monto = sub * 0.18
+            rec.isc_monto = sub * 0.10
+            rec.total_mes = sub + rec.itbis_monto + rec.isc_monto + rec.cdt_monto
 
-            if rec.concepto_ids:
-                excl = sum(c.monto for c in rec.concepto_ids if not c.grava_cdt)
-                rec.ajustes_excluidos_cdt = excl
-                rec.base_gravable_itbis = sum(c.monto for c in rec.concepto_ids if c.grava_itbis)
-                rec.base_gravable_cdt = sum(c.monto for c in rec.concepto_ids if c.grava_cdt)
-                rec.base_gravable_isc = sum(c.monto for c in rec.concepto_ids if c.grava_isc)
-            else:
-                excl = rec.ajustes_excluidos_cdt or 0.0
-                rec.base_gravable_itbis = sub
-                rec.base_gravable_cdt = max(0.0, sub - excl)
-                rec.base_gravable_isc = sub
-
-            rec.itbis_monto = rec.base_gravable_itbis * 0.18
-            rec.cdt_monto = rec.base_gravable_cdt * 0.02
-            rec.isc_monto = rec.base_gravable_isc * 0.10
-            rec.total_mes = sub + rec.itbis_monto + rec.cdt_monto + rec.isc_monto
-
-    @api.depends('linea_ids', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes')
+    @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes')
     def _compute_kpis(self):
         for rec in self:
             rec.count_lineas = len(rec.linea_ids)
@@ -169,18 +165,13 @@ class FlotaFacturaConciliacion(models.Model):
             rec.count_excesos = len(excesos)
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.uso_local_data_movil + l.monto_roaming))
 
-            tot_lineas = sum(rec.linea_ids.mapped('total_linea'))
+            tot_lineas = sum(rec.linea_ids.mapped('total'))
             rec.total_lineas_sum = tot_lineas
             diff = rec.total_mes - tot_lineas
 
             if abs(diff) < 0.01:
                 rec.estado_cuadre = 'cuadrado'
-                rec.banner_conciliacion_html = (
-                    '<div class="alert alert-success d-flex align-items-center mb-3 shadow-sm" role="alert">'
-                    '<i class="fa fa-check-circle fs-4 me-2"></i>'
-                    '<div><strong>Conciliación Exacta:</strong> La suma de consumo de todas las líneas de empleados (RD$%s) coincide con el Total de la Factura Claro (RD$%s).</div>'
-                    '</div>'
-                ) % (f"{tot_lineas:,.2f}", f"{rec.total_mes:,.2f}")
+                rec.banner_conciliacion_html = False
             else:
                 rec.estado_cuadre = 'desviacion'
                 rec.banner_conciliacion_html = (
@@ -423,15 +414,13 @@ class FlotaFacturaConciliacion(models.Model):
             mapped_values = map_claro_columns(ordered_values)
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
-                default_dept = self.env['flota.departamento'].search([], limit=1)
-                default_ubic = self.env['flota.ubicacion'].search([], limit=1)
                 emp_name = f"Empleado Flota {clean_phone}"
                 emp = self.env['flota.empleado'].create({
                     'name': emp_name,
                     'numero_flota': clean_phone,
                     'cargo': 'Asignación Automática Claro',
-                    'departamento_id': default_dept.id if default_dept else False,
-                    'ubicacion_id': default_ubic.id if default_ubic else False,
+                    'departamento_id': False,
+                    'ubicacion_id': False,
                     'estado': 'active',
                     'en_ultima_factura': True,
                     'es_nuevo_auto': True,
