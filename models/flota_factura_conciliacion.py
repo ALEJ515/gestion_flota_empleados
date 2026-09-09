@@ -355,6 +355,7 @@ class FlotaFacturaConciliacion(models.Model):
         data_m = 0.0
         roam_m = 0.0
         cred_m = 0.0
+        cdt_m = 0.0
 
         m_renta = re.search(r'Renta\s+mensual\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
         if m_renta:
@@ -377,6 +378,10 @@ class FlotaFacturaConciliacion(models.Model):
             t_c = m_cred.group(1).upper()
             val = float(re.sub(r'[^0-9.]', '', t_c.replace(',', '')) or 0)
             cred_m = -val if ('CR' in t_c or '-' in t_c) else val
+
+        m_cdt = re.search(r'CDT\s*(?:-|:)\s*2%[^0-9]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if m_cdt:
+            cdt_m = float(m_cdt.group(1).replace(',', ''))
 
         # Ajuste automático del Total de Factura si viene especificado en la carátula de Claro
         m_tot_pdf = re.search(r'(?:Total\s+del\s+Mes|Total\s+a\s+Pagar|Total\s+Factura)\s*[\$RD\s]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
@@ -453,6 +458,7 @@ class FlotaFacturaConciliacion(models.Model):
             'uso_data_movil': data_m,
             'llamadas_roaming': roam_m,
             'otros_cargos_creditos': cred_m,
+            'cdt_monto': cdt_m,
             'estado': 'procesando'
         })
 

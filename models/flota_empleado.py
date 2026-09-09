@@ -30,7 +30,7 @@ class FlotaEmpleado(models.Model):
     departamento_id = fields.Many2one(
         'flota.departamento', 
         string='Departamento', 
-        required=False, 
+        required=False,
         ondelete='restrict',
         index=True,
         tracking=True
