@@ -7,8 +7,7 @@ puede luego, desde Ajustes > Usuarios, degradar a quien corresponda al grupo
 
 
 def migrate(cr, version):
-    cr.execute("SELECT id FROM res_groups WHERE name = 'Administrador' AND category_id IN "
-               "(SELECT id FROM ir_module_category WHERE name = 'Flota Empleados')")
+    cr.execute("SELECT res_id FROM ir_model_data WHERE module = 'gestion_flota_empleados' AND name = 'group_flota_manager'")
     row = cr.fetchone()
     if not row:
         return
