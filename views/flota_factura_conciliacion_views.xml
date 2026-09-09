@@ -19,7 +19,8 @@
                 <field name="proveedor" string="Proveedor" optional="show"/>
                 <field name="fecha_factura" string="Fecha de Factura" optional="show"/>
                 <field name="fecha_subida" string="Fecha de Subida" optional="show"/>
-                <field name="count_lineas" optional="show"/>
+                <field name="count_lineas" string="Total Líneas PDF" optional="show"/>
+                <field name="count_lineas_registradas" string="Total Líneas Registradas" optional="show"/>
                 <field name="count_excesos" widget="badge" decoration-warning="count_excesos &gt; 0" optional="show"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="subtotal" widget="monetary" sum="Subtotal Total" optional="show"/>

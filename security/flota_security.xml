@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Categoría de seguridad propia del módulo, visible en Ajustes > Usuarios y Compañías > Grupos -->
+    <record id="module_category_flota_empleados" model="ir.module.category">
+        <field name="name">Flota Empleados</field>
+        <field name="description">Permisos para el módulo de Gestión de Flota y Empleados (conciliación de facturas Claro).</field>
+        <field name="sequence">20</field>
+    </record>
+
+    <!-- Grupo base: Usuario de Flota. Puede operar el día a día (crear/editar empleados,
+         departamentos, ubicaciones y conciliaciones), pero no puede eliminar registros
+         críticos ni gestionar la configuración de seguridad del módulo. -->
+    <record id="group_flota_user" model="res.groups">
+        <field name="name">Usuario</field>
+        <field name="category_id" ref="module_category_flota_empleados"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Puede registrar y editar Empleados, Departamentos, Ubicaciones y Conciliaciones de Factura Claro, pero no puede eliminarlos.</field>
+    </record>
+
+    <!-- Grupo avanzado: Administrador de Flota. Hereda todo lo del Usuario y además puede
+         eliminar registros (incluyendo conciliaciones ya conciliadas) y gestionar el módulo
+         por completo. Es el grupo recomendado para Recursos Humanos / Finanzas. -->
+    <record id="group_flota_manager" model="res.groups">
+        <field name="name">Administrador</field>
+        <field name="category_id" ref="module_category_flota_empleados"/>
+        <field name="implied_ids" eval="[(4, ref('group_flota_user'))]"/>
+        <field name="comment">Acceso total al módulo de Flota Empleados: crear, editar y eliminar Empleados, Departamentos, Ubicaciones y Conciliaciones de Factura Claro.</field>
+        <field name="users" eval="[(4, ref('base.user_admin'))]"/>
+    </record>
+</odoo>
