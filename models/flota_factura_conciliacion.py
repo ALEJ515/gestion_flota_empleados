@@ -61,9 +61,11 @@ class FlotaFacturaConciliacion(models.Model):
     base_gravable_isc = fields.Monetary(string='Base Gravable ISC', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 10% de ISC.")
     ajustes_excluidos_cdt = fields.Monetary(string='Conceptos Excluidos CDT', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', help="Conceptos/Ajustes que NO gravan CDT (ej. Cargo por Pago Atrasado / Mora).")
 
-    itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%).")
+    itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%). Se usa el monto impreso literalmente en el PDF; si no se pudo extraer, se calcula como 18% del Subtotal.")
+    itbis_pdf_extraido = fields.Monetary(string='ITBIS Extraído del PDF', currency_field='currency_id', default=0.0, help="Monto de ITBIS impreso literalmente en la carátula del PDF de Claro (fuente oficial, evita diferencias por redondeo interno de Claro al calcular por línea).")
     cdt_monto = fields.Monetary(string='CDT informado (2%)', currency_field='currency_id', default=0.0, tracking=True, help="Monto CDT usado para obtener la base gravable mediante CDT / 2%.")
-    isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
+    isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%). Se usa el monto impreso literalmente en el PDF; si no se pudo extraer, se calcula como 10% del Subtotal.")
+    isc_pdf_extraido = fields.Monetary(string='ISC Extraído del PDF', currency_field='currency_id', default=0.0, help="Monto de ISC impreso literalmente en la carátula del PDF de Claro (fuente oficial, evita diferencias por redondeo interno de Claro al calcular por línea).")
     total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Gran Total final de la factura Claro en RD$ a pagar (Subtotal + Impuestos).")
     total_factura_pdf = fields.Monetary(string='Total Factura Claro (PDF)', currency_field='currency_id', default=0.0, tracking=True, help="Monto 'Total del Mes' impreso literalmente en la carátula del PDF de Claro. Se usa como referencia oficial para validar la conciliación.")
 
@@ -136,7 +138,7 @@ class FlotaFacturaConciliacion(models.Model):
 
     @api.depends(
         'renta_mensual', 'renta_otros_servicios', 'uso_data_movil', 'llamadas_roaming',
-        'otros_cargos_creditos', 'cdt_monto'
+        'otros_cargos_creditos', 'cdt_monto', 'itbis_pdf_extraido', 'isc_pdf_extraido'
     )
     def _compute_totales_factura(self):
         for rec in self:
@@ -154,8 +156,12 @@ class FlotaFacturaConciliacion(models.Model):
             rec.base_gravable_isc = sub
             rec.base_gravable_cdt = rec.cdt_monto / 0.02 if rec.cdt_monto else 0.0
             rec.ajustes_excluidos_cdt = sub - rec.base_gravable_cdt
-            rec.itbis_monto = sub * 0.18
-            rec.isc_monto = sub * 0.10
+            # Claro calcula ITBIS/ISC línea por línea (con redondeo por empleado) y luego suma,
+            # por lo que el monto impreso en el PDF puede diferir en centavos del 18%/10% del Subtotal.
+            # Se usa el monto extraído literal del PDF como fuente oficial; si no se pudo extraer,
+            # se recurre a la fórmula (18%/10% del Subtotal) como respaldo.
+            rec.itbis_monto = rec.itbis_pdf_extraido if rec.itbis_pdf_extraido else sub * 0.18
+            rec.isc_monto = rec.isc_pdf_extraido if rec.isc_pdf_extraido else sub * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.isc_monto + rec.cdt_monto
 
     @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes', 'total_factura_pdf')
@@ -360,6 +366,8 @@ class FlotaFacturaConciliacion(models.Model):
         roam_m = 0.0
         cred_m = 0.0
         cdt_m = 0.0
+        itbis_m = 0.0
+        isc_m = 0.0
 
         m_renta = re.search(r'Renta\s+mensual\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
         if m_renta:
@@ -389,6 +397,21 @@ class FlotaFacturaConciliacion(models.Model):
             m_cdt = re.search(r'([0-9,]+\.[0-9]{2})\s*CDT\s*(?:-|:)\s*2%', pdf_text, re.IGNORECASE)
         if m_cdt:
             cdt_m = float(m_cdt.group(1).replace(',', ''))
+
+        # ITBIS e ISC impresos literalmente en el PDF (fuente oficial): Claro los calcula por línea
+        # con redondeo individual y luego suma, por lo que su total puede diferir en centavos del
+        # 18%/10% aplicado de una sola vez sobre el Subtotal consolidado.
+        m_itbis = re.search(r'ITBIS\s*(?:-|:)\s*18%[^0-9]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if not m_itbis:
+            m_itbis = re.search(r'([0-9,]+\.[0-9]{2})\s*ITBIS\s*(?:-|:)\s*18%', pdf_text, re.IGNORECASE)
+        if m_itbis:
+            itbis_m = float(m_itbis.group(1).replace(',', ''))
+
+        m_isc = re.search(r'ISC\s*(?:-|:)\s*10%[^0-9]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if not m_isc:
+            m_isc = re.search(r'([0-9,]+\.[0-9]{2})\s*ISC\s*(?:-|:)\s*10%', pdf_text, re.IGNORECASE)
+        if m_isc:
+            isc_m = float(m_isc.group(1).replace(',', ''))
 
         # Total de Factura Claro impreso literalmente en el PDF (fuente oficial para validar la conciliación)
         total_pdf_m = 0.0
@@ -463,6 +486,8 @@ class FlotaFacturaConciliacion(models.Model):
             'llamadas_roaming': roam_m,
             'otros_cargos_creditos': cred_m,
             'cdt_monto': cdt_m,
+            'itbis_pdf_extraido': itbis_m,
+            'isc_pdf_extraido': isc_m,
             'total_factura_pdf': total_pdf_m,
         })
 
