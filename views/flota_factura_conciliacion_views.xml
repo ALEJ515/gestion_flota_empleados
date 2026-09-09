@@ -27,6 +27,7 @@
                 <field name="cdt_monto" widget="monetary" sum="CDT Total" optional="show"/>
                 <field name="isc_monto" widget="monetary" sum="ISC Total" optional="show"/>
                 <field name="total_mes" widget="monetary" sum="Gran Total" optional="show"/>
+                <field name="total_factura_pdf" widget="monetary" sum="Total PDF" optional="show"/>
                 <field name="estado" widget="badge" decoration-info="estado=='procesando'" decoration-success="estado=='conciliado'" decoration-danger="estado=='error'" optional="show"/>
             </list>
         </field>
@@ -59,19 +60,33 @@
 
                     <!-- BANNER KPIS SUPERIOR -->
                     <div class="row text-center mb-4 g-2">
-                        <div class="col-md-4">
-                            <div class="p-3 border rounded bg-light shadow-sm">
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded shadow-sm" invisible="estado_cuadre != 'cuadrado'" style="background-color:#d1f2dd;">
                                 <span class="text-muted d-block small">TOTAL FACTURA CLARO</span>
-                                <strong class="fs-4 text-success"><field name="total_mes" widget="monetary"/></strong>
+                                <strong class="fs-4 text-success"><field name="total_factura_pdf" widget="monetary"/></strong>
+                            </div>
+                            <div class="p-3 border rounded bg-light shadow-sm" invisible="estado_cuadre == 'cuadrado'">
+                                <span class="text-muted d-block small">TOTAL FACTURA CLARO</span>
+                                <strong class="fs-4 text-dark"><field name="total_factura_pdf" widget="monetary"/></strong>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
+                            <div class="p-3 border rounded shadow-sm" invisible="estado_cuadre != 'cuadrado'" style="background-color:#d1f2dd;">
+                                <span class="text-muted d-block small">TOTAL DEL MES</span>
+                                <strong class="fs-4 text-success"><field name="total_mes" widget="monetary"/></strong>
+                            </div>
+                            <div class="p-3 border rounded bg-light shadow-sm" invisible="estado_cuadre == 'cuadrado'">
+                                <span class="text-muted d-block small">TOTAL DEL MES</span>
+                                <strong class="fs-4 text-primary"><field name="total_mes" widget="monetary"/></strong>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
                             <div class="p-3 border rounded bg-light shadow-sm">
                                 <span class="text-muted d-block small">SUMA LÍNEAS EMPLEADOS</span>
                                 <strong class="fs-4 text-primary"><field name="total_lineas_sum" widget="monetary"/></strong>
                             </div>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="p-3 border rounded bg-light shadow-sm">
                                 <span class="text-muted d-block small">EXCESOS DATA / ROAMING</span>
                                 <strong class="fs-4 text-warning"><field name="count_excesos"/> línea(s)</strong>
@@ -96,6 +111,7 @@
                             <field name="llamadas_roaming" widget="monetary" string="Llamadas Roaming / LD"/>
                             <field name="otros_cargos_creditos" widget="monetary" string="Otros cargos, créditos o descuentos"/>
                             <field name="subtotal_factura" widget="monetary" readonly="1" string="Subtotal Factura" class="fw-bold"/>
+                            <field name="total_factura_pdf" widget="monetary" readonly="estado != 'draft'" string="Total Factura Claro (PDF)" help="Monto 'Total del Mes' impreso literalmente en la carátula del PDF. Es la referencia oficial para validar la conciliación."/>
                         </group>
                     </group>
 

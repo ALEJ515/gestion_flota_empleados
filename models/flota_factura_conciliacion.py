@@ -65,6 +65,7 @@ class FlotaFacturaConciliacion(models.Model):
     cdt_monto = fields.Monetary(string='CDT informado (2%)', currency_field='currency_id', default=0.0, tracking=True, help="Monto CDT usado para obtener la base gravable mediante CDT / 2%.")
     isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
     total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Gran Total final de la factura Claro en RD$ a pagar (Subtotal + Impuestos).")
+    total_factura_pdf = fields.Monetary(string='Total Factura Claro (PDF)', currency_field='currency_id', default=0.0, tracking=True, help="Monto 'Total del Mes' impreso literalmente en la carátula del PDF de Claro. Se usa como referencia oficial para validar la conciliación.")
 
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id)
     estado = fields.Selection([
@@ -157,7 +158,7 @@ class FlotaFacturaConciliacion(models.Model):
             rec.isc_monto = sub * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.isc_monto + rec.cdt_monto
 
-    @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes')
+    @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes', 'total_factura_pdf')
     def _compute_kpis(self):
         for rec in self:
             rec.count_lineas = len(rec.linea_ids)
@@ -167,7 +168,8 @@ class FlotaFacturaConciliacion(models.Model):
 
             tot_lineas = sum(rec.linea_ids.mapped('total'))
             rec.total_lineas_sum = tot_lineas
-            diff = rec.total_mes - tot_lineas
+            # La conciliación se valida contra el Total de la Factura Claro impreso en el PDF, no contra la suma de líneas de empleados.
+            diff = rec.total_factura_pdf - rec.total_mes
 
             if abs(diff) < 0.01:
                 rec.estado_cuadre = 'cuadrado'
@@ -179,21 +181,23 @@ class FlotaFacturaConciliacion(models.Model):
                     '<i class="fa fa-exclamation-triangle fs-4 me-2"></i>'
                     '<div>'
                     '<strong>Diferencia Detectada en Conciliación:</strong><br/>'
-                    'El Total de la Factura Claro (<strong>RD$%s</strong>) se calcula sumando el Subtotal (<strong>RD$%s</strong>) más los impuestos '
+                    'El Total de la Factura Claro impreso en el PDF es de <strong>RD$%s</strong>.<br/>'
+                    'El Total del Mes calculado por el sistema es de <strong>RD$%s</strong>, sumando el Subtotal (<strong>RD$%s</strong>) más los impuestos '
                     '(ITBIS 18%%: <strong>RD$%s</strong>, ISC 10%%: <strong>RD$%s</strong> y CDT 2%%: <strong>RD$%s</strong>).<br/>'
-                    'Actualmente, la suma del consumo asignado a las líneas de los empleados es de <strong>RD$%s</strong>, '
-                    'presentando una diferencia de <strong>RD$%s</strong> contra la factura.'
+                    'Existe una diferencia de <strong>RD$%s</strong> entre el monto de la factura y el monto calculado por el sistema. '
+                    'Revise los valores de Renta, Otros cargos/créditos y CDT capturados de la factura.'
                     '</div>'
                     '</div>'
                 ) % (
+                    f"{rec.total_factura_pdf:,.2f}",
                     f"{rec.total_mes:,.2f}",
                     f"{rec.subtotal:,.2f}",
                     f"{rec.itbis_monto:,.2f}",
                     f"{rec.isc_monto:,.2f}",
                     f"{rec.cdt_monto:,.2f}",
-                    f"{tot_lineas:,.2f}",
                     f"{abs(diff):,.2f}"
                 )
+
 
     def action_generar_resumen_departamentos(self):
         """ Agrupa y consolida el gasto por Departamento, impacta historial y sincroniza estado (Activo/Inactivo) de Empleados """
@@ -386,16 +390,13 @@ class FlotaFacturaConciliacion(models.Model):
         if m_cdt:
             cdt_m = float(m_cdt.group(1).replace(',', ''))
 
-        # Ajuste automático del Total de Factura si viene especificado en la carátula de Claro
-        m_tot_pdf = re.search(r'(?:Total\s+del\s+Mes|Total\s+a\s+Pagar|Total\s+Factura)\s*[\$RD\s]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        # Total de Factura Claro impreso literalmente en el PDF (fuente oficial para validar la conciliación)
+        total_pdf_m = 0.0
+        m_tot_pdf = re.search(r'Total\s+del\s+Mes\s*[\$RD\s]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        if not m_tot_pdf:
+            m_tot_pdf = re.search(r'(?:Total\s+a\s+Pagar|Total\s+Factura)\s*[\$RD\s]*([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
         if m_tot_pdf:
-            pdf_total_mes_val = float(m_tot_pdf.group(1).replace(',', ''))
-            if pdf_total_mes_val > 0:
-                subtotal_prev = renta_m + renta_o + data_m + roam_m + cred_m
-                total_prev = subtotal_prev * 1.30
-                diff = pdf_total_mes_val - total_prev
-                if abs(diff) > 0.001 and abs(diff) < 10000.0:
-                    cred_m += (diff / 1.30)
+            total_pdf_m = float(m_tot_pdf.group(1).replace(',', ''))
 
         emp_map = _build_empleado_phone_map(self.env)
         lineas_vals = []
@@ -462,6 +463,7 @@ class FlotaFacturaConciliacion(models.Model):
             'llamadas_roaming': roam_m,
             'otros_cargos_creditos': cred_m,
             'cdt_monto': cdt_m,
+            'total_factura_pdf': total_pdf_m,
             'estado': 'procesando'
         })
 
