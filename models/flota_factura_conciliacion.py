@@ -180,11 +180,11 @@ class FlotaFacturaConciliacion(models.Model):
             rec.isc_monto = rec.isc_pdf_extraido if rec.isc_pdf_extraido else sub * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.isc_monto + rec.cdt_monto
 
-    @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.empleado_id', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes', 'total_factura_pdf')
+    @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.empleado_id', 'linea_ids.empleado_id.es_nuevo_auto', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes', 'total_factura_pdf')
     def _compute_kpis(self):
         for rec in self:
             rec.count_lineas = len(rec.linea_ids)
-            rec.count_lineas_registradas = len(rec.linea_ids.filtered(lambda l: l.empleado_id))
+            rec.count_lineas_registradas = len(rec.linea_ids.filtered(lambda l: l.empleado_id and not l.empleado_id.es_nuevo_auto))
             excesos = rec.linea_ids.filtered(lambda l: l.estado_linea in ['exceso_data', 'exceso_roaming'])
             rec.count_excesos = len(excesos)
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.uso_local_data_movil + l.monto_roaming))
@@ -427,7 +427,7 @@ class FlotaFacturaConciliacion(models.Model):
         if m_data:
             data_m = float(m_data.group(1).replace(',', ''))
 
-        m_roam = re.search(r'Llamadas\s+Roaming\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
+        m_roam = re.search(r'Llamadas\s+(?:Roaming|larga\s+distancia)\s+([0-9,]+\.[0-9]{2})', pdf_text, re.IGNORECASE)
         if m_roam:
             roam_m = float(m_roam.group(1).replace(',', ''))
 
@@ -860,4 +860,3 @@ class FlotaFacturaConcepto(models.Model):
             if any(kw in nombre for kw in keywords_excluidos_cdt):
                 self.grava_cdt = False
                 self.notas = _("Excluido automáticamente de CDT (Concepto no gravado con 2% CDT)")
-
