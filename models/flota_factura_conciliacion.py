@@ -112,6 +112,23 @@ class FlotaFacturaConciliacion(models.Model):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.factura.conciliacion') or _('FAC-CLARO-%s') % fields.Date.today()
         return super(FlotaFacturaConciliacion, self).create(vals_list)
 
+    def write(self, vals):
+        # Se detecta el cambio a 'conciliado' sin importar si proviene de un botón o de un
+        # clic directo en el statusbar, para no depender de action_marcar_conciliado como único
+        # punto de entrada y así poder simplificar los botones del header sin perder este efecto.
+        pasa_a_conciliado = vals.get('estado') == 'conciliado' and any(
+            rec.estado != 'conciliado' for rec in self
+        )
+        res = super(FlotaFacturaConciliacion, self).write(vals)
+        if pasa_a_conciliado:
+            self.action_generar_resumen_departamentos()
+            self.message_post(body=_("Factura de Flota marcada como Conciliada correctamente."))
+        elif vals.get('estado') == 'draft':
+            self.message_post(body=_("El estado de la conciliación fue restablecido a <b>Borrador</b>."))
+        elif vals.get('estado') == 'procesando':
+            self.message_post(body=_("El estado de la conciliación fue cambiado a <b>Procesando</b>."))
+        return res
+
     @api.depends('fecha_factura')
     def _compute_fecha_factura_str(self):
         meses = {
@@ -129,12 +146,10 @@ class FlotaFacturaConciliacion(models.Model):
     def action_set_draft(self):
         self.ensure_one()
         self.write({'estado': 'draft'})
-        self.message_post(body=_("El estado de la conciliación fue restablecido a <b>Borrador</b>."))
 
     def action_set_procesando(self):
         self.ensure_one()
         self.write({'estado': 'procesando'})
-        self.message_post(body=_("El estado de la conciliación fue cambiado a <b>Procesando</b>."))
 
     @api.depends(
         'renta_mensual', 'renta_otros_servicios', 'uso_data_movil', 'llamadas_roaming',
@@ -304,9 +319,7 @@ class FlotaFacturaConciliacion(models.Model):
 
     def action_marcar_conciliado(self):
         self.ensure_one()
-        self.action_generar_resumen_departamentos()
         self.write({'estado': 'conciliado'})
-        self.message_post(body=_("Factura de Flota marcada como Conciliada correctamente."))
 
     def _extract_pdf_text_native(self, pdf_bytes):
         text = ""
@@ -547,12 +560,14 @@ class FlotaFacturaConciliacion(models.Model):
     def action_exportar_excel(self):
         """Exporta la factura y el consolidado departamental a un libro Excel."""
         self.ensure_one()
-        diff = self.total_mes - self.total_lineas_sum
+        # La validación para exportar usa el mismo criterio de conciliación que estado_cuadre:
+        # Total Factura Claro (PDF) vs Total del Mes calculado, NO la suma de líneas de empleados.
+        diff = self.total_factura_pdf - self.total_mes
         if abs(diff) >= 0.01:
             raise UserError(_(
-                "No se puede exportar la factura a Excel porque existe una diferencia de RD$%s entre el Total de la Factura (RD$%s) y la Suma de Líneas por Empleado (RD$%s).\n\n"
-                "Por favor, revise las líneas para que ambos montos coincidan antes de exportar el documento."
-            ) % (f"{diff:,.2f}", f"{self.total_mes:,.2f}", f"{self.total_lineas_sum:,.2f}"))
+                "No se puede exportar la factura a Excel porque existe una diferencia de RD$%s entre el Total de la Factura Claro (RD$%s) y el Total del Mes calculado (RD$%s).\n\n"
+                "Por favor, revise los valores de Renta, Otros cargos/créditos y CDT capturados de la factura para que ambos montos coincidan antes de exportar el documento."
+            ) % (f"{abs(diff):,.2f}", f"{self.total_factura_pdf:,.2f}", f"{self.total_mes:,.2f}"))
 
         import openpyxl
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
