@@ -61,9 +61,9 @@ class FlotaFacturaConciliacion(models.Model):
     base_gravable_isc = fields.Monetary(string='Base Gravable ISC', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 10% de ISC.")
     ajustes_excluidos_cdt = fields.Monetary(string='Conceptos Excluidos CDT', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', help="Conceptos/Ajustes que NO gravan CDT (ej. Cargo por Pago Atrasado / Mora).")
 
-    itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%).")
+    itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%).")
     cdt_monto = fields.Monetary(string='CDT informado (2%)', currency_field='currency_id', default=0.0, tracking=True, help="Monto CDT usado para obtener la base gravable mediante CDT / 2%.")
-    isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
+    isc_monto = fields.Monetary(string='ISC (10%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto Selectivo al Consumo de Telecomunicaciones (10%).")
     total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Gran Total final de la factura Claro en RD$ a pagar (Subtotal + Impuestos).")
     total_factura_pdf = fields.Monetary(string='Total Factura Claro (PDF)', currency_field='currency_id', default=0.0, tracking=True, help="Monto 'Total del Mes' impreso literalmente en la carátula del PDF de Claro. Se usa como referencia oficial para validar la conciliación.")
 
@@ -98,7 +98,7 @@ class FlotaFacturaConciliacion(models.Model):
     ], string='Estado de Conciliación', compute='_compute_kpis', store=True, tracking=True)
 
     banner_conciliacion_html = fields.Html(
-        string='Resumen de Conciliación Factura vs. Líneas',
+        string='Observación de la Conciliación',
         compute='_compute_kpis',
         store=True
     )
@@ -180,7 +180,7 @@ class FlotaFacturaConciliacion(models.Model):
                     '<div class="alert alert-warning d-flex align-items-center mb-3 shadow-sm" role="alert">'
                     '<i class="fa fa-exclamation-triangle fs-4 me-2"></i>'
                     '<div>'
-                    '<strong>Diferencia Detectada en Conciliación:</strong><br/>'
+                    '<strong>Observación de la Conciliación:</strong><br/>'
                     'El Total de la Factura Claro impreso en el PDF es de <strong>RD$%s</strong>.<br/>'
                     'El Total del Mes calculado por el sistema es de <strong>RD$%s</strong>, sumando el Subtotal (<strong>RD$%s</strong>) más los impuestos '
                     '(ITBIS 18%%: <strong>RD$%s</strong>, ISC 10%%: <strong>RD$%s</strong> y CDT 2%%: <strong>RD$%s</strong>).<br/>'
@@ -464,7 +464,6 @@ class FlotaFacturaConciliacion(models.Model):
             'otros_cargos_creditos': cred_m,
             'cdt_monto': cdt_m,
             'total_factura_pdf': total_pdf_m,
-            'estado': 'procesando'
         })
 
         self.linea_ids.unlink()
@@ -472,9 +471,10 @@ class FlotaFacturaConciliacion(models.Model):
             self.env['flota.factura.linea'].create(lineas_vals)
 
         self.action_generar_resumen_departamentos()
-        self.write({'estado': 'conciliado'})
+        # Se mantiene en Borrador para que el usuario valide la información extraída antes de conciliar.
+        self.write({'estado': 'draft'})
 
-        self.message_post(body=_("<b>Factura PDF procesada NATIVAMENTE en Odoo:</b><br/>Líneas encontradas: %s | Gran Total: RD$%s") % (len(seen_phones), self.total_mes))
+        self.message_post(body=_("<b>Factura PDF procesada NATIVAMENTE en Odoo:</b><br/>Líneas encontradas: %s | Gran Total: RD$%s<br/>Revise y valide los datos extraídos antes de confirmar la conciliación.") % (len(seen_phones), self.total_mes))
 
         return {
             'type': 'ir.actions.client',
