@@ -227,11 +227,16 @@ class FlotaFacturaConciliacion(models.Model):
                     seen_emp_ids.add(linea.empleado_id.id)
 
                 dept_id = linea.departamento_id.id if linea.departamento_id else 0
-                
+
                 if dept_id not in dept_totals:
+                    # La ubicación del consolidado prioriza la configurada en el Departamento
+                    # (flota.departamento.ubicacion_id); si el departamento no tiene ubicación
+                    # asignada, se usa como respaldo la ubicación individual del empleado.
+                    ubicacion_dept = linea.departamento_id.ubicacion_id if linea.departamento_id else False
+                    ubicacion_final = ubicacion_dept or linea.ubicacion_id
                     dept_totals[dept_id] = {
                         'departamento_id': linea.departamento_id.id if linea.departamento_id else False,
-                        'ubicacion_id': linea.ubicacion_id.id if linea.ubicacion_id else False,
+                        'ubicacion_id': ubicacion_final.id if ubicacion_final else False,
                         'cantidad_empleados': 0,
                         'monto_subtotal': 0.0,
                         'monto_total': 0.0
@@ -348,17 +353,43 @@ class FlotaFacturaConciliacion(models.Model):
         if not pdf_text or len(pdf_text.strip()) < 20:
             raise UserError(_('No se pudo extraer texto del archivo PDF adjunto.'))
 
-        # Extracción de Fecha de Factura desde el PDF si está presente (Ej. Fecha de Emisión: 13/08/2026)
+        # Extracción de Fecha de Factura desde el PDF si está presente.
+        # Claro imprime la fecha como "Fecha de Factura: Agosto 13,2026" (mes en texto en español),
+        # aunque también se soporta el formato numérico DD/MM/AAAA por compatibilidad.
         import datetime
-        m_fecha = re.search(r'Fecha\s*(?:de\s*factura|facturaci[oó]n|emisi[oó]n)?:?\s*([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{2,4})', pdf_text, re.IGNORECASE)
-        if m_fecha:
-            d, m, y = int(m_fecha.group(1)), int(m_fecha.group(2)), int(m_fecha.group(3))
-            if y < 100:
-                y += 2000
-            try:
-                self.fecha_factura = datetime.date(y, m, d)
-            except Exception:
-                pass
+        MESES_ES = {
+            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
+            'julio': 7, 'agosto': 8, 'septiembre': 9, 'setiembre': 9, 'octubre': 10,
+            'noviembre': 11, 'diciembre': 12,
+        }
+        fecha_extraida = None
+        m_fecha_txt = re.search(
+            r'Fecha\s+de\s+Factura\s*:?\s*([A-Za-zÁÉÍÓÚáéíóú]+)\s+([0-9]{1,2})\s*,\s*([0-9]{4})',
+            pdf_text, re.IGNORECASE
+        )
+        if m_fecha_txt:
+            mes_nombre = m_fecha_txt.group(1).strip().lower()
+            mes_num = MESES_ES.get(mes_nombre)
+            if mes_num:
+                try:
+                    fecha_extraida = datetime.date(int(m_fecha_txt.group(3)), mes_num, int(m_fecha_txt.group(2)))
+                except Exception:
+                    fecha_extraida = None
+        if not fecha_extraida:
+            m_fecha = re.search(r'Fecha\s*(?:de\s*factura|facturaci[oó]n|emisi[oó]n)?:?\s*([0-9]{1,2})[/-]([0-9]{1,2})[/-]([0-9]{2,4})', pdf_text, re.IGNORECASE)
+            if m_fecha:
+                d, m, y = int(m_fecha.group(1)), int(m_fecha.group(2)), int(m_fecha.group(3))
+                if y < 100:
+                    y += 2000
+                try:
+                    fecha_extraida = datetime.date(y, m, d)
+                except Exception:
+                    fecha_extraida = None
+        if fecha_extraida:
+            self.fecha_factura = fecha_extraida
+            # El Periodo (AAAA-MM) debe reflejar el mes fiscal real de la factura, no la fecha
+            # en que se subió el PDF a Odoo, para no romper el historial de "última/penúltima factura".
+            self.periodo = fecha_extraida.strftime('%Y-%m')
 
         renta_m = 0.0
         renta_o = 0.0

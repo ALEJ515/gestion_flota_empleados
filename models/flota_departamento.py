@@ -10,6 +10,12 @@ class FlotaDepartamento(models.Model):
     name = fields.Char(string='Nombre del Departamento', required=True, index=True, tracking=True)
     code = fields.Char(string='Código Interno', tracking=True)
     active = fields.Boolean(default=True, string='Activo', tracking=True)
+    ubicacion_id = fields.Many2one(
+        'flota.ubicacion',
+        string='Ubicación / CEDI',
+        tracking=True,
+        help="Ubicación o CEDI al que pertenece este departamento. Se usa para agrupar el Consolidado por Departamento en las conciliaciones de factura."
+    )
     
     ultima_facturacion_monto = fields.Monetary(
         string='Última Facturación Depto (RD$)',

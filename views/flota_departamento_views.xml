@@ -23,6 +23,7 @@
             <list decoration-muted="not active">
                 <field name="name" optional="show"/>
                 <field name="code" optional="show"/>
+                <field name="ubicacion_id" optional="show"/>
                 <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0" optional="show"/>
                 <field name="empleados_activos_count" string="Activos" widget="badge" decoration-success="empleados_activos_count &gt; 0" optional="show"/>
                 <field name="empleados_inactivos_count" string="Inactivos" widget="badge" decoration-danger="empleados_inactivos_count &gt; 0" optional="show"/>
@@ -61,6 +62,7 @@
                     <group>
                         <group string="Detalles Generales">
                             <field name="code" placeholder="Ej. CT-DN"/>
+                            <field name="ubicacion_id" placeholder="Selecciona la Ubicación / CEDI de este departamento"/>
                             <field name="active" widget="boolean_toggle"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
@@ -100,6 +102,7 @@
                 <field name="id"/>
                 <field name="name"/>
                 <field name="code"/>
+                <field name="ubicacion_id"/>
                 <field name="total_empleados"/>
                 <field name="empleados_activos_count"/>
                 <field name="empleados_inactivos_count"/>
@@ -122,6 +125,12 @@
                                         <field name="code"/>
                                     </span>
                                 </div>
+                                <t t-if="record.ubicacion_id.raw_value">
+                                    <div class="text-muted small">
+                                        <span class="fa fa-map-marker-alt me-1" title="Ubicación"/>
+                                        <field name="ubicacion_id"/>
+                                    </div>
+                                </t>
                             </div>
                             <div class="mt-1">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
