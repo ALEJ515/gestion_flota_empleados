@@ -99,14 +99,12 @@ def extract_claro_phone_row(line_text):
 
 
 def normalize_claro_numeric_values(num_values):
-    values = list(num_values)
-    if len(values) < 3:
-        return values
-
-    # Claro entrega estas tres columnas en el orden: Uso local, Llamadas/roaming,
-    # Otros servicios. Odoo las presenta como: Otros servicios, Uso local,
-    # Llamadas/roaming.
-    return [values[2], values[0], values[1]] + values[3:]
+    # El PDF de Claro imprime el encabezado "Otros Servicios y Data Móvil | Uso local
+    # y Data Móvil | Llamadas larga distancia, roaming y otras llamadas | Financiamiento
+    # equipos | Otros cargos, créditos o descuentos | Impuestos | Total(RD$)" y los
+    # valores numéricos de cada línea vienen exactamente en ese mismo orden, sin
+    # ningún reordenamiento. No se debe alterar la posición de las columnas aquí.
+    return list(num_values)
 
 
 def map_claro_columns(num_values):
