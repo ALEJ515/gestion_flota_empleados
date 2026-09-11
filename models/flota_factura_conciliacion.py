@@ -84,7 +84,7 @@ class FlotaFacturaConciliacion(models.Model):
     concepto_ids = fields.One2many('flota.factura.concepto', 'conciliacion_id', string='Conceptos y Ajustes de Factura')
 
     count_lineas = fields.Integer(string='Total Líneas PDF', compute='_compute_kpis', store=True, help='Cantidad de líneas telefónicas extraídas del PDF de la factura.')
-    count_lineas_registradas = fields.Integer(string='Total Líneas Registradas', compute='_compute_kpis', store=True, help='Cantidad de líneas de la factura que están vinculadas a un Empleado registrado en la base de datos de Odoo.')
+    count_lineas_registradas = fields.Integer(string='Total Líneas Registradas', compute='_compute_kpis', store=True, help='Cantidad total de Empleados / Números de Flota registrados en el módulo (Perfil de Empleados y Flotas), incluyendo activos e inactivos.')
     count_excesos = fields.Integer(string='Líneas con Exceso', compute='_compute_kpis', store=True)
     monto_excesos = fields.Monetary(string='Monto Total Excesos', compute='_compute_kpis', store=True, currency_field='currency_id')
 
@@ -182,9 +182,13 @@ class FlotaFacturaConciliacion(models.Model):
 
     @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.empleado_id', 'linea_ids.empleado_id.es_nuevo_auto', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes', 'total_factura_pdf')
     def _compute_kpis(self):
+        # Total de Empleados / Números de Flota registrados en el módulo (activos e inactivos),
+        # tal como se ven en el Perfil de Empleados y Flotas. Es un total global del módulo,
+        # no depende de las líneas de esta factura en particular.
+        total_registrados = self.env['flota.empleado'].with_context(active_test=False).search_count([])
         for rec in self:
             rec.count_lineas = len(rec.linea_ids)
-            rec.count_lineas_registradas = len(rec.linea_ids.filtered(lambda l: l.empleado_id and not l.empleado_id.es_nuevo_auto))
+            rec.count_lineas_registradas = total_registrados
             excesos = rec.linea_ids.filtered(lambda l: l.estado_linea in ['exceso_data', 'exceso_roaming'])
             rec.count_excesos = len(excesos)
             rec.monto_excesos = sum(excesos.mapped(lambda l: l.uso_local_data_movil + l.monto_roaming))
