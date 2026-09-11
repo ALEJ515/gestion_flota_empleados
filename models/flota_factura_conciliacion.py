@@ -333,7 +333,19 @@ class FlotaFacturaConciliacion(models.Model):
         self.write({'estado': 'conciliado'})
 
     def _extract_pdf_text_native(self, pdf_bytes):
+        """Devuelve (texto, extractor) donde extractor es 'pypdf' o 'pdfplumber'.
+
+        IMPORTANTE: pypdf/PyPDF2 extrae correctamente el texto de la tabla
+        "Resumen Factura del Mes por Número" de Claro, pero reordena los
+        valores numéricos de cada línea de forma distinta al orden visual
+        real de las columnas (confirmado estadísticamente sobre cientos de
+        líneas de varias facturas reales). pdfplumber, en cambio, sí preserva
+        el orden visual correcto. Por eso se debe saber con qué extractor se
+        obtuvo el texto, para poder corregir el orden de columnas en
+        map_claro_columns cuando el texto viene de pypdf.
+        """
         text = ""
+        extractor = 'pypdf'
         # 1. Intentar primero con pypdf/PyPDF2 (Rápido, ultra liviano en RAM)
         try:
             import io
@@ -351,7 +363,7 @@ class FlotaFacturaConciliacion(models.Model):
             _logger.warning("Error extrayendo con PyPDF/PyPDF2: %s", str(e))
 
         if text and len(text.strip()) >= 100:
-            return text
+            return text, extractor
 
         # 2. Fallback a pdfplumber si pypdf no extrajo texto completo
         try:
@@ -360,10 +372,11 @@ class FlotaFacturaConciliacion(models.Model):
             with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
                 for page in pdf.pages:
                     text += (page.extract_text() or "") + "\n"
+            extractor = 'pdfplumber'
         except Exception as e2:
             _logger.warning("Error extrayendo con pdfplumber: %s", str(e2))
-                
-        return text
+
+        return text, extractor
 
     def action_procesar_pdf_nativo(self):
         """ Extrae y concilia la factura PDF directamente en Odoo """
@@ -372,7 +385,7 @@ class FlotaFacturaConciliacion(models.Model):
             raise UserError(_('Por favor adjunte el archivo PDF de la Factura de Claro antes de procesar.'))
 
         pdf_bytes = base64.b64decode(self.archivo_pdf)
-        pdf_text = self._extract_pdf_text_native(pdf_bytes)
+        pdf_text, pdf_extractor = self._extract_pdf_text_native(pdf_bytes)
 
         if not pdf_text or len(pdf_text.strip()) < 20:
             raise UserError(_('No se pudo extraer texto del archivo PDF adjunto.'))
@@ -498,7 +511,7 @@ class FlotaFacturaConciliacion(models.Model):
 
             ordered_values = values[:7]
 
-            mapped_values = map_claro_columns(ordered_values)
+            mapped_values = map_claro_columns(ordered_values, source_extractor=pdf_extractor)
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
                 emp_name = f"Empleado Flota {clean_phone}"
