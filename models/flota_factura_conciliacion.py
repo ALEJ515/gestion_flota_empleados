@@ -931,6 +931,27 @@ class FlotaFacturaLinea(models.Model):
                     vals['empleado_id'] = emp.id
         return super(FlotaFacturaLinea, self).create(vals_list)
 
+    @api.onchange('numero_flota')
+    def _onchange_numero_flota(self):
+        """Al capturar/editar el Número Flota manualmente en la línea, busca si ya
+        existe un empleado registrado con ese número y autocompleta Empleado (y con
+        él, Cargo/Departamento por los campos related) sin esperar a guardar.
+
+        Si no hay coincidencia, no hace nada: el usuario puede escribir el nombre
+        en el campo Empleado y, si tampoco existe, crearlo desde ahí (opción
+        "Crear y editar..." del propio combo, ya que Cargo y Número Flota son
+        obligatorios en flota.empleado).
+        """
+        if not self.numero_flota:
+            return
+        norm = _normalize_phone(self.numero_flota)
+        if not norm:
+            return
+        emp_map = _build_empleado_phone_map(self.env)
+        emp = emp_map.get(norm) or emp_map.get(norm[-10:])
+        if emp and self.empleado_id != emp:
+            self.empleado_id = emp
+
     @api.depends('llamadas_roaming_otras_llamadas', 'otros_servicios_datos', 'uso_local_data_movil', 'monto_roaming', 'financiamiento_equipos', 'otros_cargos_descuentos', 'impuestos', 'total')
     def _compute_linea_totals(self):
         for rec in self:

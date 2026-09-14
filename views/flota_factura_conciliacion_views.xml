@@ -135,7 +135,7 @@
                         <page string="Desglose por empleado" name="lineas">
                             <div class="alert alert-info d-flex align-items-center mb-2 py-2" role="alert" invisible="estado != 'draft'">
                                 <i class="fa fa-info-circle me-2"/>
-                                <div>Para agregar un empleado que pertenece a otra factura, use el botón "+" al final de la lista, seleccione el empleado y capture los montos. Quedará marcado como "Agregado Manualmente" y no se eliminará al volver a extraer el PDF.</div>
+                                <div>Para agregar un empleado que pertenece a otra factura, use el botón "+" al final de la lista. Al escribir el Número Flota, si ya está registrado se autocompletan Nombre y Cargo; si el número o el empleado no existen, puede crearlos desde el propio campo. Quedará marcado como "Agregado Manualmente" (columna Origen, oculta por defecto) y no se eliminará al volver a extraer el PDF.</div>
                             </div>
                             <div class="d-flex justify-content-end mb-2">
                                 <button name="action_buscar_lineas_empleado" type="object" class="btn-secondary d-inline-flex align-items-center gap-1">
@@ -143,16 +143,16 @@
                                         <circle cx="11" cy="11" r="8"/>
                                         <line x1="21" y1="21" x2="16.65" y2="16.65"/>
                                     </svg>
-                                    <span>Buscar por Empleado o Número</span>
+                                    <span>Buscar</span>
                                 </button>
                             </div>
                             <field name="linea_ids" readonly="estado != 'draft'">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
                                     <field name="currency_id" column_invisible="1"/>
-                                    <field name="empleado_id" string="Nombre Empleado" optional="show" readonly="conciliacion_id.estado != 'draft'" options="{'no_create': True}"/>
+                                    <field name="empleado_id" string="Nombre Empleado" optional="show" readonly="conciliacion_id.estado != 'draft'" options="{'no_quick_create': True}"/>
                                     <field name="numero_flota" string="Número Flota" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="cargo" string="Cargo" optional="show" readonly="1"/>
-                                    <field name="origen_linea" string="Origen" widget="badge" decoration-info="origen_linea=='pdf'" decoration-success="origen_linea=='manual'" optional="show" readonly="1"/>
+                                    <field name="origen_linea" string="Origen" widget="badge" decoration-info="origen_linea=='pdf'" decoration-success="origen_linea=='manual'" optional="hide" readonly="1"/>
 
                                     <field name="otros_servicios_datos" string="Otros servicios y datos" widget="monetary" sum="Total otros servicios y datos" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
                                     <field name="uso_local_data_movil" string="Uso local y data móvil" widget="monetary" sum="Total uso local y data móvil" optional="show" readonly="conciliacion_id.estado != 'draft'"/>
@@ -235,7 +235,7 @@
             <list string="Líneas de Factura" editable="bottom" create="false" delete="false" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
                 <field name="currency_id" column_invisible="1"/>
                 <field name="conciliacion_id" column_invisible="1"/>
-                <field name="empleado_id" string="Nombre Empleado" readonly="conciliacion_id.estado != 'draft'" options="{'no_create': True}"/>
+                <field name="empleado_id" string="Nombre Empleado" readonly="conciliacion_id.estado != 'draft'" options="{'no_quick_create': True}"/>
                 <field name="numero_flota" string="Número Flota" readonly="conciliacion_id.estado != 'draft'"/>
                 <field name="cargo" string="Cargo" readonly="1"/>
                 <field name="origen_linea" string="Origen" widget="badge" decoration-info="origen_linea=='pdf'" decoration-success="origen_linea=='manual'" readonly="1"/>
@@ -251,15 +251,17 @@
         </field>
     </record>
 
-    <!-- SEARCH VIEW: buscador combinado por nombre de empleado o por número de flota -->
+    <!-- SEARCH VIEW: buscador combinado por nombre de empleado, número, cargo o total -->
     <record id="view_flota_factura_linea_search" model="ir.ui.view">
         <field name="name">flota.factura.linea.search.buscador</field>
         <field name="model">flota.factura.linea</field>
         <field name="arch" type="xml">
-            <search string="Buscar por Empleado o Número">
-                <field name="empleado_id" string="Empleado o Número"
-                       filter_domain="['|', ('empleado_id.name', 'ilike', self), ('numero_flota', 'ilike', self)]"/>
+            <search string="Buscar">
+                <field name="empleado_id" string="Buscar"
+                       filter_domain="['|', '|', ('empleado_id.name', 'ilike', self), ('numero_flota', 'ilike', self), ('cargo', 'ilike', self)]"/>
                 <field name="numero_flota" string="Número Flota"/>
+                <field name="cargo" string="Cargo"/>
+                <field name="total" string="Total"/>
                 <field name="departamento_id"/>
                 <field name="conciliacion_id" string="Factura"/>
                 <filter name="no_registrados" string="No Registrados" domain="[('estado_linea', '=', 'desconocido')]"/>
