@@ -274,8 +274,15 @@ class FlotaFacturaConciliacion(models.Model):
             if seen_emp_ids:
                 self.env['flota.empleado'].browse(list(seen_emp_ids))._update_facturacion_stats()
 
-            # Sincronización automática de estado de Empleados (Activo vs Inactivo)
+            # Sincronización automática de estado de Empleados (Activo vs Inactivo).
+            # Se procesa en lote (bulk write + log batch) en vez de un write()/message_post()
+            # por empleado: con cientos de empleados, hacerlo uno por uno es la causa principal
+            # de que la extracción del PDF se quede "cargando" (cada message_post individual es
+            # una operación pesada de mail.thread que puede sumar minutos en facturas grandes).
             all_emps = self.env['flota.empleado'].with_context(active_test=False).search([])
+            to_activate_ids = []
+            to_deactivate_ids = []
+            log_bodies = {}
             for emp in all_emps:
                 if not emp.numero_flota:
                     continue
@@ -292,12 +299,20 @@ class FlotaFacturaConciliacion(models.Model):
 
                 if is_present:
                     if emp.estado != 'active' or not emp.en_ultima_factura:
-                        emp.write({'estado': 'active', 'en_ultima_factura': True})
-                        emp.message_post(body=_("Estado del empleado actualizado a <b>Activo</b> al ser detectado en la conciliación de Claro (%s).") % rec.periodo)
+                        to_activate_ids.append(emp.id)
+                        log_bodies[emp.id] = _("Estado del empleado actualizado a <b>Activo</b> al ser detectado en la conciliación de Claro (%s).") % rec.periodo
                 else:
                     if emp.estado != 'inactive' or emp.en_ultima_factura:
-                        emp.write({'estado': 'inactive', 'en_ultima_factura': False})
-                        emp.message_post(body=_("<b>Revisión de Flota:</b> Empleado NO detectado en la factura Claro del periodo (%s). Marcado como Faltante / Inactivo.") % rec.periodo)
+                        to_deactivate_ids.append(emp.id)
+                        log_bodies[emp.id] = _("<b>Revisión de Flota:</b> Empleado NO detectado en la factura Claro del periodo (%s). Marcado como Faltante / Inactivo.") % rec.periodo
+
+            Empleado = self.env['flota.empleado']
+            if to_activate_ids:
+                Empleado.browse(to_activate_ids).with_context(tracking_disable=True).write({'estado': 'active', 'en_ultima_factura': True})
+            if to_deactivate_ids:
+                Empleado.browse(to_deactivate_ids).with_context(tracking_disable=True).write({'estado': 'inactive', 'en_ultima_factura': False})
+            if log_bodies:
+                Empleado.browse(list(log_bodies.keys()))._message_log_batch(bodies=log_bodies)
 
             resumen_vals = []
             tot_gral = rec.total_mes
@@ -492,6 +507,10 @@ class FlotaFacturaConciliacion(models.Model):
         emp_map = _build_empleado_phone_map(self.env)
         lineas_vals = []
         seen_phones = set()
+        # Se registra el body de bienvenida de cada empleado nuevo y se postea en un solo
+        # lote al final (ver _message_log_batch más abajo) para no penalizar el tiempo de
+        # extracción con un message_post síncrono por cada línea nueva de la factura.
+        nuevos_empleados_log = {}
 
         for line_raw in pdf_text.split('\n'):
             row = extract_claro_phone_row(line_raw)
@@ -515,7 +534,7 @@ class FlotaFacturaConciliacion(models.Model):
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
                 emp_name = f"Empleado Flota {clean_phone}"
-                emp = self.env['flota.empleado'].create({
+                emp = self.env['flota.empleado'].with_context(tracking_disable=True, mail_create_nosubscribe=True).create({
                     'name': emp_name,
                     'numero_flota': clean_phone,
                     'cargo': 'Asignación Automática Claro',
@@ -526,7 +545,7 @@ class FlotaFacturaConciliacion(models.Model):
                     'es_nuevo_auto': True,
                     'notas': f'Nuevo número registrado desde Factura Claro ({self.periodo}). Complete la ficha de empleado.'
                 })
-                emp.message_post(body=_("Empleado registrado automáticamente al aparecer un nuevo número en la factura de Claro (%s): <b>%s</b>.") % (self.periodo, clean_phone))
+                nuevos_empleados_log[emp.id] = _("Empleado registrado automáticamente al aparecer un nuevo número en la factura de Claro (%s): <b>%s</b>.") % (self.periodo, clean_phone)
                 emp_map[clean_phone] = emp
                 if len(clean_phone) >= 10:
                     emp_map[clean_phone[-10:]] = emp
@@ -546,6 +565,9 @@ class FlotaFacturaConciliacion(models.Model):
                 'impuestos': mapped_values.get('impuestos', 0.0),
                 'total': mapped_values.get('total', 0.0),
             })
+
+        if nuevos_empleados_log:
+            self.env['flota.empleado'].browse(list(nuevos_empleados_log.keys()))._message_log_batch(bodies=nuevos_empleados_log)
 
         self.write({
             'renta_mensual': renta_m,
@@ -577,7 +599,13 @@ class FlotaFacturaConciliacion(models.Model):
                 'message': _('Se procesó la factura PDF nativamente. Se extrajeron %s líneas telefónicas.') % len(seen_phones),
                 'type': 'success',
                 'sticky': False,
-                'next': {'type': 'ir.actions.client', 'tag': 'reload'}
+                'next': {
+                    'type': 'ir.actions.act_window',
+                    'res_model': self._name,
+                    'res_id': self.id,
+                    'views': [(False, 'form')],
+                    'target': 'main',
+                }
             }
         }
 
