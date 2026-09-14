@@ -68,6 +68,7 @@ class FlotaFacturaConciliacion(models.Model):
     isc_pdf_extraido = fields.Monetary(string='ISC Extraído del PDF', currency_field='currency_id', default=0.0, help="Monto de ISC impreso literalmente en la carátula del PDF de Claro (fuente oficial, evita diferencias por redondeo interno de Claro al calcular por línea).")
     total_mes = fields.Monetary(string='Total del Mes', compute='_compute_totales_factura', store=True, currency_field='currency_id', tracking=True, help="Gran Total final de la factura Claro en RD$ a pagar (Subtotal + Impuestos).")
     total_factura_pdf = fields.Monetary(string='Total Factura Claro (PDF)', currency_field='currency_id', default=0.0, tracking=True, help="Monto 'Total del Mes' impreso literalmente en la carátula del PDF de Claro. Se usa como referencia oficial para validar la conciliación.")
+    formula_calculo_html = fields.Html(string='Cómo se calculó el Total del Mes', compute='_compute_totales_factura', sanitize=False, help="Detalle paso a paso, con los montos actuales de esta factura, de cómo el sistema obtiene el Total del Mes.")
 
     currency_id = fields.Many2one('res.currency', string='Moneda', default=lambda self: self.env.company.currency_id)
     estado = fields.Selection([
@@ -179,6 +180,49 @@ class FlotaFacturaConciliacion(models.Model):
             rec.itbis_monto = rec.itbis_pdf_extraido if rec.itbis_pdf_extraido else sub * 0.18
             rec.isc_monto = rec.isc_pdf_extraido if rec.isc_pdf_extraido else sub * 0.10
             rec.total_mes = sub + rec.itbis_monto + rec.isc_monto + rec.cdt_monto
+
+            itbis_origen = _('extraído del PDF') if rec.itbis_pdf_extraido else _('calculado como 18%s del Subtotal (no se encontró en el PDF)') % '%'
+            isc_origen = _('extraído del PDF') if rec.isc_pdf_extraido else _('calculado como 10%s del Subtotal (no se encontró en el PDF)') % '%'
+            rec.formula_calculo_html = (
+                '<details class="text-muted small">'
+                '<summary style="cursor:pointer;">%s</summary>'
+                '<table class="table table-sm mb-0 mt-2" style="max-width:520px;">'
+                '<tbody>'
+                '<tr><td>Renta Mensual Planes</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>Renta Otros Servicios</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>Uso Data Móvil</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>Llamadas Roaming / LD</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>Otros cargos, créditos o descuentos</td><td class="text-end">RD$%s</td></tr>'
+                '<tr class="fw-bold border-top"><td>(=) Subtotal Factura</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td colspan="2" class="pt-3"><em>Base Gravable CDT</em> = CDT informado (2%%) ÷ 0.02</td></tr>'
+                '<tr><td>CDT informado (2%%)</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>(=) Base Gravable CDT</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td colspan="2" class="pt-3"><em>Impuestos</em> (usan el monto impreso en el PDF; si falta, se calculan sobre el Subtotal)</td></tr>'
+                '<tr><td>ITBIS (18%%) &mdash; %s</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>ISC (10%%) &mdash; %s</td><td class="text-end">RD$%s</td></tr>'
+                '<tr><td>CDT (2%%)</td><td class="text-end">RD$%s</td></tr>'
+                '<tr class="fw-bold border-top"><td>(=) TOTAL DEL MES</td><td class="text-end">RD$%s</td></tr>'
+                '</tbody>'
+                '</table>'
+                '<div class="mt-2">Fórmula: Total del Mes = Subtotal + ITBIS + ISC + CDT informado.</div>'
+                '</details>'
+            ) % (
+                _('Ver cómo se calculó el Total del Mes ▾'),
+                f"{rec.renta_mensual:,.2f}",
+                f"{rec.renta_otros_servicios:,.2f}",
+                f"{rec.uso_data_movil:,.2f}",
+                f"{rec.llamadas_roaming:,.2f}",
+                f"{rec.otros_cargos_creditos:,.2f}",
+                f"{sub:,.2f}",
+                f"{rec.cdt_monto:,.2f}",
+                f"{rec.base_gravable_cdt:,.2f}",
+                itbis_origen,
+                f"{rec.itbis_monto:,.2f}",
+                isc_origen,
+                f"{rec.isc_monto:,.2f}",
+                f"{rec.cdt_monto:,.2f}",
+                f"{rec.total_mes:,.2f}",
+            )
 
     @api.depends('linea_ids', 'linea_ids.total', 'linea_ids.total_linea', 'linea_ids.estado_linea', 'linea_ids.empleado_id', 'linea_ids.empleado_id.es_nuevo_auto', 'linea_ids.uso_local_data_movil', 'linea_ids.monto_roaming', 'total_mes', 'total_factura_pdf')
     def _compute_kpis(self):
@@ -393,6 +437,12 @@ class FlotaFacturaConciliacion(models.Model):
 
         return text, extractor
 
+    # Límite de tamaño de archivo PDF para proteger la memoria del servidor: un PDF
+    # inusualmente pesado (ej. escaneado como imagen) puede forzar el uso del extractor
+    # pdfplumber (más costoso en RAM) sobre un archivo grande. Las facturas reales de
+    # Claro pesan típicamente unos cientos de KB, muy por debajo de este límite.
+    MAX_PDF_SIZE_BYTES = 2 * 1024 * 1024  # 2 MB
+
     def action_procesar_pdf_nativo(self):
         """ Extrae y concilia la factura PDF directamente en Odoo """
         self.ensure_one()
@@ -400,6 +450,13 @@ class FlotaFacturaConciliacion(models.Model):
             raise UserError(_('Por favor adjunte el archivo PDF de la Factura de Claro antes de procesar.'))
 
         pdf_bytes = base64.b64decode(self.archivo_pdf)
+
+        if len(pdf_bytes) > self.MAX_PDF_SIZE_BYTES:
+            raise UserError(_(
+                'El archivo PDF adjunto pesa %s MB, superando el límite permitido de %s MB. '
+                'Adjunte una versión más liviana del PDF (evite escaneos/imágenes; use el PDF digital original de Claro).'
+            ) % (f"{len(pdf_bytes) / (1024 * 1024):.2f}", self.MAX_PDF_SIZE_BYTES // (1024 * 1024)))
+
         pdf_text, pdf_extractor = self._extract_pdf_text_native(pdf_bytes)
 
         if not pdf_text or len(pdf_text.strip()) < 20:
