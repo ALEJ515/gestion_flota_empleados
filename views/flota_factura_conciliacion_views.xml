@@ -130,6 +130,9 @@
                     <!-- TABLA DE MOVIMIENTOS PROTAGONISTA CON ORDEN SOLICITADO -->
                     <notebook class="mt-4">
                         <page string="Desglose por empleado" name="lineas">
+                            <div class="d-flex justify-content-end mb-2">
+                                <button name="action_buscar_lineas_empleado" string="🔍 Buscar por Empleado o Número" type="object" class="btn-secondary"/>
+                            </div>
                             <field name="linea_ids" readonly="estado != 'draft'">
                                 <list string="Líneas de Factura" editable="bottom" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
                                     <field name="currency_id" column_invisible="1"/>
@@ -205,6 +208,49 @@
                 <group>
                     <filter name="group_periodo" string="Periodo" context="{'group_by': 'periodo'}"/>
                     <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- LIST VIEW: buscador de líneas por empleado / número (usado por el botón "Buscar por Empleado o Número") -->
+    <record id="view_flota_factura_linea_list" model="ir.ui.view">
+        <field name="name">flota.factura.linea.list.buscador</field>
+        <field name="model">flota.factura.linea</field>
+        <field name="arch" type="xml">
+            <list string="Líneas de Factura" editable="bottom" create="false" delete="false" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea == 'desconocido'">
+                <field name="currency_id" column_invisible="1"/>
+                <field name="conciliacion_id" column_invisible="1"/>
+                <field name="empleado_id" string="Nombre Empleado" readonly="conciliacion_id.estado != 'draft'" options="{'no_create': True}"/>
+                <field name="numero_flota" string="Número Flota" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="cargo" string="Cargo" readonly="1"/>
+                <field name="otros_servicios_datos" string="Otros servicios y datos" widget="monetary" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="uso_local_data_movil" string="Uso local y data móvil" widget="monetary" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="llamadas_roaming_otras_llamadas" string="Llamadas, roaming y otras llamadas" widget="monetary" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="financiamiento_equipos" string="Financiamiento de equipos" widget="monetary" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="otros_cargos_descuentos" string="Otros cargos y descuentos" widget="monetary" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="impuestos" string="Impuestos" widget="monetary" readonly="conciliacion_id.estado != 'draft'"/>
+                <field name="total" string="Total" widget="monetary" readonly="1"/>
+                <field name="estado_linea" string="Estado Línea" widget="badge" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'" readonly="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- SEARCH VIEW: buscador combinado por nombre de empleado o por número de flota -->
+    <record id="view_flota_factura_linea_search" model="ir.ui.view">
+        <field name="name">flota.factura.linea.search.buscador</field>
+        <field name="model">flota.factura.linea</field>
+        <field name="arch" type="xml">
+            <search string="Buscar por Empleado o Número">
+                <field name="empleado_id" string="Empleado o Número"
+                       filter_domain="['|', ('empleado_id.name', 'ilike', self), ('numero_flota', 'ilike', self)]"/>
+                <field name="numero_flota" string="Número Flota"/>
+                <field name="departamento_id"/>
+                <field name="conciliacion_id" string="Factura"/>
+                <filter name="no_registrados" string="No Registrados" domain="[('estado_linea', '=', 'desconocido')]"/>
+                <group>
+                    <filter name="group_departamento" string="Departamento" context="{'group_by': 'departamento_id'}"/>
+                    <filter name="group_estado" string="Estado Línea" context="{'group_by': 'estado_linea'}"/>
                 </group>
             </search>
         </field>

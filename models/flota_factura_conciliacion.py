@@ -727,6 +727,26 @@ class FlotaFacturaConciliacion(models.Model):
             'target': 'self',
         }
 
+    def action_buscar_lineas_empleado(self):
+        """Abre una vista de lista con búsqueda nativa (por nombre de empleado
+        o por número de flota) de las líneas de esta factura, sin alterar la
+        tabla editable de la pestaña 'Desglose por empleado'."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': f'Buscar Empleado / Número - {self.name}',
+            'res_model': 'flota.factura.linea',
+            'view_mode': 'list,form',
+            'views': [
+                (self.env.ref('gestion_flota_empleados.view_flota_factura_linea_list').id, 'list'),
+                (False, 'form'),
+            ],
+            'search_view_id': [self.env.ref('gestion_flota_empleados.view_flota_factura_linea_search').id, 'search'],
+            'domain': [('conciliacion_id', '=', self.id)],
+            'context': {'search_default_conciliacion_id': self.id},
+            'target': 'current',
+        }
+
 
 class FlotaFacturaLinea(models.Model):
     _name = 'flota.factura.linea'
