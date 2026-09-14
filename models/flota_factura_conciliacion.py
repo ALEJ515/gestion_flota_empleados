@@ -613,6 +613,7 @@ class FlotaFacturaConciliacion(models.Model):
                 'conciliacion_id': self.id,
                 'numero_flota': clean_phone,
                 'empleado_id': emp.id,
+                'origen_linea': 'pdf',
                 'llamadas_roaming_otras_llamadas': mapped_values.get('llamadas_roaming_otras_llamadas', 0.0),
                 'otros_servicios_datos': mapped_values.get('otros_servicios_datos', 0.0),
                 'uso_local_data_movil': mapped_values.get('uso_local_data_movil', 0.0),
@@ -638,7 +639,10 @@ class FlotaFacturaConciliacion(models.Model):
             'total_factura_pdf': total_pdf_m,
         })
 
-        self.linea_ids.unlink()
+        # Solo se eliminan las líneas provenientes de una extracción previa del PDF.
+        # Las líneas agregadas manualmente por un usuario (ej. un empleado registrado en
+        # otra factura que también debe reflejarse aquí) se conservan intactas.
+        self.linea_ids.filtered(lambda l: l.origen_linea == 'pdf').unlink()
         if lineas_vals:
             self.env['flota.factura.linea'].create(lineas_vals)
 
@@ -697,20 +701,22 @@ class FlotaFacturaConciliacion(models.Model):
         ws["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
         ws["A2"].font = Font(italic=True, color="4B5563")
 
-        # Columnas exactas en el mismo orden que en la vista: EMPLEADO, NÚMERO FLOTA, CARGO, DEPARTAMENTO, TOTAL LÍNEA
-        headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "TOTAL LÍNEA (RD$)"]
+        # Columnas exactas en el mismo orden que en la vista: EMPLEADO, NÚMERO FLOTA, CARGO, DEPARTAMENTO, ORIGEN, TOTAL LÍNEA
+        headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "ORIGEN", "TOTAL LÍNEA (RD$)"]
         for col_num, h in enumerate(headers_emp, 1):
             cell = ws.cell(row=4, column=col_num, value=h)
             cell.fill = header_fill
             cell.font = header_font
 
+        origen_labels = {'pdf': 'Extraído del PDF', 'manual': 'Agregado Manualmente'}
         current_row = 5
         for l in self.linea_ids:
             ws.cell(row=current_row, column=1, value=l.empleado_id.name if l.empleado_id else 'NO REGISTRADO')
             ws.cell(row=current_row, column=2, value=l.numero_flota)
             ws.cell(row=current_row, column=3, value=l.cargo or '')
             ws.cell(row=current_row, column=4, value=l.departamento_id.name if l.departamento_id else 'N/A')
-            c_tot = ws.cell(row=current_row, column=5, value=l.total_linea)
+            ws.cell(row=current_row, column=5, value=origen_labels.get(l.origen_linea, l.origen_linea))
+            c_tot = ws.cell(row=current_row, column=6, value=l.total_linea)
             c_tot.number_format = '"RD$"#,##0.00'
             current_row += 1
 
@@ -743,6 +749,29 @@ class FlotaFacturaConciliacion(models.Model):
             max_len = max(len(str(cell.value or '')) for cell in column_cells)
             column_letter = openpyxl.utils.get_column_letter(column_cells[0].column)
             ws_dept.column_dimensions[column_letter].width = max(max_len + 3, 16)
+
+        # Hoja dedicada de auditoría: solo las líneas agregadas manualmente (empleados de
+        # otras facturas u otros ajustes que un usuario incluyó a mano en esta conciliación),
+        # separadas de los datos extraídos automáticamente del PDF de Claro.
+        lineas_manuales = self.linea_ids.filtered(lambda l: l.origen_linea == 'manual')
+        if lineas_manuales:
+            ws_manual = wb.create_sheet("Registros Agregados Manualmente")
+            manual_headers = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "TOTAL LÍNEA (RD$)"]
+            for col_num, header in enumerate(manual_headers, 1):
+                cell = ws_manual.cell(row=1, column=col_num, value=header)
+                cell.fill = header_fill
+                cell.font = header_font
+            for row_num, l in enumerate(lineas_manuales, 2):
+                ws_manual.cell(row=row_num, column=1, value=l.empleado_id.name if l.empleado_id else 'NO REGISTRADO')
+                ws_manual.cell(row=row_num, column=2, value=l.numero_flota)
+                ws_manual.cell(row=row_num, column=3, value=l.cargo or '')
+                ws_manual.cell(row=row_num, column=4, value=l.departamento_id.name if l.departamento_id else 'N/A')
+                c_tot_manual = ws_manual.cell(row=row_num, column=5, value=l.total_linea)
+                c_tot_manual.number_format = '"RD$"#,##0.00'
+            for column_cells in ws_manual.columns:
+                max_len = max(len(str(cell.value or '')) for cell in column_cells)
+                column_letter = openpyxl.utils.get_column_letter(column_cells[0].column)
+                ws_manual.column_dimensions[column_letter].width = max(max_len + 3, 16)
 
         current_row += 2
 
@@ -843,6 +872,10 @@ class FlotaFacturaLinea(models.Model):
     fecha_factura = fields.Date(string='Fecha de Factura', related='conciliacion_id.fecha_factura', store=True, readonly=True)
     fecha_subida = fields.Datetime(string='Fecha de Subida', related='conciliacion_id.fecha_subida', store=True, readonly=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True)
+    origen_linea = fields.Selection([
+        ('pdf', 'Extraído del PDF'),
+        ('manual', 'Agregado Manualmente'),
+    ], string='Origen', default='manual', index=True, help="Indica si la línea proviene de la extracción automática del PDF de Claro o si fue agregada manualmente por un usuario (ej. un empleado de otra factura que también debe reflejarse aquí). Las líneas manuales NO se eliminan al volver a extraer el PDF.")
     
     empleado_id = fields.Many2one('flota.empleado', string='Empleado', ondelete='set null', index=True)
     departamento_id = fields.Many2one('flota.departamento', string='Departamento', related='empleado_id.departamento_id', store=True, readonly=True)
