@@ -219,13 +219,9 @@
 
                         <table class="acta-tabla" style="margin-top: 8px;">
                             <tr>
-                                <td style="text-align: justify; font-size: 14px; line-height: 1.45; background-color: #F9FAFB; padding: 12px;">
-                                    <strong style="font-size: 15px;">Aceptación y responsabilidad.</strong><br/>
-                                    Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere
-                                    la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de
-                                    las directivas establecidas en la Política de Informática, la cual he recibido, leído y
-                                    entendido, puede conllevar a que la empresa revoque mis privilegios y tome acciones
-                                    disciplinarias y/o legales de acuerdo con lo establecido en dicha política.
+                                <td t-attf-style="text-align: justify; font-size: #{doc.texto_aceptacion_font_px}px; line-height: 1.45; background-color: #F9FAFB; padding: 12px;">
+                                    <strong t-attf-style="font-size: #{doc.texto_aceptacion_font_px + 1}px;">Aceptación y responsabilidad.</strong><br/>
+                                    <span t-field="doc.texto_aceptacion" t-options="{'widget': 'text'}"/>
                                 </td>
                             </tr>
                         </table>

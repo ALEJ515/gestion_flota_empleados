@@ -17,6 +17,23 @@ ESTADO_EQUIPO_SELECTION = [
     ('na', 'N/A'),
 ]
 
+# Texto legal por defecto de la sección "Aceptación y responsabilidad" del PDF (editable por acta).
+TEXTO_ACEPTACION_DEFAULT = (
+    "Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere "
+    "la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de "
+    "las directivas establecidas en la Política de Informática, la cual he recibido, leído y "
+    "entendido, puede conllevar a que la empresa revoque mis privilegios y tome acciones "
+    "disciplinarias y/o legales de acuerdo con lo establecido en dicha política."
+)
+
+# Tamaño de fuente (px) para cada opción de texto_aceptacion_tamano.
+TEXTO_ACEPTACION_FONT_PX = {
+    'pequeno': 12,
+    'normal': 14,
+    'grande': 17,
+    'muy_grande': 20,
+}
+
 
 class FlotaEntregaEquipo(models.Model):
     _name = 'flota.entrega.equipo'
@@ -116,6 +133,27 @@ class FlotaEntregaEquipo(models.Model):
         ('si', 'Sí'),
         ('no', 'No'),
     ], string='¿Recibió la Política de Informática?', tracking=True)
+    texto_aceptacion = fields.Text(
+        string='Texto de Aceptación y Responsabilidad',
+        default=lambda self: self.env['ir.config_parameter'].sudo().get_param(
+            'gestion_flota_empleados.texto_aceptacion_default'
+        ) or TEXTO_ACEPTACION_DEFAULT,
+        help="Texto legal que se imprime en la sección 'Aceptación y responsabilidad' del PDF. Puede editarlo, "
+             "ampliarlo o personalizarlo libremente; lo que escriba aquí es exactamente lo que saldrá en la "
+             "hoja de entrega. Al guardar, este texto queda como predeterminado para las próximas actas nuevas."
+    )
+    texto_aceptacion_tamano = fields.Selection([
+        ('pequeno', 'Pequeño'),
+        ('normal', 'Normal'),
+        ('grande', 'Grande'),
+        ('muy_grande', 'Muy Grande'),
+    ], string='Tamaño del Texto (Aceptación y Responsabilidad)', default='normal', tracking=True,
+        help="Controla el tamaño de letra con el que se imprime el texto de Aceptación y Responsabilidad en el PDF."
+    )
+    texto_aceptacion_font_px = fields.Integer(
+        string='Tamaño de Fuente (px)',
+        compute='_compute_texto_aceptacion_font_px',
+    )
     politica_url = fields.Char(
         string='Enlace a la Política de Informática',
         default=lambda self: self.env['ir.config_parameter'].sudo().get_param(
@@ -163,6 +201,13 @@ class FlotaEntregaEquipo(models.Model):
             qr_bytes = rec._get_qr_image_bytes()
             rec.politica_qr_final = base64.b64encode(qr_bytes) if qr_bytes else False
 
+    @api.depends('texto_aceptacion_tamano')
+    def _compute_texto_aceptacion_font_px(self):
+        for rec in self:
+            rec.texto_aceptacion_font_px = TEXTO_ACEPTACION_FONT_PX.get(
+                rec.texto_aceptacion_tamano, TEXTO_ACEPTACION_FONT_PX['normal']
+            )
+
     @api.depends('cargo')
     def _compute_mostrar_ruta(self):
         for rec in self:
@@ -186,12 +231,15 @@ class FlotaEntregaEquipo(models.Model):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.entrega.equipo') or _('Nuevo')
         records = super().create(vals_list)
         records._guardar_qr_por_defecto()
+        records._guardar_texto_aceptacion_por_defecto()
         return records
 
     def write(self, vals):
         res = super().write(vals)
         if 'politica_qr_imagen' in vals:
             self._guardar_qr_por_defecto()
+        if 'texto_aceptacion' in vals:
+            self._guardar_texto_aceptacion_por_defecto()
         return res
 
     def _guardar_qr_por_defecto(self):
@@ -205,6 +253,15 @@ class FlotaEntregaEquipo(models.Model):
                     valor = valor.decode('ascii')
                 self.env['ir.config_parameter'].sudo().set_param(
                     'gestion_flota_empleados.politica_qr_imagen_default', valor
+                )
+
+    def _guardar_texto_aceptacion_por_defecto(self):
+        """Persiste el último texto de Aceptación y Responsabilidad editado como valor por
+        defecto global, para que las próximas actas nuevas lo traigan precargado."""
+        for rec in self:
+            if rec.texto_aceptacion:
+                self.env['ir.config_parameter'].sudo().set_param(
+                    'gestion_flota_empleados.texto_aceptacion_default', rec.texto_aceptacion
                 )
 
     def action_descargar_pdf(self):

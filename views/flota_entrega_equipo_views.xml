@@ -101,6 +101,10 @@
                                     <field name="politica_qr_imagen" widget="image"/>
                                 </group>
                             </group>
+                            <group string="Aceptación y Responsabilidad (texto legal impreso en el PDF)">
+                                <field name="texto_aceptacion_tamano" string="Tamaño del Texto"/>
+                                <field name="texto_aceptacion" nolabel="1" colspan="2" placeholder="Escriba aquí el texto de Aceptación y Responsabilidad que debe salir en la hoja de entrega..."/>
+                            </group>
                             <group>
                                 <field name="notas" placeholder="Notas adicionales..."/>
                             </group>
