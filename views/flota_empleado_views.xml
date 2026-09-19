@@ -182,7 +182,7 @@
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
             <search string="Buscar Empleados y Flotas">
-                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic, Ruta)" filter_domain="['|', '|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('numero_flota_digits', 'ilike', self.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
+                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic, Ruta)" filter_domain="['|', '|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('numero_flota_digits', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
                 <field name="cargo"/>
                 <field name="departamento_id"/>
                 <field name="ubicacion_id"/>
