@@ -108,10 +108,6 @@
                             </notebook>
                         </div>
                         <div class="col-5">
-                            <label for="vista_previa_pdf" string="Vista Previa del Documento (PDF)" class="fw-bold"/>
-                            <p class="text-muted" style="font-size: 11px;">
-                                Se actualiza automáticamente al guardar. Use el botón "Actualizar Vista Previa PDF" para forzar la actualización sin salir del formulario.
-                            </p>
                             <field name="vista_previa_pdf_filename" invisible="1"/>
                             <field name="vista_previa_pdf" widget="pdf_viewer" nolabel="1" readonly="1"/>
                         </div>

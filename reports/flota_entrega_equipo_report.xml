@@ -148,21 +148,18 @@
 
                         <br/>
 
-                        <!-- FIRMAS -->
+                        <!-- FIRMAS: etiqueta arriba, línea en blanco debajo para firma física -->
                         <table style="width: 100%; border: none; margin-top: 20px;">
                             <tr>
-                                <td style="width: 50%; border: none; text-align: center;">
-                                    <div style="border-top: 1px solid #000; width: 85%; margin: 0 auto; padding-top: 3px;">
-                                        <span t-field="doc.entregado_por"/>
-                                    </div>
+                                <td style="width: 50%; border: none; text-align: left; padding-right: 15px;">
                                     <div style="font-weight: bold;">Firma Representante IT</div>
+                                    <div style="border-top: 1px solid #000; width: 90%; margin-top: 28px;">&#160;</div>
+                                    <div style="font-size: 9px; color: #6B7280;">Nombre: <span t-field="doc.entregado_por"/></div>
                                 </td>
-                                <td style="width: 50%; border: none; text-align: center;">
-                                    <div style="border-top: 1px solid #000; width: 85%; margin: 0 auto; padding-top: 3px;">
-                                        <span t-field="doc.recibido_por"/>
-                                    </div>
+                                <td style="width: 50%; border: none; text-align: left; padding-left: 15px;">
                                     <div style="font-weight: bold;">Recibido Por</div>
-                                    <div style="font-size: 9px; color: #6B7280;">Firma y fecha</div>
+                                    <div style="border-top: 1px solid #000; width: 90%; margin-top: 28px;">&#160;</div>
+                                    <div style="font-size: 9px; color: #6B7280;">Nombre: <span t-field="doc.recibido_por"/> — Fecha: <span t-field="doc.fecha"/></div>
                                 </td>
                             </tr>
                         </table>

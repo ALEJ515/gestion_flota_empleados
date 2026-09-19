@@ -284,9 +284,38 @@ class FlotaEntregaEquipo(models.Model):
         row += 2
         merge_section(row, "FIRMAS Y POLÍTICA DE INFORMÁTICA")
         row += 1
-        data_row(row, "Firma Representante IT", self.entregado_por or '')
+
+        # Bloque de firmas: etiqueta arriba y línea en blanco debajo, una a la
+        # izquierda (Firma Representante IT) y otra a la derecha (Recibido Por),
+        # tal como se imprime en el PDF.
+        thin_bottom = Border(bottom=Side(style='thin'))
+        label_row = row
+        ws.merge_cells(start_row=label_row, start_column=1, end_row=label_row, end_column=3)
+        ws.merge_cells(start_row=label_row, start_column=5, end_row=label_row, end_column=NUM_COLS)
+        left_label = ws.cell(row=label_row, column=1, value="Firma Representante IT")
+        left_label.font = bold_font
+        right_label = ws.cell(row=label_row, column=5, value="Recibido Por")
+        right_label.font = bold_font
         row += 1
-        data_row(row, "Recibido Por", self.recibido_por or '')
+
+        # fila en blanco para dar espacio antes de la línea de firma
+        row += 1
+        line_row = row
+        ws.merge_cells(start_row=line_row, start_column=1, end_row=line_row, end_column=3)
+        ws.merge_cells(start_row=line_row, start_column=5, end_row=line_row, end_column=NUM_COLS)
+        ws.row_dimensions[label_row].height = 18
+        ws.row_dimensions[label_row + 1].height = 22
+        for col in list(range(1, 4)) + list(range(5, NUM_COLS + 1)):
+            ws.cell(row=line_row, column=col).border = thin_bottom
+        row += 1
+
+        name_row = row
+        ws.merge_cells(start_row=name_row, start_column=1, end_row=name_row, end_column=3)
+        ws.merge_cells(start_row=name_row, start_column=5, end_row=name_row, end_column=NUM_COLS)
+        left_name = ws.cell(row=name_row, column=1, value=f"Nombre: {self.entregado_por or ''}")
+        left_name.font = Font(name="Calibri", size=8, color="6B7280")
+        right_name = ws.cell(row=name_row, column=5, value=f"Nombre: {self.recibido_por or ''}")
+        right_name.font = Font(name="Calibri", size=8, color="6B7280")
         row += 1
         data_row(row, "¿Recibió la Política de Informática?", dict(self._fields['recibio_politica'].selection).get(self.recibio_politica, ''))
         row += 1
@@ -310,6 +339,18 @@ class FlotaEntregaEquipo(models.Model):
         column_widths = [22, 20, 20, 8, 20, 14, 30]
         for idx, width in enumerate(column_widths, 1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = width
+
+        # Formato de página A4 vertical (21 cm x 29.7 cm) para impresión/exportación
+        ws.page_setup.paperSize = ws.PAPERSIZE_A4
+        ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
+        ws.page_setup.fitToWidth = 1
+        ws.page_setup.fitToHeight = 0
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+        ws.page_margins.left = 0.5
+        ws.page_margins.right = 0.5
+        ws.page_margins.top = 0.6
+        ws.page_margins.bottom = 0.6
+        ws.print_options.horizontalCentered = True
 
         output = io.BytesIO()
         wb.save(output)
