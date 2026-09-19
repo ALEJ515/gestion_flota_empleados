@@ -83,11 +83,10 @@
                                     <field name="tipo_equipo"/>
                                     <field name="es_linea_licencia" column_invisible="1"/>
                                     <field name="marca" invisible="es_linea_licencia"/>
-                                    <field name="tipo_licencia_id" string="Marca" invisible="not es_linea_licencia" options="{'no_create_edit': False}"/>
                                     <field name="modelo" invisible="es_linea_licencia"/>
                                     <field name="cantidad"/>
                                     <field name="imei_serial" invisible="es_linea_licencia"/>
-                                    <field name="estado_equipo"/>
+                                    <field name="estado_equipo" readonly="es_linea_licencia"/>
                                     <field name="observaciones"/>
                                 </list>
                             </field>

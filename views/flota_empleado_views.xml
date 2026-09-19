@@ -70,7 +70,7 @@
                             <field name="departamento_id" options="{'no_create_edit': False}"/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="ruta_id" options="{'no_create_edit': False}"/>
-                            <field name="tipo_licencia_id" options="{'no_create_edit': False}"/>
+                            <field name="tipo_licencia_id" options="{'no_create_edit': False}" context="{'default_es_licencia': True}"/>
                             <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
                         </group>
                         <group string="Contacto y Facturación">

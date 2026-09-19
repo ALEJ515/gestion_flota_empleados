@@ -329,21 +329,17 @@ class FlotaEntregaEquipoLinea(models.Model):
         'flota.tipo.equipo',
         string='Tipo de Equipo',
         required=True,
-        help="Seleccione el tipo de equipo del catálogo 'Equipos'. Si el tipo que necesita no existe, puede "
-             "crearlo directamente desde este campo. Si el tipo está marcado como 'Es Tipo de Licencia', el "
-             "campo Marca se reemplaza por la selección del catálogo 'Tipos de Licencia'."
+        help="Seleccione el equipo o la licencia del catálogo 'Equipo o Licencias'. Si el que necesita no "
+             "existe, puede crearlo directamente desde este campo. Si el registro elegido está marcado como "
+             "'Es Licencia', no será necesario indicar Marca y el Estado quedará automáticamente en 'N/A'."
     )
     es_linea_licencia = fields.Boolean(
         related='tipo_equipo.es_licencia', store=True, string='Es Licencia',
-        help="Se activa automáticamente cuando el Tipo de Equipo seleccionado está marcado como "
-             "'Es Tipo de Licencia'. Controla si esta línea se muestra como equipo físico o como licencia."
+        help="Se activa automáticamente cuando el Tipo de Equipo seleccionado está marcado como 'Es Licencia' "
+             "en el catálogo 'Equipo o Licencias'. Controla si esta línea se muestra como equipo físico o "
+             "como licencia."
     )
     marca = fields.Char(string='Marca')
-    tipo_licencia_id = fields.Many2one(
-        'flota.tipo.licencia', string='Marca',
-        help="Disponible cuando el Tipo de Equipo es una Licencia: seleccione aquí el tipo de licencia/plan "
-             "registrado en el catálogo 'Tipos de Licencia'. Si no existe, puede crearlo desde este campo."
-    )
     modelo = fields.Char(string='Modelo')
     cantidad = fields.Integer(string='Cant.', default=1, required=True)
     imei_serial = fields.Char(string='IMEI / Serial')
@@ -352,3 +348,33 @@ class FlotaEntregaEquipoLinea(models.Model):
         string='Estado / Observaciones',
         help="Ej. Protector de pantalla roto, cámara cristal roto, se friza a veces."
     )
+
+    @api.onchange('tipo_equipo')
+    def _onchange_tipo_equipo(self):
+        """Si el Tipo de Equipo elegido es una licencia, no aplica Marca ni un Estado físico:
+        se limpia Marca y el Estado pasa automáticamente a 'N/A'."""
+        if self.tipo_equipo and self.tipo_equipo.es_licencia:
+            self.marca = False
+            self.estado_equipo = 'na'
+
+    def _aplicar_regla_licencia(self, vals):
+        """Fuerza Marca vacía y Estado 'N/A' cuando el Tipo de Equipo (ya sea el que viene en vals o el
+        que ya tiene el registro) es una licencia. Se aplica también a nivel de servidor (create/write),
+        no solo en el formulario, para que la regla sea consistente sin importar el origen del dato."""
+        tipo_equipo_id = vals.get('tipo_equipo')
+        tipo_equipo = self.env['flota.tipo.equipo'].browse(tipo_equipo_id) if tipo_equipo_id else self.tipo_equipo
+        if tipo_equipo and tipo_equipo.es_licencia:
+            vals['marca'] = False
+            vals['estado_equipo'] = 'na'
+        return vals
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        vals_list = [self._aplicar_regla_licencia(dict(vals)) for vals in vals_list]
+        return super().create(vals_list)
+
+    def write(self, vals):
+        for rec in self:
+            rec_vals = rec._aplicar_regla_licencia(dict(vals))
+            super(FlotaEntregaEquipoLinea, rec).write(rec_vals)
+        return True

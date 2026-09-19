@@ -19,15 +19,15 @@
         <field name="name">flota.tipo.equipo.form</field>
         <field name="model">flota.tipo.equipo</field>
         <field name="arch" type="xml">
-            <form string="Tipo de Equipo">
+            <form string="Equipo o Licencia">
                 <sheet>
                     <div class="oe_title">
-                        <label for="name" string="Tipo de Equipo"/>
-                        <h1><field name="name" placeholder="Ej. Celular, Tablet, Laptop..."/></h1>
+                        <label for="name" string="Equipo o Licencia"/>
+                        <h1><field name="name" placeholder="Ej. Celular, Tablet, Laptop, Microsoft 365, Plan Corporativo..."/></h1>
                     </div>
                     <group>
                         <field name="descripcion"/>
-                        <field name="es_licencia" widget="boolean_toggle" string="Es Tipo de Licencia"/>
+                        <field name="es_licencia" widget="boolean_toggle" string="Es Licencia"/>
                         <field name="active" widget="boolean_toggle"/>
                     </group>
                 </sheet>
@@ -40,7 +40,7 @@
         <field name="name">flota.tipo.equipo.search</field>
         <field name="model">flota.tipo.equipo</field>
         <field name="arch" type="xml">
-            <search string="Buscar Tipos de Equipo">
+            <search string="Buscar Equipo o Licencias">
                 <field name="name"/>
                 <field name="descripcion"/>
                 <filter string="Solo Licencias" name="solo_licencia" domain="[('es_licencia', '=', True)]"/>
@@ -51,17 +51,19 @@
 
     <!-- Action -->
     <record id="action_flota_tipo_equipo" model="ir.actions.act_window">
-        <field name="name">Equipos</field>
+        <field name="name">Equipo o Licencias</field>
         <field name="res_model">flota.tipo.equipo</field>
         <field name="view_mode">list,form</field>
         <field name="search_view_id" ref="view_flota_tipo_equipo_search"/>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
-                No hay tipos de equipo registrados.
+                No hay equipos ni licencias registrados.
             </p>
             <p>
-                Registre aquí los tipos de equipo (Celular, Tablet, Laptop, Impresora, Accesorio, etc.) para
-                poder seleccionarlos luego en las Actas de Entrega de Equipos.
+                Registre aquí los tipos de equipo físico (Celular, Tablet, Laptop, Impresora, Accesorio, etc.)
+                y también los tipos de licencia/plan (Microsoft 365, Plan Corporativo, Antivirus, etc.) marcando
+                la opción "Es Licencia". Todos quedan disponibles para seleccionar en Tipo de Equipo dentro de
+                las Actas de Entrega de Equipos.
             </p>
         </field>
     </record>

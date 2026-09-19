@@ -51,13 +51,15 @@ class FlotaEmpleado(models.Model):
         help="Ruta asignada al empleado. Ej. NTP0103 (vendedor) o DIST+10 (distribuidor)."
     )
     tipo_licencia_id = fields.Many2one(
-        'flota.tipo.licencia',
+        'flota.tipo.equipo',
         string='Tipo de Licencia',
+        domain="[('es_licencia', '=', True)]",
         ondelete='restrict',
         index=True,
         tracking=True,
         help="Tipo de licencia/plan asignado al empleado (ej. Plan Corporativo Ilimitado, Microsoft 365, "
-             "Antivirus Corporativo, etc.). Se puede crear un nuevo tipo directamente desde este campo."
+             "Antivirus Corporativo, etc.), tomado del catálogo 'Equipo o Licencias' filtrado a los registros "
+             "marcados como licencia. Se puede crear un nuevo tipo directamente desde este campo."
     )
     cargo = fields.Char(string='Cargo', required=True, tracking=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True, tracking=True)

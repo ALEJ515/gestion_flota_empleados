@@ -13,40 +13,42 @@
               action="action_flota_empleado"
               sequence="10"/>
 
-    <menuitem id="menu_flota_departamentos"
-              name="Departamentos"
-              parent="menu_flota_root"
-              action="action_flota_departamento"
-              sequence="20"/>
-
-    <menuitem id="menu_flota_ubicaciones"
-              name="Ubicaciones"
-              parent="menu_flota_root"
-              action="action_flota_ubicacion"
-              sequence="30"/>
-
-    <menuitem id="menu_flota_rutas"
-              name="Rutas"
-              parent="menu_flota_root"
-              action="action_flota_ruta"
-              sequence="40"/>
-
-    <menuitem id="menu_flota_tipo_licencia"
-              name="Tipos de Licencia"
-              parent="menu_flota_root"
-              action="action_flota_tipo_licencia"
-              sequence="45"/>
-
     <menuitem id="menu_flota_entrega_equipo"
               name="Actas de Entrega de Equipos"
               parent="menu_flota_root"
               action="action_flota_entrega_equipo"
-              sequence="50"/>
+              sequence="20"/>
+
+    <!-- Catálogo "Estructura y Recursos": agrupa los catálogos de apoyo
+         (Departamentos, Ubicaciones, Rutas y Equipo o Licencias) para no
+         saturar visualmente el menú raíz con muchos catálogos sueltos. -->
+    <menuitem id="menu_flota_estructura_recursos"
+              name="Estructura y Recursos"
+              parent="menu_flota_root"
+              sequence="30"/>
+
+    <menuitem id="menu_flota_departamentos"
+              name="Departamentos"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_departamento"
+              sequence="10"/>
+
+    <menuitem id="menu_flota_ubicaciones"
+              name="Ubicaciones"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_ubicacion"
+              sequence="20"/>
+
+    <menuitem id="menu_flota_rutas"
+              name="Rutas"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_ruta"
+              sequence="30"/>
 
     <menuitem id="menu_flota_tipo_equipo"
-              name="Equipos"
-              parent="menu_flota_root"
+              name="Equipo o Licencias"
+              parent="menu_flota_estructura_recursos"
               action="action_flota_tipo_equipo"
-              sequence="55"/>
+              sequence="40"/>
 
 </odoo>
