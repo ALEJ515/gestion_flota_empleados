@@ -19,7 +19,7 @@
                 <field name="empleado_id" optional="show"/>
                 <field name="ruta_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
-                <field name="tipo_asignacion" optional="show"/>
+                <field name="cargo" optional="show"/>
                 <field name="cantidad_equipos" optional="show"/>
                 <field name="recibio_politica" optional="show"/>
                 <field name="estado" widget="badge" decoration-warning="estado=='draft'" decoration-success="estado=='confirmado'" optional="show"/>
@@ -36,8 +36,7 @@
                 <header>
                     <button name="action_confirmar" string="Confirmar" type="object" class="btn-primary" invisible="estado != 'draft'"/>
                     <button name="action_restablecer_borrador" string="Volver a Borrador" type="object" invisible="estado != 'confirmado'"/>
-                    <button name="action_exportar_excel" string="Exportar a Excel" type="object" class="btn-secondary" confirm="¿Confirma que desea exportar esta acta a Excel?"/>
-                    <button name="action_descargar_pdf" string="Descargar PDF" type="object" class="btn-secondary" icon="fa-download"/>
+                    <button name="action_descargar_pdf" string="Descargar" type="object" class="btn-secondary" icon="fa-download"/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,confirmado" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
@@ -49,7 +48,7 @@
                     </div>
                     <group>
                         <group string="Datos Entrega">
-                            <field name="tipo_asignacion"/>
+                            <field name="cargo"/>
                             <field name="preparado_por_id"/>
                             <field name="ruta_id" options="{'no_create_edit': False}"/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>

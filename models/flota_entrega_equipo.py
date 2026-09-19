@@ -37,11 +37,19 @@ class FlotaEntregaEquipo(models.Model):
     ], string='Estado', default='draft', required=True, tracking=True, index=True)
 
     # --- DATOS ENTREGA (autocompletados desde el Empleado, editables) ---
-    tipo_asignacion = fields.Selection([
-        ('vendedor', 'Vendedor'),
-        ('distribuidor', 'Distribuidor'),
-        ('otro', 'Otro'),
-    ], string='Distribuidor / Vendedor', tracking=True)
+    cargo = fields.Char(
+        string='Cargo',
+        tracking=True,
+        help="Cargo del empleado. Se autocompleta desde su ficha en Flota Empleados al seleccionar el Empleado, "
+             "pero puede editarse manualmente si es necesario."
+    )
+    mostrar_ruta = fields.Boolean(
+        string='Mostrar Ruta en el Documento',
+        compute='_compute_mostrar_ruta',
+        store=True,
+        help="Se activa automáticamente cuando el Cargo corresponde a Vendedor o Distribuidor. Controla si la "
+             "Ruta se imprime en el PDF del acta."
+    )
     preparado_por_id = fields.Many2one(
         'res.users', string='Preparado por',
         default=lambda self: self.env.user, tracking=True
@@ -131,6 +139,12 @@ class FlotaEntregaEquipo(models.Model):
             qr_bytes = rec._get_qr_image_bytes()
             rec.politica_qr_final = base64.b64encode(qr_bytes) if qr_bytes else False
 
+    @api.depends('cargo')
+    def _compute_mostrar_ruta(self):
+        for rec in self:
+            cargo = (rec.cargo or '').strip().lower()
+            rec.mostrar_ruta = bool(cargo) and any(k in cargo for k in ('vendedor', 'distribuidor'))
+
     @api.onchange('empleado_id')
     def _onchange_empleado_id(self):
         for rec in self:
@@ -139,10 +153,7 @@ class FlotaEntregaEquipo(models.Model):
                 rec.ubicacion_id = rec.empleado_id.ubicacion_id
                 rec.telefono_flota = rec.empleado_id.numero_flota
                 rec.recibido_por = rec.empleado_id.name
-                if rec.empleado_id.ruta_id and rec.empleado_id.ruta_id.tipo in ('vendedor', 'distribuidor'):
-                    rec.tipo_asignacion = rec.empleado_id.ruta_id.tipo
-                else:
-                    rec.tipo_asignacion = 'otro'
+                rec.cargo = rec.empleado_id.cargo
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -163,8 +174,8 @@ class FlotaEntregaEquipo(models.Model):
         self.write({'estado': 'draft'})
 
     def _get_qr_image_bytes(self):
-        """Devuelve los bytes PNG del QR de la política de informática (para el Excel):
-        usa la imagen subida manualmente si existe, o genera una con el enlace configurado."""
+        """Devuelve los bytes PNG del QR de la política de informática: usa la imagen subida
+        manualmente si existe, o genera una con el enlace configurado."""
         self.ensure_one()
         if self.politica_qr_imagen:
             return base64.b64decode(self.politica_qr_imagen)
@@ -174,224 +185,6 @@ class FlotaEntregaEquipo(models.Model):
             except Exception:
                 _logger.exception("No se pudo generar el QR de la política para el acta %s", self.id)
         return False
-
-    def action_exportar_excel(self):
-        """Exporta el acta de entrega/recepción de equipos a un libro Excel con un diseño limpio y profesional."""
-        self.ensure_one()
-        import io
-        import openpyxl
-        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
-
-        wb = openpyxl.Workbook()
-        ws = wb.active
-        ws.title = "Acta Entrega Equipos"
-
-        NUM_COLS = 7
-        thin = Side(style='thin', color='B0B0B0')
-        border = Border(left=thin, right=thin, top=thin, bottom=thin)
-
-        header_fill = PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid")
-        header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
-        title_font = Font(name="Calibri", size=14, bold=True, color="1F2937")
-        subtitle_font = Font(name="Calibri", size=9, italic=True, color="6B7280")
-        section_fill = PatternFill(start_color="1F3864", end_color="1F3864", fill_type="solid")
-        section_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-        label_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
-        bold_font = Font(name="Calibri", size=10, bold=True)
-        normal_font = Font(name="Calibri", size=10)
-
-        def merge_section(row_num, text, fill=section_fill, font=section_font):
-            ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=NUM_COLS)
-            cell = ws.cell(row=row_num, column=1, value=text)
-            cell.fill = fill
-            cell.font = font
-            cell.alignment = Alignment(horizontal='center', vertical='center')
-            for col in range(1, NUM_COLS + 1):
-                ws.cell(row=row_num, column=col).border = border
-
-        def data_row(row_num, label, value):
-            ws.merge_cells(start_row=row_num, start_column=2, end_row=row_num, end_column=NUM_COLS)
-            lbl_cell = ws.cell(row=row_num, column=1, value=label)
-            lbl_cell.font = bold_font
-            lbl_cell.fill = label_fill
-            val_cell = ws.cell(row=row_num, column=2, value=value)
-            val_cell.font = normal_font
-            for col in range(1, NUM_COLS + 1):
-                ws.cell(row=row_num, column=col).border = border
-
-        ws.merge_cells('A1:G1')
-        ws["A1"] = f"ACTA DE RECEPCIÓN Y ENTREGA DE EQUIPOS — {self.name}"
-        ws["A1"].font = title_font
-        ws["A1"].alignment = Alignment(horizontal='center')
-        ws.merge_cells('A2:G2')
-        ws["A2"] = f"Código: {self.codigo_formulario or ''}   |   Versión: {self.version_formulario or ''}   |   Fecha: {self.fecha}   |   Empleado: {self.empleado_id.name or ''}"
-        ws["A2"].font = subtitle_font
-        ws["A2"].alignment = Alignment(horizontal='center')
-
-        row = 4
-        merge_section(row, "DATOS ENTREGA")
-        row += 1
-        datos_entrega = [
-            ("Distribuidor/Vendedor", dict(self._fields['tipo_asignacion'].selection).get(self.tipo_asignacion, '') if self.tipo_asignacion else ''),
-            ("Preparado por", self.preparado_por_id.name or ''),
-            ("Ruta", self.ruta_id.name or ''),
-            ("Localidad", self.ubicacion_id.name or ''),
-            ("Recibido por (responsable)", self.recibido_por or ''),
-            ("Núm. de teléfono (flota)", self.telefono_flota or ''),
-        ]
-        for label, value in datos_entrega:
-            data_row(row, label, value)
-            row += 1
-
-        row += 1
-        if self.mostrar_flota_recibida:
-            merge_section(row, "DATOS FLOTA RECIBIDA POR TI")
-            row += 1
-            for label, value in [("Modelo", self.equipo_recibido_modelo or 'N/A'), ("Serial/IMEI", self.equipo_recibido_serial or 'N/A')]:
-                data_row(row, label, value)
-                row += 1
-            row += 1
-
-        if self.mostrar_datos_impresora:
-            merge_section(row, "DATOS IMPRESORA")
-            row += 1
-            for label, value in [("Modelo", self.impresora_modelo or 'N/A'), ("Serial", self.impresora_serial or 'N/A')]:
-                data_row(row, label, value)
-                row += 1
-            row += 1
-        merge_section(row, "DATOS DE EQUIPO NUEVO ENTREGADO")
-        row += 1
-        headers_eq = ["TIPO DE EQUIPO", "MARCA", "MODELO", "CANT.", "IMEI / SERIAL", "ESTADO", "OBSERVACIONES"]
-        for col_num, h in enumerate(headers_eq, 1):
-            cell = ws.cell(row=row, column=col_num, value=h)
-            cell.fill = header_fill
-            cell.font = header_font
-            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
-            cell.border = border
-        row += 1
-        for line in self.linea_ids:
-            values = [
-                dict(line._fields['tipo_equipo'].selection).get(line.tipo_equipo, ''),
-                line.marca or '',
-                line.modelo or '',
-                line.cantidad,
-                line.imei_serial or '',
-                dict(line._fields['estado_equipo'].selection).get(line.estado_equipo, ''),
-                line.observaciones or '',
-            ]
-            for col_num, value in enumerate(values, 1):
-                cell = ws.cell(row=row, column=col_num, value=value)
-                cell.font = normal_font
-                cell.alignment = Alignment(vertical='top', wrap_text=True)
-                cell.border = border
-            row += 1
-
-        row += 2
-        merge_section(row, "FIRMAS Y POLÍTICA DE INFORMÁTICA")
-        row += 1
-
-        # Bloque de firmas: etiqueta arriba y línea en blanco debajo, una a la
-        # izquierda (Firma Representante IT) y otra a la derecha (Recibido Por),
-        # tal como se imprime en el PDF.
-        thin_bottom = Border(bottom=Side(style='thin'))
-        label_row = row
-        ws.merge_cells(start_row=label_row, start_column=1, end_row=label_row, end_column=3)
-        ws.merge_cells(start_row=label_row, start_column=5, end_row=label_row, end_column=NUM_COLS)
-        left_label = ws.cell(row=label_row, column=1, value="Firma Representante IT")
-        left_label.font = bold_font
-        right_label = ws.cell(row=label_row, column=5, value="Recibido Por")
-        right_label.font = bold_font
-        row += 1
-
-        # fila en blanco para dar espacio antes de la línea de firma
-        row += 1
-        line_row = row
-        ws.merge_cells(start_row=line_row, start_column=1, end_row=line_row, end_column=3)
-        ws.merge_cells(start_row=line_row, start_column=5, end_row=line_row, end_column=NUM_COLS)
-        ws.row_dimensions[label_row].height = 18
-        ws.row_dimensions[label_row + 1].height = 22
-        for col in list(range(1, 4)) + list(range(5, NUM_COLS + 1)):
-            ws.cell(row=line_row, column=col).border = thin_bottom
-        row += 1
-
-        name_row = row
-        ws.row_dimensions[name_row].height = 6
-        row += 1
-        data_row(row, "¿Recibió la Política de Informática?", dict(self._fields['recibio_politica'].selection).get(self.recibio_politica, ''))
-        row += 1
-        if self.politica_url:
-            data_row(row, "Enlace Política de Informática", self.politica_url)
-            row += 1
-
-        # Código QR de la Política de Informática (imagen subida manualmente o generada
-        # automáticamente a partir del enlace), igual que en el PDF.
-        qr_bytes = self._get_qr_image_bytes()
-        if qr_bytes:
-            from openpyxl.drawing.image import Image as XLImage
-            qr_row = row
-            qr_stream = io.BytesIO(qr_bytes)
-            xl_img = XLImage(qr_stream)
-            xl_img.width = 100
-            xl_img.height = 100
-            ws.add_image(xl_img, f"A{qr_row}")
-            qr_label_cell = ws.cell(row=qr_row, column=3, value="Código QR — Política de Informática")
-            qr_label_cell.font = Font(name="Calibri", size=9, italic=True, color="4B5563")
-            ws.merge_cells(start_row=qr_row, start_column=3, end_row=qr_row, end_column=NUM_COLS)
-            row += 7  # reservar filas para no solapar con el contenido siguiente
-
-        row += 1
-        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NUM_COLS)
-        legal_title_cell = ws.cell(row=row, column=1, value="Aceptación y responsabilidad")
-        legal_title_cell.font = Font(name="Calibri", size=11, bold=True, color="1F3864")
-        row += 1
-
-        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NUM_COLS)
-        legal_cell = ws.cell(row=row, column=1, value=(
-            "Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere la asignación "
-            "de los equipos aquí detallados y entiendo que la violación a cualquiera de las directivas establecidas "
-            "en la Política de Informática, la cual he recibido, leído y entendido, puede conllevar a que la empresa "
-            "revoque mis privilegios y tome acciones disciplinarias y/o legales de acuerdo con lo establecido en "
-            "dicha política."
-        ))
-        legal_cell.font = Font(name="Calibri", size=11, color="374151")
-        legal_cell.alignment = Alignment(horizontal='justify', vertical='top', wrap_text=True)
-        ws.row_dimensions[row].height = 75
-
-        column_widths = [22, 20, 20, 8, 20, 14, 30]
-        for idx, width in enumerate(column_widths, 1):
-            ws.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = width
-
-        # Formato de página A4 vertical (21 cm x 29.7 cm) para impresión/exportación
-        ws.page_setup.paperSize = ws.PAPERSIZE_A4
-        ws.page_setup.orientation = ws.ORIENTATION_PORTRAIT
-        ws.page_setup.fitToWidth = 1
-        ws.page_setup.fitToHeight = 0
-        ws.sheet_properties.pageSetUpPr.fitToPage = True
-        ws.page_margins.left = 0.5
-        ws.page_margins.right = 0.5
-        ws.page_margins.top = 0.6
-        ws.page_margins.bottom = 0.6
-        ws.print_options.horizontalCentered = True
-
-        output = io.BytesIO()
-        wb.save(output)
-        output.seek(0)
-        file_data = base64.b64encode(output.read())
-        output.close()
-
-        attachment = self.env['ir.attachment'].create({
-            'name': f'{self.name} - {self.empleado_id.name}.xlsx',
-            'datas': file_data,
-            'res_model': self._name,
-            'res_id': self.id,
-            'mimetype': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-        })
-
-        return {
-            'type': 'ir.actions.act_url',
-            'url': f'/web/content/{attachment.id}?download=true',
-            'target': 'self',
-        }
 
 
 class FlotaEntregaEquipoLinea(models.Model):
