@@ -5,6 +5,18 @@ from odoo import models, fields, api, _
 
 _logger = logging.getLogger(__name__)
 
+# Opciones de estado usadas para el equipo entregado, la flota devuelta y la impresora.
+ESTADO_EQUIPO_SELECTION = [
+    ('nuevo', 'Nuevo'),
+    ('casi_nuevo', 'Casi nuevo'),
+    ('usado_excelente', 'Usado - Excelente Estado'),
+    ('buen_estado', 'Buen Estado'),
+    ('usado', 'Usado'),
+    ('prestado', 'Prestado'),
+    ('averiado', 'Averiado / Dañado'),
+    ('na', 'N/A'),
+]
+
 
 class FlotaEntregaEquipo(models.Model):
     _name = 'flota.entrega.equipo'
@@ -68,6 +80,9 @@ class FlotaEntregaEquipo(models.Model):
     )
     equipo_recibido_modelo = fields.Char(string='Modelo (Flota Recibida)')
     equipo_recibido_serial = fields.Char(string='Serial / IMEI (Flota Recibida)')
+    estado_flota_recibida = fields.Selection(
+        ESTADO_EQUIPO_SELECTION, string='Estado (Flota Recibida)'
+    )
 
     # --- DATOS IMPRESORA ---
     mostrar_datos_impresora = fields.Boolean(
@@ -78,6 +93,9 @@ class FlotaEntregaEquipo(models.Model):
     )
     impresora_modelo = fields.Char(string='Modelo (Impresora)')
     impresora_serial = fields.Char(string='Serial (Impresora)')
+    estado_impresora = fields.Selection(
+        ESTADO_EQUIPO_SELECTION, string='Estado (Impresora)'
+    )
 
     # --- DATOS DE EQUIPO NUEVO ENTREGADO ---
     linea_ids = fields.One2many(
@@ -110,8 +128,14 @@ class FlotaEntregaEquipo(models.Model):
     politica_qr_imagen = fields.Image(
         string='Imagen del QR (opcional)',
         max_width=400, max_height=400,
+        default=lambda self: self.env['ir.config_parameter'].sudo().get_param(
+            'gestion_flota_empleados.politica_qr_imagen_default'
+        ) or False,
         help="Suba aquí la foto/imagen del código QR de la política de informática tal como debe imprimirse. "
-             "Si no sube ninguna imagen, el sistema genera automáticamente un QR a partir del enlace indicado arriba."
+             "Una vez subida, queda guardada como QR predeterminado y se precargará automáticamente en las "
+             "próximas actas nuevas para que no tenga que volver a subirla cada vez; puede reemplazarla cuando "
+             "lo necesite. Si no sube ninguna imagen, el sistema genera automáticamente un QR a partir del "
+             "enlace configurado."
     )
     politica_qr_final = fields.Binary(
         string='QR Política (para documentos)',
@@ -160,7 +184,28 @@ class FlotaEntregaEquipo(models.Model):
         for vals in vals_list:
             if vals.get('name', _('Nuevo')) == _('Nuevo'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.entrega.equipo') or _('Nuevo')
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records._guardar_qr_por_defecto()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if 'politica_qr_imagen' in vals:
+            self._guardar_qr_por_defecto()
+        return res
+
+    def _guardar_qr_por_defecto(self):
+        """Persiste la última imagen de QR subida como valor por defecto global (parámetro del
+        sistema), para que no desaparezca al crear una nueva acta: cada acta nueva la traerá
+        precargada automáticamente."""
+        for rec in self:
+            if rec.politica_qr_imagen:
+                valor = rec.politica_qr_imagen
+                if isinstance(valor, bytes):
+                    valor = valor.decode('ascii')
+                self.env['ir.config_parameter'].sudo().set_param(
+                    'gestion_flota_empleados.politica_qr_imagen_default', valor
+                )
 
     def action_descargar_pdf(self):
         """Descarga directamente el acta en PDF (reemplaza la antigua vista previa embebida)."""
@@ -193,22 +238,18 @@ class FlotaEntregaEquipoLinea(models.Model):
     _order = 'id asc'
 
     entrega_id = fields.Many2one('flota.entrega.equipo', string='Acta de Entrega', required=True, ondelete='cascade', index=True)
-    tipo_equipo = fields.Selection([
-        ('celular', 'Celular'),
-        ('tablet', 'Tablet'),
-        ('laptop', 'Laptop'),
-        ('impresora', 'Impresora'),
-        ('accesorio', 'Accesorio'),
-        ('otro', 'Otro'),
-    ], string='Tipo de Equipo', required=True, default='celular')
+    tipo_equipo = fields.Many2one(
+        'flota.tipo.equipo',
+        string='Tipo de Equipo',
+        required=True,
+        help="Seleccione el tipo de equipo del catálogo 'Equipos'. Si el tipo que necesita no existe, puede "
+             "crearlo directamente desde este campo."
+    )
     marca = fields.Char(string='Marca')
     modelo = fields.Char(string='Modelo')
     cantidad = fields.Integer(string='Cant.', default=1, required=True)
     imei_serial = fields.Char(string='IMEI / Serial')
-    estado_equipo = fields.Selection([
-        ('nueva', 'Nueva'),
-        ('usada', 'Usada'),
-    ], string='Estado', default='nueva')
+    estado_equipo = fields.Selection(ESTADO_EQUIPO_SELECTION, string='Estado', default='nuevo')
     observaciones = fields.Char(
         string='Estado / Observaciones',
         help="Ej. Protector de pantalla roto, cámara cristal roto, se friza a veces."

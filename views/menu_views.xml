@@ -37,4 +37,10 @@
               action="action_flota_entrega_equipo"
               sequence="50"/>
 
+    <menuitem id="menu_flota_tipo_equipo"
+              name="Equipos"
+              parent="menu_flota_root"
+              action="action_flota_tipo_equipo"
+              sequence="55"/>
+
 </odoo>

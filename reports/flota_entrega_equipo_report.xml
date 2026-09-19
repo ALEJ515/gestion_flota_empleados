@@ -112,6 +112,10 @@
                                 <td class="acta-label">Serial/IMEI:</td>
                                 <td><span t-field="doc.equipo_recibido_serial"/><t t-if="not doc.equipo_recibido_serial">N/A</t></td>
                             </tr>
+                            <tr>
+                                <td class="acta-label">Estado:</td>
+                                <td><span t-field="doc.estado_flota_recibida"/><t t-if="not doc.estado_flota_recibida">N/A</t></td>
+                            </tr>
                         </table>
 
                         <!-- DATOS IMPRESORA (solo si el toggle está activo) -->
@@ -124,6 +128,10 @@
                             <tr>
                                 <td class="acta-label">Serial:</td>
                                 <td><span t-field="doc.impresora_serial"/><t t-if="not doc.impresora_serial">N/A</t></td>
+                            </tr>
+                            <tr>
+                                <td class="acta-label">Estado:</td>
+                                <td><span t-field="doc.estado_impresora"/><t t-if="not doc.estado_impresora">N/A</t></td>
                             </tr>
                         </table>
 
@@ -170,17 +178,19 @@
                         <br/>
 
                         <!-- FIRMAS: etiqueta arriba, línea en blanco debajo para firma física.
-                             Se fuerza border="0"/cellspacing/cellpadding además del CSS "border: none"
-                             porque wkhtmltopdf a veces dibuja un recuadro por defecto en las tablas si no
-                             se indica explícitamente el atributo HTML border="0". -->
-                        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: none; border-collapse: collapse; margin-top: 26px;">
-                            <tr>
-                                <td style="width: 50%; border: none; text-align: left; padding-right: 20px; font-size: 13px;">
+                             Se fuerza border="0"/cellspacing/cellpadding, border-style/width/color en 0
+                             y el mismo reseteo en <tr> y <td>, además del CSS "border: none", porque
+                             wkhtmltopdf a veces dibuja un recuadro por defecto en las tablas si no se
+                             indica explícitamente el atributo HTML border="0" y todas las propiedades CSS
+                             de borde en cada nivel (table/tr/td). -->
+                        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: none; border-width: 0; border-style: none; border-collapse: collapse; margin-top: 26px;">
+                            <tr style="border: none; border-width: 0; border-style: none;">
+                                <td style="width: 50%; border: none; border-width: 0; border-style: none; text-align: left; padding-right: 20px; font-size: 13px;">
                                     <div style="font-weight: bold;">Firma Representante IT</div>
                                     <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
                                     <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.entregado_por"/></div>
                                 </td>
-                                <td style="width: 50%; border: none; text-align: left; padding-left: 20px; font-size: 13px;">
+                                <td style="width: 50%; border: none; border-width: 0; border-style: none; text-align: left; padding-left: 20px; font-size: 13px;">
                                     <div style="font-weight: bold;">Recibido Por</div>
                                     <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
                                     <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.recibido_por"/> — Fecha: <span t-field="doc.fecha"/></div>
@@ -190,9 +200,9 @@
 
                         <br/>
 
-                        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: none; border-collapse: collapse;">
-                            <tr>
-                                <td style="width: 55%; border: none; vertical-align: middle;">
+                        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: none; border-width: 0; border-style: none; border-collapse: collapse;">
+                            <tr style="border: none; border-width: 0; border-style: none;">
+                                <td style="width: 55%; border: none; border-width: 0; border-style: none; vertical-align: middle;">
                                     <p style="font-size: 13px;">
                                         Recibió usted la política de informática para el correcto uso de estos
                                         recursos tecnológicos:
@@ -200,7 +210,7 @@
                                         NO <t t-if="doc.recibio_politica == 'no'">☒</t><t t-else="">☐</t>
                                     </p>
                                 </td>
-                                <td style="width: 45%; border: none; text-align: center;">
+                                <td style="width: 45%; border: none; border-width: 0; border-style: none; text-align: center;">
                                     <img t-if="doc.politica_qr_final" t-att-src="image_data_uri(doc.politica_qr_final)" style="width: 210px; height: 210px;"/>
                                     <div t-if="doc.politica_url" style="font-size: 10px;"><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
                                 </td>
@@ -209,8 +219,8 @@
 
                         <table class="acta-tabla" style="margin-top: 8px;">
                             <tr>
-                                <td style="text-align: justify; font-size: 13px; line-height: 1.4; background-color: #F9FAFB; padding: 10px;">
-                                    <strong style="font-size: 14px;">Aceptación y responsabilidad.</strong><br/>
+                                <td style="text-align: justify; font-size: 14px; line-height: 1.45; background-color: #F9FAFB; padding: 12px;">
+                                    <strong style="font-size: 15px;">Aceptación y responsabilidad.</strong><br/>
                                     Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere
                                     la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de
                                     las directivas establecidas en la Política de Informática, la cual he recibido, leído y

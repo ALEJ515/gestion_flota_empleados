@@ -67,11 +67,13 @@
                             <field name="mostrar_flota_recibida" widget="boolean_toggle" string="Incluir en el documento"/>
                             <field name="equipo_recibido_modelo" placeholder="N/A" invisible="not mostrar_flota_recibida"/>
                             <field name="equipo_recibido_serial" placeholder="N/A" invisible="not mostrar_flota_recibida"/>
+                            <field name="estado_flota_recibida" invisible="not mostrar_flota_recibida"/>
                         </group>
                         <group string="Datos Impresora">
                             <field name="mostrar_datos_impresora" widget="boolean_toggle" string="Incluir en el documento"/>
                             <field name="impresora_modelo" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
                             <field name="impresora_serial" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
+                            <field name="estado_impresora" invisible="not mostrar_datos_impresora"/>
                         </group>
                     </group>
                     <notebook>
@@ -96,7 +98,6 @@
                                 </group>
                                 <group string="Política de Informática">
                                     <field name="recibio_politica"/>
-                                    <field name="politica_url"/>
                                     <field name="politica_qr_imagen" widget="image"/>
                                 </group>
                             </group>
