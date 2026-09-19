@@ -133,10 +133,6 @@
                     <!-- TABLA DE MOVIMIENTOS PROTAGONISTA CON ORDEN SOLICITADO -->
                     <notebook class="mt-4">
                         <page string="Desglose por empleado" name="lineas">
-                            <div class="alert alert-info d-flex align-items-center mb-2 py-2" role="alert" invisible="estado != 'draft'">
-                                <i class="fa fa-info-circle me-2"/>
-                                <div>Para agregar un empleado que pertenece a otra factura, use el botón "+" al final de la lista. Al escribir el Número Flota, si ya está registrado se autocompletan Nombre y Cargo; si el número o el empleado no existen, puede crearlos desde el propio campo. Quedará marcado como "Agregado Manualmente" (columna Origen, oculta por defecto) y no se eliminará al volver a extraer el PDF.</div>
-                            </div>
                             <div class="d-flex justify-content-end mb-2">
                                 <button name="action_buscar_lineas_empleado" type="object" class="btn-secondary d-inline-flex align-items-center gap-1">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

@@ -184,8 +184,16 @@ class FlotaEmpleado(models.Model):
             if record.numero_flota:
                 norm = _normalize_phone(record.numero_flota)
                 if norm:
-                    others = self.with_context(active_test=False).search([('id', '!=', record.id)])
-                    for ot in others:
+                    # Se acota la búsqueda por los últimos dígitos (ilike, usa índice)
+                    # en vez de traer TODOS los empleados a Python en cada guardado:
+                    # con cientos de registros esa comparación uno a uno podía sentirse
+                    # como que la página se queda "cargando" al crear/editar un empleado.
+                    filtro_digitos = norm[-7:] if len(norm) >= 7 else norm
+                    candidatos = self.with_context(active_test=False).search([
+                        ('id', '!=', record.id),
+                        ('numero_flota', 'ilike', filtro_digitos),
+                    ])
+                    for ot in candidatos:
                         if ot.numero_flota and _normalize_phone(ot.numero_flota) == norm:
                             raise ValidationError(_('El número de flota (%s) ya pertenece al empleado %s.') % (record.numero_flota, ot.name))
             if record.name:

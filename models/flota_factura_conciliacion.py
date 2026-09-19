@@ -937,6 +937,11 @@ class FlotaFacturaLinea(models.Model):
         existe un empleado registrado con ese número y autocompleta Empleado (y con
         él, Cargo/Departamento por los campos related) sin esperar a guardar.
 
+        Usa una búsqueda directa acotada por los últimos dígitos (en vez de cargar
+        TODOS los empleados a memoria como hace _build_empleado_phone_map, pensado
+        para procesar el PDF completo) para responder rápido y no bloquear el
+        navegador cuando hay muchos empleados registrados.
+
         Si no hay coincidencia, no hace nada: el usuario puede escribir el nombre
         en el campo Empleado y, si tampoco existe, crearlo desde ahí (opción
         "Crear y editar..." del propio combo, ya que Cargo y Número Flota son
@@ -945,12 +950,20 @@ class FlotaFacturaLinea(models.Model):
         if not self.numero_flota:
             return
         norm = _normalize_phone(self.numero_flota)
-        if not norm:
+        if not norm or len(norm) < 7:
             return
-        emp_map = _build_empleado_phone_map(self.env)
-        emp = emp_map.get(norm) or emp_map.get(norm[-10:])
-        if emp and self.empleado_id != emp:
-            self.empleado_id = emp
+        try:
+            ultimos = norm[-10:]
+            candidatos = self.env['flota.empleado'].with_context(active_test=False).search(
+                [('numero_flota', 'ilike', ultimos[-7:])]
+            )
+            emp = next((c for c in candidatos if _normalize_phone(c.numero_flota) == ultimos), False)
+            if emp and self.empleado_id != emp:
+                self.empleado_id = emp
+        except Exception:
+            # Nunca debe bloquear la edición manual de la línea: si la búsqueda
+            # falla por cualquier motivo, simplemente se omite el autocompletado.
+            _logger.warning("No se pudo autocompletar el empleado para el número %s", self.numero_flota, exc_info=True)
 
     @api.depends('llamadas_roaming_otras_llamadas', 'otros_servicios_datos', 'uso_local_data_movil', 'monto_roaming', 'financiamiento_equipos', 'otros_cargos_descuentos', 'impuestos', 'total')
     def _compute_linea_totals(self):
