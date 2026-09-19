@@ -25,4 +25,10 @@
               action="action_flota_ubicacion"
               sequence="30"/>
 
+    <menuitem id="menu_flota_rutas"
+              name="Rutas"
+              parent="menu_flota_root"
+              action="action_flota_ruta"
+              sequence="40"/>
+
 </odoo>

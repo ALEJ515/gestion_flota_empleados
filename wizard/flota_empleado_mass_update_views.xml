@@ -19,6 +19,12 @@
                                 <field name="ubicacion_id" invisible="not set_ubicacion" required="set_ubicacion" placeholder="Seleccionar CEDI..."/>
                             </div>
 
+                            <label for="set_ruta" string="Ruta"/>
+                            <div class="o_row">
+                                <field name="set_ruta" class="me-2"/>
+                                <field name="ruta_id" invisible="not set_ruta" required="set_ruta" placeholder="Seleccionar Ruta..."/>
+                            </div>
+
                             <label for="set_departamento" string="Departamento"/>
                             <div class="o_row">
                                 <field name="set_departamento" class="me-2"/>

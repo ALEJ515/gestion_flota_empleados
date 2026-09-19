@@ -114,8 +114,9 @@
 
                     <group string="Impuestos Aplicados y Desglose CDT (República Dominicana)">
                         <group string="Bases Gravables y Exclusiones CDT">
-                            <field name="ajustes_excluidos_cdt" widget="monetary" readonly="estado != 'draft'" string="(-) Conceptos Excluidos CDT" help="Monto de conceptos como Cargo por Pago Atrasado / Moras que NO gravan 2% de CDT."/>
-                            <field name="base_gravable_cdt" widget="monetary" readonly="1" class="fw-bold text-primary" string="(=) Base Gravable CDT"/>
+                            <field name="mostrar_detalle_cdt" widget="boolean_toggle" string="Ver Detalle CDT" help="Muestra el desglose intermedio (Conceptos Excluidos y Base Gravable) usado para calcular el CDT informado. Oculto por defecto para simplificar la vista."/>
+                            <field name="ajustes_excluidos_cdt" widget="monetary" readonly="estado != 'draft'" string="(-) Conceptos Excluidos CDT" invisible="not mostrar_detalle_cdt" help="Monto de conceptos como Cargo por Pago Atrasado / Moras que NO gravan 2% de CDT."/>
+                            <field name="base_gravable_cdt" widget="monetary" readonly="1" class="fw-bold text-primary" string="(=) Base Gravable CDT" invisible="not mostrar_detalle_cdt"/>
                         </group>
                         <group string="Impuestos Calculados">
                             <field name="itbis_monto" widget="monetary" readonly="estado != 'draft'" string="ITBIS (18%)"/>

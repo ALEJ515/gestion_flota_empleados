@@ -25,6 +25,7 @@
                 <field name="name" optional="show"/>
                 <field name="departamento_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
+                <field name="ruta_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
@@ -49,6 +50,8 @@
                     <field name="estado" widget="statusbar" statusbar_visible="draft,active,inactive" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
+                    <widget name="web_ribbon" title="Borrador" bg_color="bg-warning" invisible="not active or estado != 'draft'"/>
+                    <widget name="web_ribbon" title="Inactivo" bg_color="bg-danger" invisible="not active or estado != 'inactive'"/>
                     <widget name="web_ribbon" title="Archivado" bg_color="bg-danger" invisible="active"/>
                     <div class="oe_title">
                         <label for="name" class="oe_edit_only" string="Nombre Completo"/>
@@ -60,6 +63,7 @@
                         <group string="Información Laboral">
                             <field name="departamento_id" options="{'no_create_edit': False}"/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
+                            <field name="ruta_id" options="{'no_create_edit': False}"/>
                             <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
                         </group>
                         <group string="Contacto y Facturación">
@@ -121,6 +125,7 @@
                 <field name="name"/>
                 <field name="departamento_id"/>
                 <field name="ubicacion_id"/>
+                <field name="ruta_id"/>
                 <field name="cargo"/>
                 <field name="numero_flota"/>
                 <field name="ultima_facturacion_monto"/>
@@ -141,6 +146,10 @@
                                 <div class="text-muted small mb-1">
                                     <span class="fa fa-map-marker me-1" title="Ubicación"/>
                                     <field name="ubicacion_id"/>
+                                </div>
+                                <div class="text-muted small mb-1" t-if="record.ruta_id.raw_value">
+                                    <span class="fa fa-road me-1" title="Ruta"/>
+                                    <field name="ruta_id"/>
                                 </div>
                                 <div class="text-primary fw-bold mb-1">
                                     <span class="fa fa-phone me-1" title="Número Flota"/>
@@ -168,9 +177,10 @@
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
             <search string="Buscar Empleados y Flotas">
-                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic)" filter_domain="['|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self)]"/>
+                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic)" filter_domain="['|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
                 <field name="departamento_id"/>
                 <field name="ubicacion_id"/>
+                <field name="ruta_id"/>
                 <field name="numero_flota"/>
                 <filter string="Activos" name="active_filter" domain="[('estado', '=', 'active')]"/>
                 <filter string="Inactivos" name="inactive_filter" domain="[('estado', '=', 'inactive')]"/>
@@ -180,6 +190,7 @@
                 <group>
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
+                    <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
                 </group>
             </search>

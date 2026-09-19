@@ -14,6 +14,9 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
     set_ubicacion = fields.Boolean(string='Modificar CEDI / Ubicación')
     ubicacion_id = fields.Many2one('flota.ubicacion', string='CEDI / Ubicación', ondelete='set null')
 
+    set_ruta = fields.Boolean(string='Modificar Ruta')
+    ruta_id = fields.Many2one('flota.ruta', string='Ruta', ondelete='set null')
+
     set_departamento = fields.Boolean(string='Modificar Departamento')
     departamento_id = fields.Many2one('flota.departamento', string='Departamento', ondelete='set null')
 
@@ -47,6 +50,12 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
                 raise UserError(_('Por favor seleccione una Ubicación/CEDI válida.'))
             vals['ubicacion_id'] = self.ubicacion_id.id
             changes_desc.append(f"CEDI/Ubicación: {self.ubicacion_id.name}")
+
+        if self.set_ruta:
+            if not self.ruta_id:
+                raise UserError(_('Por favor seleccione una Ruta válida.'))
+            vals['ruta_id'] = self.ruta_id.id
+            changes_desc.append(f"Ruta: {self.ruta_id.name}")
 
         if self.set_departamento:
             if not self.departamento_id:

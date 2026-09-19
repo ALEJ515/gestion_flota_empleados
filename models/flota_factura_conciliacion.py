@@ -60,6 +60,7 @@ class FlotaFacturaConciliacion(models.Model):
     base_gravable_cdt = fields.Monetary(string='Base Gravable CDT', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 2% de CDT (Subtotal menos Conceptos Excluidos).")
     base_gravable_isc = fields.Monetary(string='Base Gravable ISC', compute='_compute_totales_factura', store=True, currency_field='currency_id', help="Monto total gravado con el 10% de ISC.")
     ajustes_excluidos_cdt = fields.Monetary(string='Conceptos Excluidos CDT', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', help="Conceptos/Ajustes que NO gravan CDT (ej. Cargo por Pago Atrasado / Mora).")
+    mostrar_detalle_cdt = fields.Boolean(string='Ver Detalle CDT', default=False, help="Muestra el desglose intermedio (Conceptos Excluidos y Base Gravable) usado para calcular el CDT. Está oculto por defecto para simplificar la vista; actívelo si necesita auditar el cálculo.")
 
     itbis_monto = fields.Monetary(string='ITBIS (18%)', compute='_compute_totales_factura', store=True, readonly=False, currency_field='currency_id', tracking=True, help="Impuesto a la Transferencia de Bienes Industrializados y Servicios (18%). Se usa el monto impreso literalmente en el PDF; si no se pudo extraer, se calcula como 18% del Subtotal.")
     itbis_pdf_extraido = fields.Monetary(string='ITBIS Extraído del PDF', currency_field='currency_id', default=0.0, help="Monto de ITBIS impreso literalmente en la carátula del PDF de Claro (fuente oficial, evita diferencias por redondeo interno de Claro al calcular por línea).")
@@ -701,22 +702,22 @@ class FlotaFacturaConciliacion(models.Model):
         ws["A2"] = f"Periodo: {self.periodo} | Fecha: {self.fecha_factura} | Estado: {self.estado.upper()}"
         ws["A2"].font = Font(italic=True, color="4B5563")
 
-        # Columnas exactas en el mismo orden que en la vista: EMPLEADO, NÚMERO FLOTA, CARGO, DEPARTAMENTO, ORIGEN, TOTAL LÍNEA
-        headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "ORIGEN", "TOTAL LÍNEA (RD$)"]
+        # Columnas exactas en el mismo orden que en la vista: EMPLEADO, NÚMERO FLOTA, CARGO, DEPARTAMENTO, TOTAL LÍNEA
+        # (la columna Origen se omite intencionalmente del Excel: es un detalle interno de auditoría,
+        # visible solo en la vista y en la hoja "Registros Agregados Manualmente").
+        headers_emp = ["EMPLEADO", "NÚMERO FLOTA", "CARGO", "DEPARTAMENTO", "TOTAL LÍNEA (RD$)"]
         for col_num, h in enumerate(headers_emp, 1):
             cell = ws.cell(row=4, column=col_num, value=h)
             cell.fill = header_fill
             cell.font = header_font
 
-        origen_labels = {'pdf': 'Extraído del PDF', 'manual': 'Agregado Manualmente'}
         current_row = 5
         for l in self.linea_ids:
             ws.cell(row=current_row, column=1, value=l.empleado_id.name if l.empleado_id else 'NO REGISTRADO')
             ws.cell(row=current_row, column=2, value=l.numero_flota)
             ws.cell(row=current_row, column=3, value=l.cargo or '')
             ws.cell(row=current_row, column=4, value=l.departamento_id.name if l.departamento_id else 'N/A')
-            ws.cell(row=current_row, column=5, value=origen_labels.get(l.origen_linea, l.origen_linea))
-            c_tot = ws.cell(row=current_row, column=6, value=l.total_linea)
+            c_tot = ws.cell(row=current_row, column=5, value=l.total_linea)
             c_tot.number_format = '"RD$"#,##0.00'
             current_row += 1
 
@@ -789,8 +790,6 @@ class FlotaFacturaConciliacion(models.Model):
             ("Llamadas Roaming", self.llamadas_roaming),
             ("Otros Cargos, Créditos o Descuentos (CR)", self.otros_cargos_creditos),
             ("SUBTOTAL FACTURA", self.subtotal_factura),
-            ("(-) Conceptos Excluidos CDT", self.ajustes_excluidos_cdt),
-            ("(=) Base Gravable CDT", self.base_gravable_cdt),
             ("ITBIS - 18%", self.itbis_monto),
             ("CDT - 2%", self.cdt_monto),
             ("ISC - 10%", self.isc_monto),
@@ -802,7 +801,7 @@ class FlotaFacturaConciliacion(models.Model):
             c_val = ws.cell(row=current_row, column=2, value=val)
             c_val.number_format = '"RD$"#,##0.00'
             
-            if name in ["SUBTOTAL FACTURA", "(=) Base Gravable CDT", "TOTAL DEL MES"]:
+            if name in ["SUBTOTAL FACTURA", "TOTAL DEL MES"]:
                 c_name.font = bold_font
                 c_val.font = bold_font
             if name == "TOTAL DEL MES":
