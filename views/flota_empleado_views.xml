@@ -178,6 +178,7 @@
         <field name="arch" type="xml">
             <search string="Buscar Empleados y Flotas">
                 <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic)" filter_domain="['|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
+                <field name="cargo"/>
                 <field name="departamento_id"/>
                 <field name="ubicacion_id"/>
                 <field name="ruta_id"/>
@@ -188,6 +189,7 @@
                 <separator/>
                 <filter string="Archivados" name="archived" domain="[('active', '=', False)]"/>
                 <group>
+                    <filter string="Cargo" name="group_cargo" context="{'group_by': 'cargo'}"/>
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
