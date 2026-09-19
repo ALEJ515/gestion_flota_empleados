@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Report Action -->
+    <record id="action_report_flota_entrega_equipo" model="ir.actions.report">
+        <field name="name">Acta de Entrega de Equipos (PDF)</field>
+        <field name="model">flota.entrega.equipo</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">gestion_flota_empleados.report_flota_entrega_equipo</field>
+        <field name="report_file">gestion_flota_empleados.report_flota_entrega_equipo</field>
+        <field name="binding_model_id" ref="model_flota_entrega_equipo"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- QWeb Template -->
+    <template id="report_flota_entrega_equipo">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.basic_layout">
+                    <div class="page" style="font-family: Arial, sans-serif; font-size: 12px;">
+
+                        <!-- ENCABEZADO DE CONTROL DOCUMENTAL -->
+                        <table class="table table-bordered" style="border: 1px solid #000;">
+                            <tr>
+                                <td rowspan="3" style="width: 25%; text-align: center; vertical-align: middle;">
+                                    <img t-if="doc.company_id.logo" t-att-src="image_data_uri(doc.company_id.logo)" style="max-height: 70px; max-width: 100%;"/>
+                                </td>
+                                <td style="width: 40%; text-align: center; font-weight: bold;">FORMULARIO</td>
+                                <td style="width: 15%; font-weight: bold;">CÓDIGO:</td>
+                                <td style="width: 20%;"><span t-field="doc.codigo_formulario"/></td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: center;">Recepción y Entrega de Equipos</td>
+                                <td style="font-weight: bold;">VERSIÓN:</td>
+                                <td><span t-field="doc.version_formulario"/></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold;">Departamento de Tecnología</td>
+                                <td style="font-weight: bold;">PÁGINA:</td>
+                                <td>1 de 1</td>
+                            </tr>
+                        </table>
+
+                        <br/>
+
+                        <!-- DATOS ENTREGA -->
+                        <table class="table table-bordered" style="border: 1px solid #000;">
+                            <tr><td colspan="2" style="background-color: #92D050; font-weight: bold; text-align: center;">DATOS ENTREGA</td></tr>
+                            <tr>
+                                <td style="width: 35%; font-weight: bold; background-color: #D9D9D9;">Distribuidor/Vendedor</td>
+                                <td><span t-field="doc.tipo_asignacion"/></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Preparado por:</td>
+                                <td><span t-field="doc.preparado_por_id.name"/></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Ruta</td>
+                                <td><span t-field="doc.ruta_id.name"/></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Localidad</td>
+                                <td><span t-field="doc.ubicacion_id.name"/></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Recibido por (responsable):</td>
+                                <td><span t-field="doc.recibido_por"/></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Núm. de teléfono (flota)</td>
+                                <td><span t-field="doc.telefono_flota"/></td>
+                            </tr>
+                        </table>
+
+                        <!-- DATOS FLOTA RECIBIDA POR TI -->
+                        <table class="table table-bordered" style="border: 1px solid #000;">
+                            <tr><td colspan="2" style="background-color: #92D050; font-weight: bold; text-align: center;">DATOS FLOTA RECIBIDA POR TI</td></tr>
+                            <tr>
+                                <td style="width: 35%; font-weight: bold; background-color: #D9D9D9;">Modelo:</td>
+                                <td><span t-field="doc.equipo_recibido_modelo"/><t t-if="not doc.equipo_recibido_modelo">N/A</t></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Serial/IMEI:</td>
+                                <td><span t-field="doc.equipo_recibido_serial"/><t t-if="not doc.equipo_recibido_serial">N/A</t></td>
+                            </tr>
+                        </table>
+
+                        <!-- DATOS IMPRESORA -->
+                        <table class="table table-bordered" style="border: 1px solid #000;">
+                            <tr><td colspan="2" style="background-color: #92D050; font-weight: bold; text-align: center;">DATOS IMPRESORA</td></tr>
+                            <tr>
+                                <td style="width: 35%; font-weight: bold; background-color: #D9D9D9;">Modelo:</td>
+                                <td><span t-field="doc.impresora_modelo"/><t t-if="not doc.impresora_modelo">N/A</t></td>
+                            </tr>
+                            <tr>
+                                <td style="font-weight: bold; background-color: #D9D9D9;">Serial:</td>
+                                <td><span t-field="doc.impresora_serial"/><t t-if="not doc.impresora_serial">N/A</t></td>
+                            </tr>
+                        </table>
+
+                        <!-- DATOS DE EQUIPO NUEVO ENTREGADO -->
+                        <table class="table table-bordered" style="border: 1px solid #000;">
+                            <thead>
+                                <tr><th colspan="6" style="background-color: #92D050; text-align: center;">DATOS DE EQUIPO NUEVO ENTREGADO</th></tr>
+                                <tr style="background-color: #9DC3E6;">
+                                    <th>Tipo de Equipo</th>
+                                    <th>Marca</th>
+                                    <th>Modelo</th>
+                                    <th>Cant.</th>
+                                    <th>IMEI</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="doc.linea_ids" t-as="l">
+                                    <tr>
+                                        <td><span t-field="l.tipo_equipo"/></td>
+                                        <td><span t-field="l.marca"/></td>
+                                        <td><span t-field="l.modelo"/></td>
+                                        <td class="text-center"><span t-field="l.cantidad"/></td>
+                                        <td><span t-field="l.imei_serial"/></td>
+                                        <td>
+                                            <span t-field="l.estado_equipo"/>
+                                            <t t-if="l.observaciones"><br/><span t-field="l.observaciones"/></t>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+
+                        <br/><br/>
+
+                        <!-- FIRMAS -->
+                        <table style="width: 100%; border: none;">
+                            <tr>
+                                <td style="width: 50%; border: none; text-align: center;">
+                                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto;">
+                                        <span t-field="doc.entregado_por"/>
+                                    </div>
+                                    <div>Entregado por</div>
+                                </td>
+                                <td style="width: 50%; border: none; text-align: center;">
+                                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto;">&#160;</div>
+                                    <div>Recibido por<br/>Firma y fecha</div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <br/>
+
+                        <table style="width: 100%; border: none;">
+                            <tr>
+                                <td style="width: 70%; border: none; vertical-align: top;">
+                                    <p>
+                                        Recibió usted la política de informática para el correcto uso de estos
+                                        Recursos tecnológicos:
+                                        SI <t t-if="doc.recibio_politica == 'si'">X</t> ______
+                                        NO <t t-if="doc.recibio_politica == 'no'">X</t> ______
+                                    </p>
+                                </td>
+                                <td style="width: 30%; border: none; text-align: center;">
+                                    <img t-if="doc.politica_qr_src" t-att-src="doc.politica_qr_src" style="width: 90px; height: 90px;"/>
+                                    <div><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <br/>
+                        <p style="text-align: justify;">
+                            Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere
+                            la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de
+                            las directivas establecidas en la Política de Informática, la cual he recibido, leído y
+                            entendido, puede conllevar a que la empresa revoque mis privilegios y tome acciones
+                            disciplinarias y/o legales de acuerdo con lo establecido en dicha política.
+                        </p>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

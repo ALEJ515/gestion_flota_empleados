@@ -50,6 +50,11 @@
                     <field name="estado" widget="statusbar" statusbar_visible="draft,active,inactive" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_entregas_equipo" type="object" class="oe_stat_button" icon="fa-mobile">
+                            <field name="entrega_equipo_count" widget="statinfo" string="Actas de Equipos"/>
+                        </button>
+                    </div>
                     <widget name="web_ribbon" title="Borrador" bg_color="bg-warning" invisible="not active or estado != 'draft'"/>
                     <widget name="web_ribbon" title="Inactivo" bg_color="bg-danger" invisible="not active or estado != 'inactive'"/>
                     <widget name="web_ribbon" title="Archivado" bg_color="bg-danger" invisible="active"/>

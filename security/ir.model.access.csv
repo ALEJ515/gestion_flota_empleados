@@ -16,3 +16,7 @@ access_flota_factura_departamento_resumen_user,flota.factura.departamento.resume
 access_flota_factura_departamento_resumen_manager,flota.factura.departamento.resumen.manager,model_flota_factura_departamento_resumen,group_flota_manager,1,1,1,1
 access_flota_factura_concepto_user,flota.factura.concepto.user,model_flota_factura_concepto,group_flota_user,1,1,1,0
 access_flota_factura_concepto_manager,flota.factura.concepto.manager,model_flota_factura_concepto,group_flota_manager,1,1,1,1
+access_flota_entrega_equipo_user,flota.entrega.equipo.user,model_flota_entrega_equipo,group_flota_user,1,1,1,0
+access_flota_entrega_equipo_manager,flota.entrega.equipo.manager,model_flota_entrega_equipo,group_flota_manager,1,1,1,1
+access_flota_entrega_equipo_linea_user,flota.entrega.equipo.linea.user,model_flota_entrega_equipo_linea,group_flota_user,1,1,1,0
+access_flota_entrega_equipo_linea_manager,flota.entrega.equipo.linea.manager,model_flota_entrega_equipo_linea,group_flota_manager,1,1,1,1

@@ -111,6 +111,32 @@ class FlotaEmpleado(models.Model):
         string='Historial de Facturación y Consumos'
     )
 
+    entrega_equipo_ids = fields.One2many(
+        'flota.entrega.equipo',
+        'empleado_id',
+        string='Actas de Entrega de Equipos'
+    )
+    entrega_equipo_count = fields.Integer(
+        string='Total Actas de Equipos',
+        compute='_compute_entrega_equipo_count'
+    )
+
+    @api.depends('entrega_equipo_ids')
+    def _compute_entrega_equipo_count(self):
+        for rec in self:
+            rec.entrega_equipo_count = len(rec.entrega_equipo_ids)
+
+    def action_view_entregas_equipo(self):
+        self.ensure_one()
+        return {
+            'name': f'Actas de Entrega de Equipos - {self.name}',
+            'type': 'ir.actions.act_window',
+            'res_model': 'flota.entrega.equipo',
+            'view_mode': 'list,form',
+            'domain': [('empleado_id', '=', self.id)],
+            'context': {'default_empleado_id': self.id}
+        }
+
     # Campo Computado: Compañeros del Mismo Departamento
     companeros_departamento_ids = fields.One2many(
         'flota.empleado',

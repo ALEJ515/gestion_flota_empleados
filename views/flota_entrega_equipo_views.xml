@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sequence for Acta de Entrega de Equipos -->
+    <record id="seq_flota_entrega_equipo" model="ir.sequence">
+        <field name="name">Secuencia Acta de Entrega de Equipos</field>
+        <field name="code">flota.entrega.equipo</field>
+        <field name="prefix">ACT-EQ/%(year)s/</field>
+        <field name="padding">4</field>
+    </record>
+
+    <!-- LIST VIEW -->
+    <record id="view_flota_entrega_equipo_list" model="ir.ui.view">
+        <field name="name">flota.entrega.equipo.list</field>
+        <field name="model">flota.entrega.equipo</field>
+        <field name="arch" type="xml">
+            <list string="Actas de Entrega y Recepción de Equipos" decoration-muted="estado=='draft'">
+                <field name="name" optional="show"/>
+                <field name="fecha" optional="show"/>
+                <field name="empleado_id" optional="show"/>
+                <field name="ruta_id" optional="show"/>
+                <field name="ubicacion_id" optional="show"/>
+                <field name="tipo_asignacion" optional="show"/>
+                <field name="cantidad_equipos" optional="show"/>
+                <field name="recibio_politica" optional="show"/>
+                <field name="estado" widget="badge" decoration-warning="estado=='draft'" decoration-success="estado=='confirmado'" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- FORM VIEW -->
+    <record id="view_flota_entrega_equipo_form" model="ir.ui.view">
+        <field name="name">flota.entrega.equipo.form</field>
+        <field name="model">flota.entrega.equipo</field>
+        <field name="arch" type="xml">
+            <form string="Acta de Recepción y Entrega de Equipos">
+                <header>
+                    <button name="action_confirmar" string="Confirmar" type="object" class="btn-primary" invisible="estado != 'draft'"/>
+                    <button name="action_restablecer_borrador" string="Volver a Borrador" type="object" invisible="estado != 'confirmado'"/>
+                    <button name="action_exportar_excel" string="Exportar a Excel" type="object" class="btn-secondary" confirm="¿Confirma que desea exportar esta acta a Excel?"/>
+                    <field name="estado" widget="statusbar" statusbar_visible="draft,confirmado" options="{'clickable': '1'}"/>
+                </header>
+                <sheet>
+                    <div class="oe_title mb-3">
+                        <label for="empleado_id" class="oe_edit_only" string="Empleado"/>
+                        <h1>
+                            <field name="empleado_id" options="{'no_create_edit': True}" placeholder="Seleccione el empleado..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Datos Entrega">
+                            <field name="tipo_asignacion"/>
+                            <field name="preparado_por_id"/>
+                            <field name="ruta_id" options="{'no_create_edit': False}"/>
+                            <field name="ubicacion_id" options="{'no_create_edit': False}"/>
+                            <field name="recibido_por"/>
+                            <field name="telefono_flota"/>
+                        </group>
+                        <group string="Control Documental">
+                            <field name="name" readonly="1"/>
+                            <field name="fecha"/>
+                            <field name="codigo_formulario"/>
+                            <field name="version_formulario"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Datos Flota Recibida por TI">
+                            <field name="equipo_recibido_modelo" placeholder="N/A"/>
+                            <field name="equipo_recibido_serial" placeholder="N/A"/>
+                        </group>
+                        <group string="Datos Impresora">
+                            <field name="impresora_modelo" placeholder="N/A"/>
+                            <field name="impresora_serial" placeholder="N/A"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Equipo Nuevo Entregado" name="equipos">
+                            <field name="linea_ids">
+                                <list editable="bottom">
+                                    <field name="tipo_equipo"/>
+                                    <field name="marca"/>
+                                    <field name="modelo"/>
+                                    <field name="cantidad"/>
+                                    <field name="imei_serial"/>
+                                    <field name="estado_equipo"/>
+                                    <field name="observaciones"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Firmas y Política" name="firmas">
+                            <group>
+                                <group string="Entrega">
+                                    <field name="entregado_por"/>
+                                    <field name="firma_entregado" widget="signature" string="Firma de Entrega"/>
+                                </group>
+                                <group string="Recepción">
+                                    <field name="firma_recibido" widget="signature" string="Firma de Recepción"/>
+                                    <field name="recibio_politica"/>
+                                    <field name="politica_url"/>
+                                </group>
+                            </group>
+                            <group>
+                                <field name="notas" placeholder="Notas adicionales..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- SEARCH VIEW -->
+    <record id="view_flota_entrega_equipo_search" model="ir.ui.view">
+        <field name="name">flota.entrega.equipo.search</field>
+        <field name="model">flota.entrega.equipo</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Actas de Entrega de Equipos">
+                <field name="name"/>
+                <field name="empleado_id"/>
+                <field name="ruta_id"/>
+                <field name="ubicacion_id"/>
+                <filter string="Borrador" name="draft_filter" domain="[('estado', '=', 'draft')]"/>
+                <filter string="Confirmado" name="confirmado_filter" domain="[('estado', '=', 'confirmado')]"/>
+                <separator/>
+                <filter string="Este Mes" name="this_month" domain="[('fecha', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d'))]"/>
+                <group>
+                    <filter string="Empleado" name="group_empleado" context="{'group_by': 'empleado_id'}"/>
+                    <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
+                    <filter string="Ubicación" name="group_ubicacion" context="{'group_by': 'ubicacion_id'}"/>
+                    <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ACTION -->
+    <record id="action_flota_entrega_equipo" model="ir.actions.act_window">
+        <field name="name">Actas de Entrega de Equipos</field>
+        <field name="res_model">flota.entrega.equipo</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_flota_entrega_equipo_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay actas de entrega de equipos registradas.
+            </p>
+            <p>
+                Registre la recepción y entrega de equipos (celulares, tablets, laptops, impresoras) a cada empleado,
+                y expórtelas a Excel o imprímalas en PDF con el formato oficial de la empresa.
+            </p>
+        </field>
+    </record>
+</odoo>

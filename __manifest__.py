@@ -1,6 +1,6 @@
 {
     'name': 'Gestión de Flota y Empleados (Factura Claro Nativa)',
-    'version': '19.0.1.61.0',
+    'version': '19.0.1.62.0',
     'category': 'Human Resources',
     'summary': 'Registro profesional de empleados, cargos, flota telefónica, ubicaciones, conciliación financiera de facturas Claro 100% nativa.',
     'description': """
@@ -25,6 +25,8 @@
         'views/flota_ruta_views.xml',
         'views/flota_factura_conciliacion_views.xml',
         'reports/flota_factura_conciliacion_report.xml',
+        'views/flota_entrega_equipo_views.xml',
+        'reports/flota_entrega_equipo_report.xml',
         'views/menu_views.xml',
         'data/demo_data.xml',
     ],
