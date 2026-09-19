@@ -8,6 +8,7 @@
             <list decoration-muted="not active" editable="bottom">
                 <field name="name" optional="show"/>
                 <field name="descripcion" optional="show"/>
+                <field name="es_licencia" widget="boolean_toggle" string="Es Licencia" optional="show"/>
                 <field name="active" widget="boolean_toggle" optional="hide"/>
             </list>
         </field>
@@ -26,6 +27,7 @@
                     </div>
                     <group>
                         <field name="descripcion"/>
+                        <field name="es_licencia" widget="boolean_toggle" string="Es Tipo de Licencia"/>
                         <field name="active" widget="boolean_toggle"/>
                     </group>
                 </sheet>
@@ -41,6 +43,7 @@
             <search string="Buscar Tipos de Equipo">
                 <field name="name"/>
                 <field name="descripcion"/>
+                <filter string="Solo Licencias" name="solo_licencia" domain="[('es_licencia', '=', True)]"/>
                 <filter string="Archivados" name="inactive_filter" domain="[('active', '=', False)]"/>
             </search>
         </field>

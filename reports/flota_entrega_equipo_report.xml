@@ -136,7 +136,9 @@
                         </table>
 
                         <!-- DATOS DE EQUIPO NUEVO ENTREGADO (justo debajo de Datos Impresora) -->
-                        <table class="acta-tabla">
+                        <t t-set="lineas_equipo" t-value="doc.linea_ids.filtered(lambda l: not l.es_linea_licencia)"/>
+                        <t t-set="lineas_licencia" t-value="doc.linea_ids.filtered(lambda l: l.es_linea_licencia)"/>
+                        <table class="acta-tabla" t-if="lineas_equipo">
                             <tr><td colspan="6" class="acta-section">DATOS DE EQUIPO NUEVO ENTREGADO</td></tr>
                             <tr>
                                 <th class="acta-th">Tipo de Equipo</th>
@@ -146,7 +148,7 @@
                                 <th class="acta-th">IMEI / Serial</th>
                                 <th class="acta-th">Estado</th>
                             </tr>
-                            <t t-foreach="doc.linea_ids" t-as="l">
+                            <t t-foreach="lineas_equipo" t-as="l">
                                 <tr>
                                     <td><span t-field="l.tipo_equipo"/></td>
                                     <td><span t-field="l.marca"/></td>
@@ -158,11 +160,32 @@
                             </t>
                         </table>
 
-                        <!-- ESTADO / OBSERVACIONES: separado de la tabla anterior para que no se vea recortado -->
-                        <t t-if="doc.linea_ids.filtered(lambda l: l.observaciones)">
+                        <!-- DATOS DE LICENCIAS ASIGNADAS: solo si hay líneas cuyo Tipo de Equipo está
+                             marcado como Licencia. Se imprime como líneas completas (no por columnas),
+                             ya que una licencia no tiene modelo/IMEI/serial como un equipo físico. -->
+                        <table class="acta-tabla" t-if="lineas_licencia">
+                            <tr><td class="acta-section">DATOS DE LICENCIAS ASIGNADAS</td></tr>
+                            <t t-foreach="lineas_licencia" t-as="l">
+                                <tr>
+                                    <td>
+                                        <strong>
+                                            <span t-if="l.tipo_licencia_id" t-field="l.tipo_licencia_id.name"/>
+                                            <span t-if="not l.tipo_licencia_id" t-field="l.tipo_equipo.name"/>
+                                        </strong>
+                                        <t t-if="l.cantidad and l.cantidad != 1"> — Cant: <span t-field="l.cantidad"/></t>
+                                        <t t-if="l.estado_equipo"> — Estado: <span t-field="l.estado_equipo"/></t>
+                                        <t t-if="l.observaciones"> — <span t-field="l.observaciones"/></t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </table>
+
+                        <!-- ESTADO / OBSERVACIONES: separado de la tabla anterior para que no se vea recortado.
+                             Solo para líneas de equipo (las licencias muestran su observación en su propia línea). -->
+                        <t t-if="lineas_equipo.filtered(lambda l: l.observaciones)">
                             <table class="acta-tabla">
                                 <tr><td class="acta-section">ESTADO / OBSERVACIONES</td></tr>
-                                <t t-foreach="doc.linea_ids" t-as="l">
+                                <t t-foreach="lineas_equipo" t-as="l">
                                     <t t-if="l.observaciones">
                                         <tr>
                                             <td>

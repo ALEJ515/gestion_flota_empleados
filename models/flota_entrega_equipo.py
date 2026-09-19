@@ -330,9 +330,20 @@ class FlotaEntregaEquipoLinea(models.Model):
         string='Tipo de Equipo',
         required=True,
         help="Seleccione el tipo de equipo del catálogo 'Equipos'. Si el tipo que necesita no existe, puede "
-             "crearlo directamente desde este campo."
+             "crearlo directamente desde este campo. Si el tipo está marcado como 'Es Tipo de Licencia', el "
+             "campo Marca se reemplaza por la selección del catálogo 'Tipos de Licencia'."
+    )
+    es_linea_licencia = fields.Boolean(
+        related='tipo_equipo.es_licencia', store=True, string='Es Licencia',
+        help="Se activa automáticamente cuando el Tipo de Equipo seleccionado está marcado como "
+             "'Es Tipo de Licencia'. Controla si esta línea se muestra como equipo físico o como licencia."
     )
     marca = fields.Char(string='Marca')
+    tipo_licencia_id = fields.Many2one(
+        'flota.tipo.licencia', string='Marca',
+        help="Disponible cuando el Tipo de Equipo es una Licencia: seleccione aquí el tipo de licencia/plan "
+             "registrado en el catálogo 'Tipos de Licencia'. Si no existe, puede crearlo desde este campo."
+    )
     modelo = fields.Char(string='Modelo')
     cantidad = fields.Integer(string='Cant.', default=1, required=True)
     imei_serial = fields.Char(string='IMEI / Serial')
