@@ -26,7 +26,6 @@
                 <field name="departamento_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
                 <field name="ruta_id" optional="show"/>
-                <field name="tipo_licencia_id" optional="hide"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
@@ -70,7 +69,6 @@
                             <field name="departamento_id" options="{'no_create_edit': False}"/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="ruta_id" options="{'no_create_edit': False}"/>
-                            <field name="tipo_licencia_id" options="{'no_create_edit': False}" context="{'default_es_licencia': True}"/>
                             <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
                         </group>
                         <group string="Contacto y Facturación">
@@ -184,12 +182,11 @@
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
             <search string="Buscar Empleados y Flotas">
-                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic)" filter_domain="['|', '|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self), ('tipo_licencia_id.name', 'ilike', self)]"/>
+                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic, Ruta)" filter_domain="['|', '|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('numero_flota_digits', 'ilike', self.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
                 <field name="cargo"/>
                 <field name="departamento_id"/>
                 <field name="ubicacion_id"/>
                 <field name="ruta_id"/>
-                <field name="tipo_licencia_id"/>
                 <field name="numero_flota"/>
                 <filter string="Activos" name="active_filter" domain="[('estado', '=', 'active')]"/>
                 <filter string="Inactivos" name="inactive_filter" domain="[('estado', '=', 'inactive')]"/>
@@ -201,9 +198,13 @@
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
-                    <filter string="Tipo de Licencia" name="group_tipo_licencia" context="{'group_by': 'tipo_licencia_id'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
                 </group>
+                <searchpanel>
+                    <field name="ubicacion_id" string="Ubicación" icon="fa-map-marker" enable_counters="1"/>
+                    <field name="cargo" string="Cargo" icon="fa-briefcase" enable_counters="1"/>
+                    <field name="departamento_id" string="Departamento" icon="fa-building" enable_counters="1"/>
+                </searchpanel>
             </search>
         </field>
     </record>

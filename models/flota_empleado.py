@@ -13,6 +13,19 @@ def _normalize_phone(phone_str):
         digits = digits[-10:]
     return digits
 
+def _formatear_numero_flota(valor):
+    """Reformatea el número de flota a un único formato consistente 'XXX XXX-XXXX' cuando se
+    detectan 10 dígitos (formato dominicano estándar), para que todos los números queden
+    registrados de la misma manera y las búsquedas/exportes no fallen por diferencias de
+    espacios o guiones. Si no son exactamente 10 dígitos (ej. extensiones u otros formatos),
+    se deja el valor tal como fue ingresado."""
+    if not valor:
+        return valor
+    digitos = _normalize_phone(valor)
+    if len(digitos) == 10:
+        return f"{digitos[0:3]} {digitos[3:6]}-{digitos[6:10]}"
+    return valor
+
 class FlotaEmpleado(models.Model):
     _name = 'flota.empleado'
     _description = 'Empleado y Flota Telefónica'
@@ -50,19 +63,17 @@ class FlotaEmpleado(models.Model):
         tracking=True,
         help="Ruta asignada al empleado. Ej. NTP0103 (vendedor) o DIST+10 (distribuidor)."
     )
-    tipo_licencia_id = fields.Many2one(
-        'flota.tipo.equipo',
-        string='Tipo de Licencia',
-        domain="[('es_licencia', '=', True)]",
-        ondelete='restrict',
-        index=True,
-        tracking=True,
-        help="Tipo de licencia/plan asignado al empleado (ej. Plan Corporativo Ilimitado, Microsoft 365, "
-             "Antivirus Corporativo, etc.), tomado del catálogo 'Equipo o Licencias' filtrado a los registros "
-             "marcados como licencia. Se puede crear un nuevo tipo directamente desde este campo."
-    )
     cargo = fields.Char(string='Cargo', required=True, tracking=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True, tracking=True)
+    numero_flota_digits = fields.Char(
+        string='Número Flota (Normalizado)',
+        compute='_compute_numero_flota_digits',
+        store=True,
+        index=True,
+        help="Campo interno de solo lectura: contiene únicamente los dígitos del Número Flota (sin espacios, "
+             "guiones ni paréntesis). Se usa para que la búsqueda encuentre el número sin importar cómo se "
+             "haya escrito (con o sin espacios/guiones)."
+    )
     estado = fields.Selection([
         ('draft', 'Borrador'),
         ('active', 'Activo'),
@@ -221,6 +232,23 @@ class FlotaEmpleado(models.Model):
             else:
                 record.companeros_departamento_ids = self.browse()
 
+    @api.depends('numero_flota')
+    def _compute_numero_flota_digits(self):
+        for record in self:
+            record.numero_flota_digits = _normalize_phone(record.numero_flota)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get('numero_flota'):
+                vals['numero_flota'] = _formatear_numero_flota(vals['numero_flota'])
+        return super().create(vals_list)
+
+    def write(self, vals):
+        if vals.get('numero_flota'):
+            vals['numero_flota'] = _formatear_numero_flota(vals['numero_flota'])
+        return super().write(vals)
+
     @api.constrains('numero_flota', 'name')
     def _check_unique_fields(self):
         if self.env.context.get('install_mode'):
@@ -236,10 +264,10 @@ class FlotaEmpleado(models.Model):
                     filtro_digitos = norm[-7:] if len(norm) >= 7 else norm
                     candidatos = self.with_context(active_test=False).search([
                         ('id', '!=', record.id),
-                        ('numero_flota', 'ilike', filtro_digitos),
+                        ('numero_flota_digits', 'ilike', filtro_digitos),
                     ])
                     for ot in candidatos:
-                        if ot.numero_flota and _normalize_phone(ot.numero_flota) == norm:
+                        if ot.numero_flota_digits == norm:
                             raise ValidationError(_('El número de flota (%s) ya pertenece al empleado %s.') % (record.numero_flota, ot.name))
             if record.name:
                 clean_n = record.name.strip()

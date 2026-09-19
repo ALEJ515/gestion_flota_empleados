@@ -99,7 +99,7 @@ class FlotaEntregaEquipo(models.Model):
     # --- DATOS FLOTA RECIBIDA POR TI (equipo antiguo devuelto) ---
     mostrar_flota_recibida = fields.Boolean(
         string='Incluir Datos Flota Recibida por TI',
-        default=True,
+        default=False,
         help="Active esta opción para que la sección 'Datos Flota Recibida por TI' aparezca en el PDF y en el "
              "Excel exportados. Desactívela si esta acta no aplica devolución de flota."
     )
@@ -112,7 +112,7 @@ class FlotaEntregaEquipo(models.Model):
     # --- DATOS IMPRESORA ---
     mostrar_datos_impresora = fields.Boolean(
         string='Incluir Datos Impresora',
-        default=True,
+        default=False,
         help="Active esta opción para que la sección 'Datos Impresora' aparezca en el PDF y en el Excel "
              "exportados. Desactívela si esta acta no aplica entrega/devolución de impresora."
     )
@@ -200,7 +200,7 @@ class FlotaEntregaEquipo(models.Model):
         ('normal', 'Normal'),
         ('grande', 'Grande'),
         ('muy_grande', 'Muy Grande'),
-    ], string='Tamaño del QR', default='grande', tracking=True,
+    ], string='Tamaño del QR', default='normal', tracking=True,
         help="Controla el tamaño con el que se imprime el código QR en el PDF."
     )
     qr_tamano_px = fields.Integer(
@@ -236,7 +236,7 @@ class FlotaEntregaEquipo(models.Model):
     @api.depends('qr_tamano')
     def _compute_qr_tamano_px(self):
         for rec in self:
-            rec.qr_tamano_px = QR_TAMANO_PX.get(rec.qr_tamano, QR_TAMANO_PX['grande'])
+            rec.qr_tamano_px = QR_TAMANO_PX.get(rec.qr_tamano, QR_TAMANO_PX['normal'])
 
     @api.depends('cargo')
     def _compute_mostrar_ruta(self):
@@ -254,17 +254,36 @@ class FlotaEntregaEquipo(models.Model):
                 rec.recibido_por = rec.empleado_id.name
                 rec.cargo = rec.empleado_id.cargo
 
+    def _completar_datos_empleado(self, vals):
+        """Si vals trae un nuevo empleado_id, autocompleta (con setdefault, sin pisar valores que
+        ya vengan explícitos en el mismo vals) Ruta, Localidad, Teléfono de flota, Responsable y
+        Cargo desde la ficha de ese empleado. Sirve de respaldo a nivel de servidor del onchange
+        del formulario, para que estos datos queden siempre sincronizados con el Empleado
+        seleccionado sin importar el origen de la escritura (formulario, importación, etc.)."""
+        if vals.get('empleado_id'):
+            empleado = self.env['flota.empleado'].browse(vals['empleado_id'])
+            if empleado.exists():
+                vals.setdefault('ruta_id', empleado.ruta_id.id)
+                vals.setdefault('ubicacion_id', empleado.ubicacion_id.id)
+                vals.setdefault('telefono_flota', empleado.numero_flota)
+                vals.setdefault('recibido_por', empleado.name)
+                vals.setdefault('cargo', empleado.cargo)
+        return vals
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get('name', _('Nuevo')) == _('Nuevo'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.entrega.equipo') or _('Nuevo')
+            self._completar_datos_empleado(vals)
         records = super().create(vals_list)
         records._guardar_qr_por_defecto()
         records._guardar_texto_aceptacion_por_defecto()
         return records
 
     def write(self, vals):
+        if 'empleado_id' in vals:
+            vals = self._completar_datos_empleado(dict(vals))
         res = super().write(vals)
         if 'politica_qr_imagen' in vals:
             self._guardar_qr_por_defecto()

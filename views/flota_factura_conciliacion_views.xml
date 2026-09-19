@@ -41,7 +41,7 @@
         <field name="arch" type="xml">
             <form string="Conciliación Financiera Factura Claro">
                 <header>
-                   <button name="action_procesar_pdf_nativo" string="Extraer PDF" type="object" class="btn-primary" invisible="not archivo_pdf" confirm="¿Confirma que desea extraer los datos del PDF adjunto?"/>
+                   <button name="action_procesar_pdf_nativo" string="Extraer" type="object" class="btn-primary" invisible="not archivo_pdf" confirm="¿Confirma que desea extraer los datos del PDF adjunto?"/>
                    <button name="action_exportar_excel" string="Exportar" type="object" class="btn-secondary" confirm="¿Confirma que desea exportar los datos de esta factura a Excel?"/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,procesando,conciliado" options="{'clickable': '1'}"/>
                 </header>

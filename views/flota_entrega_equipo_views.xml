@@ -125,10 +125,11 @@
         <field name="model">flota.entrega.equipo</field>
         <field name="arch" type="xml">
             <search string="Buscar Actas de Entrega de Equipos">
-                <field name="name"/>
+                <field name="name" string="Búsqueda Global (Acta, Empleado, Ruta, Localidad, Cargo)" filter_domain="['|', '|', '|', '|', ('name', 'ilike', self), ('empleado_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('cargo', 'ilike', self)]"/>
                 <field name="empleado_id"/>
                 <field name="ruta_id"/>
                 <field name="ubicacion_id"/>
+                <field name="cargo"/>
                 <filter string="Borrador" name="draft_filter" domain="[('estado', '=', 'draft')]"/>
                 <filter string="Confirmado" name="confirmado_filter" domain="[('estado', '=', 'confirmado')]"/>
                 <separator/>
@@ -137,6 +138,7 @@
                     <filter string="Empleado" name="group_empleado" context="{'group_by': 'empleado_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
                     <filter string="Ubicación" name="group_ubicacion" context="{'group_by': 'ubicacion_id'}"/>
+                    <filter string="Cargo" name="group_cargo" context="{'group_by': 'cargo'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
                 </group>
             </search>
