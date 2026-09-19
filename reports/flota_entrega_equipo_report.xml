@@ -178,44 +178,41 @@
                         <br/>
 
                         <!-- FIRMAS: etiqueta arriba, línea en blanco debajo para firma física.
-                             Se fuerza border="0"/cellspacing/cellpadding, border-style/width/color en 0
-                             y el mismo reseteo en <tr> y <td>, además del CSS "border: none", porque
-                             wkhtmltopdf a veces dibuja un recuadro por defecto en las tablas si no se
-                             indica explícitamente el atributo HTML border="0" y todas las propiedades CSS
-                             de borde en cada nivel (table/tr/td). -->
-                        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: none; border-width: 0; border-style: none; border-collapse: collapse; margin-top: 26px;">
-                            <tr style="border: none; border-width: 0; border-style: none;">
-                                <td style="width: 50%; border: none; border-width: 0; border-style: none; text-align: left; padding-right: 20px; font-size: 13px;">
-                                    <div style="font-weight: bold;">Firma Representante IT</div>
-                                    <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
-                                    <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.entregado_por"/></div>
-                                </td>
-                                <td style="width: 50%; border: none; border-width: 0; border-style: none; text-align: left; padding-left: 20px; font-size: 13px;">
-                                    <div style="font-weight: bold;">Recibido Por</div>
-                                    <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
-                                    <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.recibido_por"/> — Fecha: <span t-field="doc.fecha"/></div>
-                                </td>
-                            </tr>
-                        </table>
+                             Se usan <div> con float en vez de <table> para esta sección, porque
+                             algunos motores de PDF (wkhtmltopdf) siguen dibujando un recuadro tenue
+                             alrededor de las celdas de una tabla aunque el borde esté en "none"; con
+                             divs no existe ese renderizado de tabla y no puede aparecer ningún recuadro. -->
+                        <div style="width: 100%; margin-top: 26px; overflow: hidden;">
+                            <div style="width: 48%; float: left; text-align: left; padding-right: 2%; font-size: 13px; box-sizing: border-box;">
+                                <div style="font-weight: bold;">Firma Representante IT</div>
+                                <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
+                                <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.entregado_por"/></div>
+                            </div>
+                            <div style="width: 48%; float: left; text-align: left; padding-left: 2%; font-size: 13px; box-sizing: border-box;">
+                                <div style="font-weight: bold;">Recibido Por</div>
+                                <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
+                                <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.recibido_por"/> — Fecha: <span t-field="doc.fecha"/></div>
+                            </div>
+                        </div>
 
                         <br/>
 
-                        <table border="0" cellspacing="0" cellpadding="0" style="width: 100%; border: none; border-width: 0; border-style: none; border-collapse: collapse;">
-                            <tr style="border: none; border-width: 0; border-style: none;">
-                                <td style="width: 55%; border: none; border-width: 0; border-style: none; vertical-align: middle;">
-                                    <p style="font-size: 13px;">
-                                        Recibió usted la política de informática para el correcto uso de estos
-                                        recursos tecnológicos:
-                                        SI <t t-if="doc.recibio_politica == 'si'">☒</t><t t-else="">☐</t>&#160;&#160;
-                                        NO <t t-if="doc.recibio_politica == 'no'">☒</t><t t-else="">☐</t>
-                                    </p>
-                                </td>
-                                <td style="width: 45%; border: none; border-width: 0; border-style: none; text-align: center;">
-                                    <img t-if="doc.politica_qr_final" t-att-src="image_data_uri(doc.politica_qr_final)" style="width: 210px; height: 210px;"/>
-                                    <div t-if="doc.politica_url" style="font-size: 10px;"><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
-                                </td>
-                            </tr>
-                        </table>
+                        <!-- POLÍTICA DE INFORMÁTICA + QR: igual que arriba, con <div> en vez de <table>
+                             para evitar por completo cualquier recuadro de tabla. -->
+                        <div style="width: 100%; overflow: hidden;">
+                            <div style="width: 55%; float: left; box-sizing: border-box; padding-right: 10px;">
+                                <p style="font-size: 13px;">
+                                    Recibió usted la política de informática para el correcto uso de estos
+                                    recursos tecnológicos:
+                                    SI <t t-if="doc.recibio_politica == 'si'">☒</t><t t-else="">☐</t>&#160;&#160;
+                                    NO <t t-if="doc.recibio_politica == 'no'">☒</t><t t-else="">☐</t>
+                                </p>
+                            </div>
+                            <div style="width: 45%; float: left; text-align: center; box-sizing: border-box;">
+                                <img t-if="doc.politica_qr_final" t-att-src="image_data_uri(doc.politica_qr_final)" style="width: 210px; height: 210px;"/>
+                                <div t-if="doc.politica_url" style="font-size: 10px;"><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
+                            </div>
+                        </div>
 
                         <table class="acta-tabla" style="margin-top: 8px;">
                             <tr>
