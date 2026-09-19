@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- List View -->
+    <record id="view_flota_tipo_licencia_list" model="ir.ui.view">
+        <field name="name">flota.tipo.licencia.list</field>
+        <field name="model">flota.tipo.licencia</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active" editable="bottom">
+                <field name="name" optional="show"/>
+                <field name="descripcion" optional="show"/>
+                <field name="active" widget="boolean_toggle" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="view_flota_tipo_licencia_form" model="ir.ui.view">
+        <field name="name">flota.tipo.licencia.form</field>
+        <field name="model">flota.tipo.licencia</field>
+        <field name="arch" type="xml">
+            <form string="Tipo de Licencia">
+                <sheet>
+                    <div class="oe_title">
+                        <label for="name" string="Tipo de Licencia"/>
+                        <h1><field name="name" placeholder="Ej. Plan Corporativo Ilimitado, Microsoft 365..."/></h1>
+                    </div>
+                    <group>
+                        <field name="descripcion"/>
+                        <field name="active" widget="boolean_toggle"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_flota_tipo_licencia_search" model="ir.ui.view">
+        <field name="name">flota.tipo.licencia.search</field>
+        <field name="model">flota.tipo.licencia</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Tipos de Licencia">
+                <field name="name"/>
+                <field name="descripcion"/>
+                <filter string="Archivados" name="inactive_filter" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_flota_tipo_licencia" model="ir.actions.act_window">
+        <field name="name">Tipos de Licencia</field>
+        <field name="res_model">flota.tipo.licencia</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_flota_tipo_licencia_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay tipos de licencia registrados.
+            </p>
+            <p>
+                Registre aquí los tipos de licencia o plan (Plan Corporativo Ilimitado, Microsoft 365,
+                Antivirus Corporativo, etc.) para poder asignarlos luego a cada empleado.
+            </p>
+        </field>
+    </record>
+</odoo>

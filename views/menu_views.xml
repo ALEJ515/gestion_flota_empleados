@@ -31,6 +31,12 @@
               action="action_flota_ruta"
               sequence="40"/>
 
+    <menuitem id="menu_flota_tipo_licencia"
+              name="Tipos de Licencia"
+              parent="menu_flota_root"
+              action="action_flota_tipo_licencia"
+              sequence="45"/>
+
     <menuitem id="menu_flota_entrega_equipo"
               name="Actas de Entrega de Equipos"
               parent="menu_flota_root"
