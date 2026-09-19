@@ -16,10 +16,17 @@
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="doc">
                 <t t-call="web.basic_layout">
-                    <div class="page" style="font-family: Arial, sans-serif; font-size: 12px;">
+                    <div class="page" style="font-family: Arial, sans-serif; font-size: 11px; color: #1F2937;">
+                        <style>
+                            .acta-tabla { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                            .acta-tabla td, .acta-tabla th { border: 1px solid #9CA3AF; padding: 4px 6px; }
+                            .acta-section { background-color: #1F3864; color: #FFFFFF; font-weight: bold; text-align: center; padding: 5px; }
+                            .acta-label { font-weight: bold; background-color: #E5E7EB; width: 35%; }
+                            .acta-th { background-color: #2F5496; color: #FFFFFF; text-align: center; font-size: 10px; }
+                        </style>
 
                         <!-- ENCABEZADO DE CONTROL DOCUMENTAL -->
-                        <table class="table table-bordered" style="border: 1px solid #000;">
+                        <table class="acta-tabla">
                             <tr>
                                 <td rowspan="3" style="width: 25%; text-align: center; vertical-align: middle;">
                                     <img t-if="doc.company_id.logo" t-att-src="image_data_uri(doc.company_id.logo)" style="max-height: 70px; max-width: 100%;"/>
@@ -40,107 +47,122 @@
                             </tr>
                         </table>
 
-                        <br/>
+                        <h2 style="text-align: center; font-size: 15px; margin: 6px 0 12px 0; color: #1F3864;">
+                            ACTA <span t-field="doc.name"/> — <span t-field="doc.empleado_id.name"/>
+                        </h2>
 
                         <!-- DATOS ENTREGA -->
-                        <table class="table table-bordered" style="border: 1px solid #000;">
-                            <tr><td colspan="2" style="background-color: #92D050; font-weight: bold; text-align: center;">DATOS ENTREGA</td></tr>
+                        <table class="acta-tabla">
+                            <tr><td colspan="2" class="acta-section">DATOS ENTREGA</td></tr>
                             <tr>
-                                <td style="width: 35%; font-weight: bold; background-color: #D9D9D9;">Distribuidor/Vendedor</td>
+                                <td class="acta-label">Distribuidor/Vendedor</td>
                                 <td><span t-field="doc.tipo_asignacion"/></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Preparado por:</td>
+                                <td class="acta-label">Preparado por:</td>
                                 <td><span t-field="doc.preparado_por_id.name"/></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Ruta</td>
+                                <td class="acta-label">Ruta</td>
                                 <td><span t-field="doc.ruta_id.name"/></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Localidad</td>
+                                <td class="acta-label">Localidad</td>
                                 <td><span t-field="doc.ubicacion_id.name"/></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Recibido por (responsable):</td>
+                                <td class="acta-label">Recibido por (responsable):</td>
                                 <td><span t-field="doc.recibido_por"/></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Núm. de teléfono (flota)</td>
+                                <td class="acta-label">Núm. de teléfono (flota)</td>
                                 <td><span t-field="doc.telefono_flota"/></td>
                             </tr>
                         </table>
 
                         <!-- DATOS FLOTA RECIBIDA POR TI -->
-                        <table class="table table-bordered" style="border: 1px solid #000;">
-                            <tr><td colspan="2" style="background-color: #92D050; font-weight: bold; text-align: center;">DATOS FLOTA RECIBIDA POR TI</td></tr>
+                        <table class="acta-tabla">
+                            <tr><td colspan="2" class="acta-section">DATOS FLOTA RECIBIDA POR TI</td></tr>
                             <tr>
-                                <td style="width: 35%; font-weight: bold; background-color: #D9D9D9;">Modelo:</td>
+                                <td class="acta-label">Modelo:</td>
                                 <td><span t-field="doc.equipo_recibido_modelo"/><t t-if="not doc.equipo_recibido_modelo">N/A</t></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Serial/IMEI:</td>
+                                <td class="acta-label">Serial/IMEI:</td>
                                 <td><span t-field="doc.equipo_recibido_serial"/><t t-if="not doc.equipo_recibido_serial">N/A</t></td>
                             </tr>
                         </table>
 
                         <!-- DATOS IMPRESORA -->
-                        <table class="table table-bordered" style="border: 1px solid #000;">
-                            <tr><td colspan="2" style="background-color: #92D050; font-weight: bold; text-align: center;">DATOS IMPRESORA</td></tr>
+                        <table class="acta-tabla">
+                            <tr><td colspan="2" class="acta-section">DATOS IMPRESORA</td></tr>
                             <tr>
-                                <td style="width: 35%; font-weight: bold; background-color: #D9D9D9;">Modelo:</td>
+                                <td class="acta-label">Modelo:</td>
                                 <td><span t-field="doc.impresora_modelo"/><t t-if="not doc.impresora_modelo">N/A</t></td>
                             </tr>
                             <tr>
-                                <td style="font-weight: bold; background-color: #D9D9D9;">Serial:</td>
+                                <td class="acta-label">Serial:</td>
                                 <td><span t-field="doc.impresora_serial"/><t t-if="not doc.impresora_serial">N/A</t></td>
                             </tr>
                         </table>
 
-                        <!-- DATOS DE EQUIPO NUEVO ENTREGADO -->
-                        <table class="table table-bordered" style="border: 1px solid #000;">
-                            <thead>
-                                <tr><th colspan="6" style="background-color: #92D050; text-align: center;">DATOS DE EQUIPO NUEVO ENTREGADO</th></tr>
-                                <tr style="background-color: #9DC3E6;">
-                                    <th>Tipo de Equipo</th>
-                                    <th>Marca</th>
-                                    <th>Modelo</th>
-                                    <th>Cant.</th>
-                                    <th>IMEI</th>
-                                    <th>Estado</th>
+                        <!-- DATOS DE EQUIPO NUEVO ENTREGADO (justo debajo de Datos Impresora) -->
+                        <table class="acta-tabla">
+                            <tr><td colspan="6" class="acta-section">DATOS DE EQUIPO NUEVO ENTREGADO</td></tr>
+                            <tr>
+                                <th class="acta-th">Tipo de Equipo</th>
+                                <th class="acta-th">Marca</th>
+                                <th class="acta-th">Modelo</th>
+                                <th class="acta-th">Cant.</th>
+                                <th class="acta-th">IMEI / Serial</th>
+                                <th class="acta-th">Estado</th>
+                            </tr>
+                            <t t-foreach="doc.linea_ids" t-as="l">
+                                <tr>
+                                    <td><span t-field="l.tipo_equipo"/></td>
+                                    <td><span t-field="l.marca"/></td>
+                                    <td><span t-field="l.modelo"/></td>
+                                    <td style="text-align: center;"><span t-field="l.cantidad"/></td>
+                                    <td><span t-field="l.imei_serial"/></td>
+                                    <td style="text-align: center;"><span t-field="l.estado_equipo"/></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="doc.linea_ids" t-as="l">
-                                    <tr>
-                                        <td><span t-field="l.tipo_equipo"/></td>
-                                        <td><span t-field="l.marca"/></td>
-                                        <td><span t-field="l.modelo"/></td>
-                                        <td class="text-center"><span t-field="l.cantidad"/></td>
-                                        <td><span t-field="l.imei_serial"/></td>
-                                        <td>
-                                            <span t-field="l.estado_equipo"/>
-                                            <t t-if="l.observaciones"><br/><span t-field="l.observaciones"/></t>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
+                            </t>
                         </table>
 
-                        <br/><br/>
+                        <!-- ESTADO / OBSERVACIONES: separado de la tabla anterior para que no se vea recortado -->
+                        <t t-if="doc.linea_ids.filtered(lambda l: l.observaciones)">
+                            <table class="acta-tabla">
+                                <tr><td class="acta-section">ESTADO / OBSERVACIONES</td></tr>
+                                <t t-foreach="doc.linea_ids" t-as="l">
+                                    <t t-if="l.observaciones">
+                                        <tr>
+                                            <td>
+                                                <strong><span t-field="l.tipo_equipo"/><t t-if="l.modelo"> — <span t-field="l.modelo"/></t>:</strong>
+                                                <span t-field="l.observaciones"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </table>
+                        </t>
+
+                        <br/>
 
                         <!-- FIRMAS -->
-                        <table style="width: 100%; border: none;">
+                        <table style="width: 100%; border: none; margin-top: 20px;">
                             <tr>
                                 <td style="width: 50%; border: none; text-align: center;">
-                                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto;">
+                                    <div style="border-top: 1px solid #000; width: 85%; margin: 0 auto; padding-top: 3px;">
                                         <span t-field="doc.entregado_por"/>
                                     </div>
-                                    <div>Entregado por</div>
+                                    <div style="font-weight: bold;">Firma Representante IT</div>
                                 </td>
                                 <td style="width: 50%; border: none; text-align: center;">
-                                    <div style="border-top: 1px solid #000; width: 80%; margin: 0 auto;">&#160;</div>
-                                    <div>Recibido por<br/>Firma y fecha</div>
+                                    <div style="border-top: 1px solid #000; width: 85%; margin: 0 auto; padding-top: 3px;">
+                                        <span t-field="doc.recibido_por"/>
+                                    </div>
+                                    <div style="font-weight: bold;">Recibido Por</div>
+                                    <div style="font-size: 9px; color: #6B7280;">Firma y fecha</div>
                                 </td>
                             </tr>
                         </table>
@@ -149,32 +171,38 @@
 
                         <table style="width: 100%; border: none;">
                             <tr>
-                                <td style="width: 70%; border: none; vertical-align: top;">
+                                <td style="width: 68%; border: none; vertical-align: top;">
                                     <p>
                                         Recibió usted la política de informática para el correcto uso de estos
-                                        Recursos tecnológicos:
-                                        SI <t t-if="doc.recibio_politica == 'si'">X</t> ______
-                                        NO <t t-if="doc.recibio_politica == 'no'">X</t> ______
+                                        recursos tecnológicos:
+                                        SI <t t-if="doc.recibio_politica == 'si'">☒</t><t t-else="">☐</t>&#160;&#160;
+                                        NO <t t-if="doc.recibio_politica == 'no'">☒</t><t t-else="">☐</t>
                                     </p>
                                 </td>
-                                <td style="width: 30%; border: none; text-align: center;">
-                                    <img t-if="doc.politica_qr_src" t-att-src="doc.politica_qr_src" style="width: 90px; height: 90px;"/>
-                                    <div><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
+                                <td style="width: 32%; border: none; text-align: center;">
+                                    <img t-if="doc.politica_qr_imagen" t-att-src="image_data_uri(doc.politica_qr_imagen)" style="width: 90px; height: 90px;"/>
+                                    <img t-elif="doc.politica_qr_src" t-att-src="doc.politica_qr_src" style="width: 90px; height: 90px;"/>
+                                    <div t-if="doc.politica_url" style="font-size: 9px;"><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
                                 </td>
                             </tr>
                         </table>
 
-                        <br/>
-                        <p style="text-align: justify;">
-                            Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere
-                            la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de
-                            las directivas establecidas en la Política de Informática, la cual he recibido, leído y
-                            entendido, puede conllevar a que la empresa revoque mis privilegios y tome acciones
-                            disciplinarias y/o legales de acuerdo con lo establecido en dicha política.
-                        </p>
+                        <table class="acta-tabla" style="margin-top: 8px;">
+                            <tr>
+                                <td style="text-align: justify; font-size: 10px; background-color: #F9FAFB;">
+                                    <strong>Aceptación y responsabilidad.</strong>
+                                    Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere
+                                    la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de
+                                    las directivas establecidas en la Política de Informática, la cual he recibido, leído y
+                                    entendido, puede conllevar a que la empresa revoque mis privilegios y tome acciones
+                                    disciplinarias y/o legales de acuerdo con lo establecido en dicha política.
+                                </td>
+                            </tr>
+                        </table>
                     </div>
                 </t>
             </t>
         </t>
     </template>
 </odoo>
+

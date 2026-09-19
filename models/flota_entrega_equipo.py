@@ -1,6 +1,10 @@
+import base64
+import logging
 from urllib.parse import quote as url_quote
 
 from odoo import models, fields, api, _
+
+_logger = logging.getLogger(__name__)
 
 
 class FlotaEntregaEquipo(models.Model):
@@ -63,10 +67,14 @@ class FlotaEntregaEquipo(models.Model):
     )
     cantidad_equipos = fields.Integer(string='Cantidad de Equipos', compute='_compute_cantidad_equipos', store=True)
 
-    # --- FIRMAS Y POLÍTICA ---
-    entregado_por = fields.Char(string='Entregado por', default=lambda self: self.env.user.name, tracking=True)
-    firma_entregado = fields.Binary(string='Firma de quien Entrega', attachment=True)
-    firma_recibido = fields.Binary(string='Firma de quien Recibe', attachment=True)
+    # --- FIRMAS (espacio para firma física, sin firma digital) Y POLÍTICA ---
+    entregado_por = fields.Char(
+        string='Firma Representante IT',
+        default=lambda self: self.env.user.name,
+        tracking=True,
+        help="Nombre del representante de TI que entrega el equipo. Se imprime sobre la línea de firma "
+             "'Firma Representante IT' para que la persona firme físicamente el documento."
+    )
     recibio_politica = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
@@ -76,9 +84,15 @@ class FlotaEntregaEquipo(models.Model):
         default=lambda self: self.env['ir.config_parameter'].sudo().get_param(
             'gestion_flota_empleados.politica_informatica_url', default=''
         ),
-        help="URL de la política de informática. Se usa para generar el código QR del acta. "
-             "Puede configurarse de forma general en Ajustes Técnicos > Parámetros del Sistema "
+        help="URL de la política de informática. Se usa para generar el código QR del acta si no se sube una "
+             "imagen propia. Puede configurarse de forma general en Ajustes Técnicos > Parámetros del Sistema "
              "con la clave 'gestion_flota_empleados.politica_informatica_url'."
+    )
+    politica_qr_imagen = fields.Image(
+        string='Imagen del QR (opcional)',
+        max_width=400, max_height=400,
+        help="Suba aquí la foto/imagen del código QR de la política de informática tal como debe imprimirse. "
+             "Si no sube ninguna imagen, el sistema genera automáticamente un QR a partir del enlace indicado arriba."
     )
     politica_qr_src = fields.Char(string='QR Política (URL interna)', compute='_compute_politica_qr_src')
 
@@ -88,6 +102,10 @@ class FlotaEntregaEquipo(models.Model):
 
     notas = fields.Text(string='Notas')
     company_id = fields.Many2one('res.company', string='Compañía', default=lambda self: self.env.company)
+
+    # --- VISTA PREVIA EN PDF (se actualiza automáticamente al guardar) ---
+    vista_previa_pdf = fields.Binary(string='Vista Previa (PDF)', attachment=False, copy=False)
+    vista_previa_pdf_filename = fields.Char(string='Nombre de archivo (vista previa)', copy=False)
 
     @api.depends('linea_ids.cantidad')
     def _compute_cantidad_equipos(self):
@@ -120,7 +138,32 @@ class FlotaEntregaEquipo(models.Model):
         for vals in vals_list:
             if vals.get('name', _('Nuevo')) == _('Nuevo'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.entrega.equipo') or _('Nuevo')
-        return super().create(vals_list)
+        records = super().create(vals_list)
+        records.with_context(skip_preview_refresh=True)._actualizar_vista_previa_pdf()
+        return records
+
+    def write(self, vals):
+        res = super().write(vals)
+        if not self.env.context.get('skip_preview_refresh'):
+            self.with_context(skip_preview_refresh=True)._actualizar_vista_previa_pdf()
+        return res
+
+    def _actualizar_vista_previa_pdf(self):
+        """Regenera la vista previa en PDF del acta (se ve del lado derecho del formulario).
+        Se ejecuta automáticamente al crear/guardar el registro."""
+        report = self.env.ref('gestion_flota_empleados.action_report_flota_entrega_equipo', raise_if_not_found=False)
+        if not report:
+            return
+        for rec in self:
+            try:
+                pdf_content, _report_type = report._render_qweb_pdf(rec.ids)
+                rec.vista_previa_pdf = base64.b64encode(pdf_content)
+                rec.vista_previa_pdf_filename = '%s.pdf' % (rec.name or 'Acta')
+            except Exception:
+                _logger.exception("No se pudo generar la vista previa en PDF del acta %s", rec.id)
+
+    def action_actualizar_vista_previa(self):
+        self.with_context(skip_preview_refresh=True)._actualizar_vista_previa_pdf()
 
     def action_confirmar(self):
         self.write({'estado': 'confirmado'})
@@ -129,33 +172,60 @@ class FlotaEntregaEquipo(models.Model):
         self.write({'estado': 'draft'})
 
     def action_exportar_excel(self):
-        """Exporta el acta de entrega/recepción de equipos a un libro Excel."""
+        """Exporta el acta de entrega/recepción de equipos a un libro Excel con un diseño limpio y profesional."""
         self.ensure_one()
         import io
-        import base64
         import openpyxl
-        from openpyxl.styles import Font, PatternFill
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = "Acta Entrega Equipos"
 
-        header_fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
-        header_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-        title_font = Font(name="Calibri", size=14, bold=True, color="1F2937")
-        section_fill = PatternFill(start_color="16A34A", end_color="16A34A", fill_type="solid")
-        section_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
-        bold_font = Font(name="Calibri", size=11, bold=True)
+        NUM_COLS = 7
+        thin = Side(style='thin', color='B0B0B0')
+        border = Border(left=thin, right=thin, top=thin, bottom=thin)
 
+        header_fill = PatternFill(start_color="2F5496", end_color="2F5496", fill_type="solid")
+        header_font = Font(name="Calibri", size=10, bold=True, color="FFFFFF")
+        title_font = Font(name="Calibri", size=14, bold=True, color="1F2937")
+        subtitle_font = Font(name="Calibri", size=9, italic=True, color="6B7280")
+        section_fill = PatternFill(start_color="1F3864", end_color="1F3864", fill_type="solid")
+        section_font = Font(name="Calibri", size=11, bold=True, color="FFFFFF")
+        label_fill = PatternFill(start_color="D9D9D9", end_color="D9D9D9", fill_type="solid")
+        bold_font = Font(name="Calibri", size=10, bold=True)
+        normal_font = Font(name="Calibri", size=10)
+
+        def merge_section(row_num, text, fill=section_fill, font=section_font):
+            ws.merge_cells(start_row=row_num, start_column=1, end_row=row_num, end_column=NUM_COLS)
+            cell = ws.cell(row=row_num, column=1, value=text)
+            cell.fill = fill
+            cell.font = font
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            for col in range(1, NUM_COLS + 1):
+                ws.cell(row=row_num, column=col).border = border
+
+        def data_row(row_num, label, value):
+            ws.merge_cells(start_row=row_num, start_column=2, end_row=row_num, end_column=NUM_COLS)
+            lbl_cell = ws.cell(row=row_num, column=1, value=label)
+            lbl_cell.font = bold_font
+            lbl_cell.fill = label_fill
+            val_cell = ws.cell(row=row_num, column=2, value=value)
+            val_cell.font = normal_font
+            for col in range(1, NUM_COLS + 1):
+                ws.cell(row=row_num, column=col).border = border
+
+        ws.merge_cells('A1:G1')
         ws["A1"] = f"ACTA DE RECEPCIÓN Y ENTREGA DE EQUIPOS — {self.name}"
         ws["A1"].font = title_font
-        ws["A2"] = f"Código: {self.codigo_formulario} | Versión: {self.version_formulario} | Fecha: {self.fecha}"
-        ws["A2"].font = Font(italic=True, color="4B5563")
+        ws["A1"].alignment = Alignment(horizontal='center')
+        ws.merge_cells('A2:G2')
+        ws["A2"] = f"Código: {self.codigo_formulario or ''}   |   Versión: {self.version_formulario or ''}   |   Fecha: {self.fecha}   |   Empleado: {self.empleado_id.name or ''}"
+        ws["A2"].font = subtitle_font
+        ws["A2"].alignment = Alignment(horizontal='center')
 
         row = 4
-        ws.cell(row=row, column=1, value="DATOS ENTREGA").font = section_font
-        ws.cell(row=row, column=1).fill = section_fill
-        ws.cell(row=row, column=2).fill = section_fill
+        merge_section(row, "DATOS ENTREGA")
         row += 1
         datos_entrega = [
             ("Distribuidor/Vendedor", dict(self._fields['tipo_asignacion'].selection).get(self.tipo_asignacion, '') if self.tipo_asignacion else ''),
@@ -166,58 +236,80 @@ class FlotaEntregaEquipo(models.Model):
             ("Núm. de teléfono (flota)", self.telefono_flota or ''),
         ]
         for label, value in datos_entrega:
-            ws.cell(row=row, column=1, value=label).font = bold_font
-            ws.cell(row=row, column=2, value=value)
+            data_row(row, label, value)
             row += 1
 
         row += 1
-        ws.cell(row=row, column=1, value="DATOS FLOTA RECIBIDA POR TI").font = section_font
-        ws.cell(row=row, column=1).fill = section_fill
-        ws.cell(row=row, column=2).fill = section_fill
+        merge_section(row, "DATOS FLOTA RECIBIDA POR TI")
         row += 1
         for label, value in [("Modelo", self.equipo_recibido_modelo or 'N/A'), ("Serial/IMEI", self.equipo_recibido_serial or 'N/A')]:
-            ws.cell(row=row, column=1, value=label).font = bold_font
-            ws.cell(row=row, column=2, value=value)
+            data_row(row, label, value)
             row += 1
 
         row += 1
-        ws.cell(row=row, column=1, value="DATOS IMPRESORA").font = section_font
-        ws.cell(row=row, column=1).fill = section_fill
-        ws.cell(row=row, column=2).fill = section_fill
+        merge_section(row, "DATOS IMPRESORA")
         row += 1
         for label, value in [("Modelo", self.impresora_modelo or 'N/A'), ("Serial", self.impresora_serial or 'N/A')]:
-            ws.cell(row=row, column=1, value=label).font = bold_font
-            ws.cell(row=row, column=2, value=value)
+            data_row(row, label, value)
             row += 1
 
-        row += 2
+        row += 1
+        merge_section(row, "DATOS DE EQUIPO NUEVO ENTREGADO")
+        row += 1
         headers_eq = ["TIPO DE EQUIPO", "MARCA", "MODELO", "CANT.", "IMEI / SERIAL", "ESTADO", "OBSERVACIONES"]
         for col_num, h in enumerate(headers_eq, 1):
             cell = ws.cell(row=row, column=col_num, value=h)
             cell.fill = header_fill
             cell.font = header_font
+            cell.alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+            cell.border = border
         row += 1
         for line in self.linea_ids:
-            ws.cell(row=row, column=1, value=dict(line._fields['tipo_equipo'].selection).get(line.tipo_equipo, ''))
-            ws.cell(row=row, column=2, value=line.marca or '')
-            ws.cell(row=row, column=3, value=line.modelo or '')
-            ws.cell(row=row, column=4, value=line.cantidad)
-            ws.cell(row=row, column=5, value=line.imei_serial or '')
-            ws.cell(row=row, column=6, value=dict(line._fields['estado_equipo'].selection).get(line.estado_equipo, ''))
-            ws.cell(row=row, column=7, value=line.observaciones or '')
+            values = [
+                dict(line._fields['tipo_equipo'].selection).get(line.tipo_equipo, ''),
+                line.marca or '',
+                line.modelo or '',
+                line.cantidad,
+                line.imei_serial or '',
+                dict(line._fields['estado_equipo'].selection).get(line.estado_equipo, ''),
+                line.observaciones or '',
+            ]
+            for col_num, value in enumerate(values, 1):
+                cell = ws.cell(row=row, column=col_num, value=value)
+                cell.font = normal_font
+                cell.alignment = Alignment(vertical='top', wrap_text=True)
+                cell.border = border
             row += 1
 
         row += 2
-        ws.cell(row=row, column=1, value="Entregado por").font = bold_font
-        ws.cell(row=row, column=2, value=self.entregado_por or '')
+        merge_section(row, "FIRMAS Y POLÍTICA DE INFORMÁTICA")
         row += 1
-        ws.cell(row=row, column=1, value="Recibió la Política de Informática").font = bold_font
-        ws.cell(row=row, column=2, value=dict(self._fields['recibio_politica'].selection).get(self.recibio_politica, ''))
+        data_row(row, "Firma Representante IT", self.entregado_por or '')
+        row += 1
+        data_row(row, "Recibido Por", self.recibido_por or '')
+        row += 1
+        data_row(row, "¿Recibió la Política de Informática?", dict(self._fields['recibio_politica'].selection).get(self.recibio_politica, ''))
+        row += 1
+        if self.politica_url:
+            data_row(row, "Enlace Política de Informática", self.politica_url)
+            row += 1
 
-        for col in ws.columns:
-            max_len = max((len(str(cell.value or '')) for cell in col), default=0)
-            col_letter = openpyxl.utils.get_column_letter(col[0].column)
-            ws.column_dimensions[col_letter].width = max(max_len + 3, 14)
+        row += 1
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NUM_COLS)
+        legal_cell = ws.cell(row=row, column=1, value=(
+            "Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere la asignación "
+            "de los equipos aquí detallados y entiendo que la violación a cualquiera de las directivas establecidas "
+            "en la Política de Informática, la cual he recibido, leído y entendido, puede conllevar a que la empresa "
+            "revoque mis privilegios y tome acciones disciplinarias y/o legales de acuerdo con lo establecido en "
+            "dicha política."
+        ))
+        legal_cell.font = Font(name="Calibri", size=9, italic=True, color="4B5563")
+        legal_cell.alignment = Alignment(horizontal='justify', vertical='top', wrap_text=True)
+        ws.row_dimensions[row].height = 60
+
+        column_widths = [22, 20, 20, 8, 20, 14, 30]
+        for idx, width in enumerate(column_widths, 1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(idx)].width = width
 
         output = io.BytesIO()
         wb.save(output)
