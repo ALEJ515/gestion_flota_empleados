@@ -202,7 +202,6 @@
                 </group>
                 <searchpanel>
                     <field name="ubicacion_id" string="Ubicación" icon="fa-map-marker" enable_counters="1"/>
-                    <field name="cargo" string="Cargo" icon="fa-briefcase" enable_counters="1"/>
                     <field name="departamento_id" string="Departamento" icon="fa-building" enable_counters="1"/>
                 </searchpanel>
             </search>
