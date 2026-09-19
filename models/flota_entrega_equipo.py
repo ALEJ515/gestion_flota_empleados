@@ -103,10 +103,6 @@ class FlotaEntregaEquipo(models.Model):
     notas = fields.Text(string='Notas')
     company_id = fields.Many2one('res.company', string='Compañía', default=lambda self: self.env.company)
 
-    # --- VISTA PREVIA EN PDF (se actualiza automáticamente al guardar) ---
-    vista_previa_pdf = fields.Binary(string='Vista Previa (PDF)', attachment=False, copy=False)
-    vista_previa_pdf_filename = fields.Char(string='Nombre de archivo (vista previa)', copy=False)
-
     @api.depends('linea_ids.cantidad')
     def _compute_cantidad_equipos(self):
         for rec in self:
@@ -138,38 +134,31 @@ class FlotaEntregaEquipo(models.Model):
         for vals in vals_list:
             if vals.get('name', _('Nuevo')) == _('Nuevo'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.entrega.equipo') or _('Nuevo')
-        records = super().create(vals_list)
-        records.with_context(skip_preview_refresh=True)._actualizar_vista_previa_pdf()
-        return records
+        return super().create(vals_list)
 
-    def write(self, vals):
-        res = super().write(vals)
-        if not self.env.context.get('skip_preview_refresh'):
-            self.with_context(skip_preview_refresh=True)._actualizar_vista_previa_pdf()
-        return res
-
-    def _actualizar_vista_previa_pdf(self):
-        """Regenera la vista previa en PDF del acta (se ve del lado derecho del formulario).
-        Se ejecuta automáticamente al crear/guardar el registro."""
-        report = self.env.ref('gestion_flota_empleados.action_report_flota_entrega_equipo', raise_if_not_found=False)
-        if not report:
-            return
-        for rec in self:
-            try:
-                pdf_content, _report_type = report._render_qweb_pdf(rec.ids)
-                rec.vista_previa_pdf = base64.b64encode(pdf_content)
-                rec.vista_previa_pdf_filename = '%s.pdf' % (rec.name or 'Acta')
-            except Exception:
-                _logger.exception("No se pudo generar la vista previa en PDF del acta %s", rec.id)
-
-    def action_actualizar_vista_previa(self):
-        self.with_context(skip_preview_refresh=True)._actualizar_vista_previa_pdf()
+    def action_descargar_pdf(self):
+        """Descarga directamente el acta en PDF (reemplaza la antigua vista previa embebida)."""
+        report = self.env.ref('gestion_flota_empleados.action_report_flota_entrega_equipo')
+        return report.report_action(self)
 
     def action_confirmar(self):
         self.write({'estado': 'confirmado'})
 
     def action_restablecer_borrador(self):
         self.write({'estado': 'draft'})
+
+    def _get_qr_image_bytes(self):
+        """Devuelve los bytes PNG del QR de la política de informática (para el Excel):
+        usa la imagen subida manualmente si existe, o genera una con el enlace configurado."""
+        self.ensure_one()
+        if self.politica_qr_imagen:
+            return base64.b64decode(self.politica_qr_imagen)
+        if self.politica_url:
+            try:
+                return self.env['ir.actions.report'].barcode('QR', self.politica_url, width=200, height=200)
+            except Exception:
+                _logger.exception("No se pudo generar el QR de la política para el acta %s", self.id)
+        return False
 
     def action_exportar_excel(self):
         """Exporta el acta de entrega/recepción de equipos a un libro Excel con un diseño limpio y profesional."""
@@ -322,6 +311,22 @@ class FlotaEntregaEquipo(models.Model):
         if self.politica_url:
             data_row(row, "Enlace Política de Informática", self.politica_url)
             row += 1
+
+        # Código QR de la Política de Informática (imagen subida manualmente o generada
+        # automáticamente a partir del enlace), igual que en el PDF.
+        qr_bytes = self._get_qr_image_bytes()
+        if qr_bytes:
+            from openpyxl.drawing.image import Image as XLImage
+            qr_row = row
+            qr_stream = io.BytesIO(qr_bytes)
+            xl_img = XLImage(qr_stream)
+            xl_img.width = 100
+            xl_img.height = 100
+            ws.add_image(xl_img, f"A{qr_row}")
+            qr_label_cell = ws.cell(row=qr_row, column=3, value="Código QR — Política de Informática")
+            qr_label_cell.font = Font(name="Calibri", size=9, italic=True, color="4B5563")
+            ws.merge_cells(start_row=qr_row, start_column=3, end_row=qr_row, end_column=NUM_COLS)
+            row += 7  # reservar filas para no solapar con el contenido siguiente
 
         row += 1
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NUM_COLS)

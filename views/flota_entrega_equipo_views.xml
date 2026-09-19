@@ -37,7 +37,7 @@
                     <button name="action_confirmar" string="Confirmar" type="object" class="btn-primary" invisible="estado != 'draft'"/>
                     <button name="action_restablecer_borrador" string="Volver a Borrador" type="object" invisible="estado != 'confirmado'"/>
                     <button name="action_exportar_excel" string="Exportar a Excel" type="object" class="btn-secondary" confirm="¿Confirma que desea exportar esta acta a Excel?"/>
-                    <button name="action_actualizar_vista_previa" string="Actualizar Vista Previa PDF" type="object" class="btn-secondary" icon="fa-refresh"/>
+                    <button name="action_descargar_pdf" string="Descargar PDF" type="object" class="btn-secondary" icon="fa-download"/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,confirmado" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
@@ -47,71 +47,63 @@
                             <field name="empleado_id" options="{'no_create_edit': True}" placeholder="Seleccione el empleado..."/>
                         </h1>
                     </div>
-                    <div class="row">
-                        <div class="col-7">
+                    <group>
+                        <group string="Datos Entrega">
+                            <field name="tipo_asignacion"/>
+                            <field name="preparado_por_id"/>
+                            <field name="ruta_id" options="{'no_create_edit': False}"/>
+                            <field name="ubicacion_id" options="{'no_create_edit': False}"/>
+                            <field name="recibido_por"/>
+                            <field name="telefono_flota"/>
+                        </group>
+                        <group string="Control Documental">
+                            <field name="name" readonly="1"/>
+                            <field name="fecha"/>
+                            <field name="codigo_formulario"/>
+                            <field name="version_formulario"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Datos Flota Recibida por TI">
+                            <field name="equipo_recibido_modelo" placeholder="N/A"/>
+                            <field name="equipo_recibido_serial" placeholder="N/A"/>
+                        </group>
+                        <group string="Datos Impresora">
+                            <field name="impresora_modelo" placeholder="N/A"/>
+                            <field name="impresora_serial" placeholder="N/A"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Equipo Nuevo Entregado" name="equipos">
+                            <field name="linea_ids">
+                                <list editable="bottom">
+                                    <field name="tipo_equipo"/>
+                                    <field name="marca"/>
+                                    <field name="modelo"/>
+                                    <field name="cantidad"/>
+                                    <field name="imei_serial"/>
+                                    <field name="estado_equipo"/>
+                                    <field name="observaciones"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Firma y Política" name="firmas">
                             <group>
-                                <group string="Datos Entrega">
-                                    <field name="tipo_asignacion"/>
-                                    <field name="preparado_por_id"/>
-                                    <field name="ruta_id" options="{'no_create_edit': False}"/>
-                                    <field name="ubicacion_id" options="{'no_create_edit': False}"/>
-                                    <field name="recibido_por"/>
-                                    <field name="telefono_flota"/>
+                                <group string="Firmas (espacio para firma física al imprimir)">
+                                    <field name="entregado_por" string="Firma Representante IT"/>
+                                    <field name="recibido_por" string="Recibido Por" readonly="1"/>
                                 </group>
-                                <group string="Control Documental">
-                                    <field name="name" readonly="1"/>
-                                    <field name="fecha"/>
-                                    <field name="codigo_formulario"/>
-                                    <field name="version_formulario"/>
+                                <group string="Política de Informática">
+                                    <field name="recibio_politica"/>
+                                    <field name="politica_url"/>
+                                    <field name="politica_qr_imagen" widget="image"/>
                                 </group>
                             </group>
                             <group>
-                                <group string="Datos Flota Recibida por TI">
-                                    <field name="equipo_recibido_modelo" placeholder="N/A"/>
-                                    <field name="equipo_recibido_serial" placeholder="N/A"/>
-                                </group>
-                                <group string="Datos Impresora">
-                                    <field name="impresora_modelo" placeholder="N/A"/>
-                                    <field name="impresora_serial" placeholder="N/A"/>
-                                </group>
+                                <field name="notas" placeholder="Notas adicionales..."/>
                             </group>
-                            <notebook>
-                                <page string="Equipo Nuevo Entregado" name="equipos">
-                                    <field name="linea_ids">
-                                        <list editable="bottom">
-                                            <field name="tipo_equipo"/>
-                                            <field name="marca"/>
-                                            <field name="modelo"/>
-                                            <field name="cantidad"/>
-                                            <field name="imei_serial"/>
-                                            <field name="estado_equipo"/>
-                                            <field name="observaciones"/>
-                                        </list>
-                                    </field>
-                                </page>
-                                <page string="Firma y Política" name="firmas">
-                                    <group>
-                                        <group string="Firmas (espacio para firma física al imprimir)">
-                                            <field name="entregado_por" string="Firma Representante IT"/>
-                                            <field name="recibido_por" string="Recibido Por" readonly="1"/>
-                                        </group>
-                                        <group string="Política de Informática">
-                                            <field name="recibio_politica"/>
-                                            <field name="politica_url"/>
-                                            <field name="politica_qr_imagen" widget="image"/>
-                                        </group>
-                                    </group>
-                                    <group>
-                                        <field name="notas" placeholder="Notas adicionales..."/>
-                                    </group>
-                                </page>
-                            </notebook>
-                        </div>
-                        <div class="col-5">
-                            <field name="vista_previa_pdf_filename" invisible="1"/>
-                            <field name="vista_previa_pdf" widget="pdf_viewer" nolabel="1" readonly="1"/>
-                        </div>
-                    </div>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter/>
             </form>
