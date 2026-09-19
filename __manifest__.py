@@ -29,6 +29,8 @@
         'views/flota_entrega_equipo_views.xml',
         'reports/flota_entrega_equipo_report.xml',
         'views/menu_views.xml',
+    ],
+    'demo': [
         'data/demo_data.xml',
     ],
     'assets': {
