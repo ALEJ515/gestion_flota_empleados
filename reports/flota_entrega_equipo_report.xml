@@ -99,8 +99,8 @@
                             </tr>
                         </table>
 
-                        <!-- DATOS FLOTA RECIBIDA POR TI -->
-                        <table class="acta-tabla">
+                        <!-- DATOS FLOTA RECIBIDA POR TI (solo si el toggle está activo) -->
+                        <table class="acta-tabla" t-if="doc.mostrar_flota_recibida">
                             <tr><td colspan="2" class="acta-section">DATOS FLOTA RECIBIDA POR TI</td></tr>
                             <tr>
                                 <td class="acta-label">Modelo:</td>
@@ -112,8 +112,8 @@
                             </tr>
                         </table>
 
-                        <!-- DATOS IMPRESORA -->
-                        <table class="acta-tabla">
+                        <!-- DATOS IMPRESORA (solo si el toggle está activo) -->
+                        <table class="acta-tabla" t-if="doc.mostrar_datos_impresora">
                             <tr><td colspan="2" class="acta-section">DATOS IMPRESORA</td></tr>
                             <tr>
                                 <td class="acta-label">Modelo:</td>
@@ -167,18 +167,16 @@
 
                         <br/>
 
-                        <!-- FIRMAS: etiqueta arriba, línea en blanco debajo para firma física -->
+                        <!-- FIRMAS: solo la etiqueta y la línea en blanco para firmar, sin texto adicional -->
                         <table style="width: 100%; border: none; margin-top: 26px;">
                             <tr>
                                 <td style="width: 50%; border: none; text-align: left; padding-right: 20px; font-size: 13px;">
                                     <div style="font-weight: bold;">Firma Representante IT</div>
                                     <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
-                                    <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.entregado_por"/></div>
                                 </td>
                                 <td style="width: 50%; border: none; text-align: left; padding-left: 20px; font-size: 13px;">
                                     <div style="font-weight: bold;">Recibido Por</div>
                                     <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
-                                    <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.recibido_por"/> — Fecha: <span t-field="doc.fecha"/></div>
                                 </td>
                             </tr>
                         </table>
@@ -196,8 +194,7 @@
                                     </p>
                                 </td>
                                 <td style="width: 35%; border: none; text-align: center;">
-                                    <img t-if="doc.politica_qr_imagen" t-att-src="image_data_uri(doc.politica_qr_imagen)" style="width: 120px; height: 120px;"/>
-                                    <img t-elif="doc.politica_qr_src" t-att-src="doc.politica_qr_src" style="width: 120px; height: 120px;"/>
+                                    <img t-if="doc.politica_qr_final" t-att-src="image_data_uri(doc.politica_qr_final)" style="width: 120px; height: 120px;"/>
                                     <div t-if="doc.politica_url" style="font-size: 10px;"><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
                                 </td>
                             </tr>
@@ -205,8 +202,8 @@
 
                         <table class="acta-tabla" style="margin-top: 8px;">
                             <tr>
-                                <td style="text-align: justify; font-size: 11px; background-color: #F9FAFB;">
-                                    <strong>Aceptación y responsabilidad.</strong>
+                                <td style="text-align: justify; font-size: 13px; line-height: 1.4; background-color: #F9FAFB; padding: 10px;">
+                                    <strong style="font-size: 14px;">Aceptación y responsabilidad.</strong><br/>
                                     Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere
                                     la asignación de los equipos aquí detallados y entiendo que la violación a cualquiera de
                                     las directivas establecidas en la Política de Informática, la cual he recibido, leído y

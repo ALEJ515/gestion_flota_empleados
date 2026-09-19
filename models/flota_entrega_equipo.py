@@ -1,6 +1,5 @@
 import base64
 import logging
-from urllib.parse import quote as url_quote
 
 from odoo import models, fields, api, _
 
@@ -53,10 +52,22 @@ class FlotaEntregaEquipo(models.Model):
     telefono_flota = fields.Char(string='Núm. de Teléfono (Flota)', tracking=True)
 
     # --- DATOS FLOTA RECIBIDA POR TI (equipo antiguo devuelto) ---
+    mostrar_flota_recibida = fields.Boolean(
+        string='Incluir Datos Flota Recibida por TI',
+        default=True,
+        help="Active esta opción para que la sección 'Datos Flota Recibida por TI' aparezca en el PDF y en el "
+             "Excel exportados. Desactívela si esta acta no aplica devolución de flota."
+    )
     equipo_recibido_modelo = fields.Char(string='Modelo (Flota Recibida)')
     equipo_recibido_serial = fields.Char(string='Serial / IMEI (Flota Recibida)')
 
     # --- DATOS IMPRESORA ---
+    mostrar_datos_impresora = fields.Boolean(
+        string='Incluir Datos Impresora',
+        default=True,
+        help="Active esta opción para que la sección 'Datos Impresora' aparezca en el PDF y en el Excel "
+             "exportados. Desactívela si esta acta no aplica entrega/devolución de impresora."
+    )
     impresora_modelo = fields.Char(string='Modelo (Impresora)')
     impresora_serial = fields.Char(string='Serial (Impresora)')
 
@@ -94,7 +105,13 @@ class FlotaEntregaEquipo(models.Model):
         help="Suba aquí la foto/imagen del código QR de la política de informática tal como debe imprimirse. "
              "Si no sube ninguna imagen, el sistema genera automáticamente un QR a partir del enlace indicado arriba."
     )
-    politica_qr_src = fields.Char(string='QR Política (URL interna)', compute='_compute_politica_qr_src')
+    politica_qr_final = fields.Binary(
+        string='QR Política (para documentos)',
+        compute='_compute_politica_qr_final',
+        help="Imagen del QR realmente usada en el PDF y el Excel: la subida manualmente o, si no hay ninguna, "
+             "una generada automáticamente a partir del enlace. Se calcula siempre en el servidor (no depende de "
+             "una URL externa) para que salga de forma consistente en todas las actas."
+    )
 
     # --- CONTROL DOCUMENTAL DEL FORMATO (editable por si cambia la versión oficial) ---
     codigo_formulario = fields.Char(string='Código de Formulario', default='MS-TE-FO-001')
@@ -108,13 +125,11 @@ class FlotaEntregaEquipo(models.Model):
         for rec in self:
             rec.cantidad_equipos = sum(rec.linea_ids.mapped('cantidad'))
 
-    @api.depends('politica_url')
-    def _compute_politica_qr_src(self):
+    @api.depends('politica_qr_imagen', 'politica_url')
+    def _compute_politica_qr_final(self):
         for rec in self:
-            if rec.politica_url:
-                rec.politica_qr_src = '/report/barcode/QR/%s?width=200&height=200' % url_quote(rec.politica_url, safe='')
-            else:
-                rec.politica_qr_src = False
+            qr_bytes = rec._get_qr_image_bytes()
+            rec.politica_qr_final = base64.b64encode(qr_bytes) if qr_bytes else False
 
     @api.onchange('empleado_id')
     def _onchange_empleado_id(self):
@@ -229,20 +244,21 @@ class FlotaEntregaEquipo(models.Model):
             row += 1
 
         row += 1
-        merge_section(row, "DATOS FLOTA RECIBIDA POR TI")
-        row += 1
-        for label, value in [("Modelo", self.equipo_recibido_modelo or 'N/A'), ("Serial/IMEI", self.equipo_recibido_serial or 'N/A')]:
-            data_row(row, label, value)
+        if self.mostrar_flota_recibida:
+            merge_section(row, "DATOS FLOTA RECIBIDA POR TI")
+            row += 1
+            for label, value in [("Modelo", self.equipo_recibido_modelo or 'N/A'), ("Serial/IMEI", self.equipo_recibido_serial or 'N/A')]:
+                data_row(row, label, value)
+                row += 1
             row += 1
 
-        row += 1
-        merge_section(row, "DATOS IMPRESORA")
-        row += 1
-        for label, value in [("Modelo", self.impresora_modelo or 'N/A'), ("Serial", self.impresora_serial or 'N/A')]:
-            data_row(row, label, value)
+        if self.mostrar_datos_impresora:
+            merge_section(row, "DATOS IMPRESORA")
             row += 1
-
-        row += 1
+            for label, value in [("Modelo", self.impresora_modelo or 'N/A'), ("Serial", self.impresora_serial or 'N/A')]:
+                data_row(row, label, value)
+                row += 1
+            row += 1
         merge_section(row, "DATOS DE EQUIPO NUEVO ENTREGADO")
         row += 1
         headers_eq = ["TIPO DE EQUIPO", "MARCA", "MODELO", "CANT.", "IMEI / SERIAL", "ESTADO", "OBSERVACIONES"]
@@ -299,12 +315,7 @@ class FlotaEntregaEquipo(models.Model):
         row += 1
 
         name_row = row
-        ws.merge_cells(start_row=name_row, start_column=1, end_row=name_row, end_column=3)
-        ws.merge_cells(start_row=name_row, start_column=5, end_row=name_row, end_column=NUM_COLS)
-        left_name = ws.cell(row=name_row, column=1, value=f"Nombre: {self.entregado_por or ''}")
-        left_name.font = Font(name="Calibri", size=8, color="6B7280")
-        right_name = ws.cell(row=name_row, column=5, value=f"Nombre: {self.recibido_por or ''}")
-        right_name.font = Font(name="Calibri", size=8, color="6B7280")
+        ws.row_dimensions[name_row].height = 6
         row += 1
         data_row(row, "¿Recibió la Política de Informática?", dict(self._fields['recibio_politica'].selection).get(self.recibio_politica, ''))
         row += 1
@@ -330,6 +341,11 @@ class FlotaEntregaEquipo(models.Model):
 
         row += 1
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NUM_COLS)
+        legal_title_cell = ws.cell(row=row, column=1, value="Aceptación y responsabilidad")
+        legal_title_cell.font = Font(name="Calibri", size=11, bold=True, color="1F3864")
+        row += 1
+
+        ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=NUM_COLS)
         legal_cell = ws.cell(row=row, column=1, value=(
             "Mediante la firma de este documento, comprendo y asumo la responsabilidad que me confiere la asignación "
             "de los equipos aquí detallados y entiendo que la violación a cualquiera de las directivas establecidas "
@@ -337,9 +353,9 @@ class FlotaEntregaEquipo(models.Model):
             "revoque mis privilegios y tome acciones disciplinarias y/o legales de acuerdo con lo establecido en "
             "dicha política."
         ))
-        legal_cell.font = Font(name="Calibri", size=9, italic=True, color="4B5563")
+        legal_cell.font = Font(name="Calibri", size=11, color="374151")
         legal_cell.alignment = Alignment(horizontal='justify', vertical='top', wrap_text=True)
-        ws.row_dimensions[row].height = 60
+        ws.row_dimensions[row].height = 75
 
         column_widths = [22, 20, 20, 8, 20, 14, 30]
         for idx, width in enumerate(column_widths, 1):

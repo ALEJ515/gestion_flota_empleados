@@ -65,12 +65,14 @@
                     </group>
                     <group>
                         <group string="Datos Flota Recibida por TI">
-                            <field name="equipo_recibido_modelo" placeholder="N/A"/>
-                            <field name="equipo_recibido_serial" placeholder="N/A"/>
+                            <field name="mostrar_flota_recibida" widget="boolean_toggle" string="Incluir en el documento"/>
+                            <field name="equipo_recibido_modelo" placeholder="N/A" invisible="not mostrar_flota_recibida"/>
+                            <field name="equipo_recibido_serial" placeholder="N/A" invisible="not mostrar_flota_recibida"/>
                         </group>
                         <group string="Datos Impresora">
-                            <field name="impresora_modelo" placeholder="N/A"/>
-                            <field name="impresora_serial" placeholder="N/A"/>
+                            <field name="mostrar_datos_impresora" widget="boolean_toggle" string="Incluir en el documento"/>
+                            <field name="impresora_modelo" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
+                            <field name="impresora_serial" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
                         </group>
                     </group>
                     <notebook>
