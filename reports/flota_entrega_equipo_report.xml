@@ -198,9 +198,10 @@
                         <br/>
 
                         <!-- POLÍTICA DE INFORMÁTICA + QR: igual que arriba, con <div> en vez de <table>
-                             para evitar por completo cualquier recuadro de tabla. -->
+                             para evitar por completo cualquier recuadro de tabla. El QR solo se imprime si
+                             doc.mostrar_qr está activo; si se oculta, el texto ocupa todo el ancho. -->
                         <div style="width: 100%; overflow: hidden;">
-                            <div style="width: 55%; float: left; box-sizing: border-box; padding-right: 10px;">
+                            <div t-attf-style="width: #{'55%' if doc.mostrar_qr else '100%'}; float: left; box-sizing: border-box; padding-right: 10px;">
                                 <p style="font-size: 13px;">
                                     Recibió usted la política de informática para el correcto uso de estos
                                     recursos tecnológicos:
@@ -208,8 +209,8 @@
                                     NO <t t-if="doc.recibio_politica == 'no'">☒</t><t t-else="">☐</t>
                                 </p>
                             </div>
-                            <div style="width: 45%; float: left; text-align: center; box-sizing: border-box;">
-                                <img t-if="doc.politica_qr_final" t-att-src="image_data_uri(doc.politica_qr_final)" style="width: 210px; height: 210px;"/>
+                            <div t-if="doc.mostrar_qr" style="width: 45%; float: left; text-align: center; box-sizing: border-box;">
+                                <img t-if="doc.politica_qr_final" t-att-src="image_data_uri(doc.politica_qr_final)" t-attf-style="width: #{doc.qr_tamano_px}px; height: #{doc.qr_tamano_px}px;"/>
                                 <div t-if="doc.politica_url" style="font-size: 10px;"><a t-att-href="doc.politica_url">Link Política de Informática</a></div>
                             </div>
                         </div>

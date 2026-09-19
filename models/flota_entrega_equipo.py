@@ -34,6 +34,14 @@ TEXTO_ACEPTACION_FONT_PX = {
     'muy_grande': 20,
 }
 
+# Tamaño en px (ancho = alto, es cuadrado) para cada opción de qr_tamano.
+QR_TAMANO_PX = {
+    'pequeno': 110,
+    'normal': 160,
+    'grande': 210,
+    'muy_grande': 260,
+}
+
 
 class FlotaEntregaEquipo(models.Model):
     _name = 'flota.entrega.equipo'
@@ -132,7 +140,7 @@ class FlotaEntregaEquipo(models.Model):
     recibio_politica = fields.Selection([
         ('si', 'Sí'),
         ('no', 'No'),
-    ], string='¿Recibió la Política de Informática?', tracking=True)
+    ], string='¿Recibió la Política de Informática?', default='si', tracking=True)
     texto_aceptacion = fields.Text(
         string='Texto de Aceptación y Responsabilidad',
         default=lambda self: self.env['ir.config_parameter'].sudo().get_param(
@@ -182,6 +190,23 @@ class FlotaEntregaEquipo(models.Model):
              "una generada automáticamente a partir del enlace. Se calcula siempre en el servidor (no depende de "
              "una URL externa) para que salga de forma consistente en todas las actas."
     )
+    mostrar_qr = fields.Boolean(
+        string='Mostrar QR en el PDF', default=True, tracking=True,
+        help="Desactive esta opción si no desea que el código QR de la política de informática salga impreso "
+             "en el PDF del acta. La imagen sigue guardada aquí, solo se oculta en el documento."
+    )
+    qr_tamano = fields.Selection([
+        ('pequeno', 'Pequeño'),
+        ('normal', 'Normal'),
+        ('grande', 'Grande'),
+        ('muy_grande', 'Muy Grande'),
+    ], string='Tamaño del QR', default='grande', tracking=True,
+        help="Controla el tamaño con el que se imprime el código QR en el PDF."
+    )
+    qr_tamano_px = fields.Integer(
+        string='Tamaño de QR (px)',
+        compute='_compute_qr_tamano_px',
+    )
 
     # --- CONTROL DOCUMENTAL DEL FORMATO (editable por si cambia la versión oficial) ---
     codigo_formulario = fields.Char(string='Código de Formulario', default='MS-TE-FO-001')
@@ -207,6 +232,11 @@ class FlotaEntregaEquipo(models.Model):
             rec.texto_aceptacion_font_px = TEXTO_ACEPTACION_FONT_PX.get(
                 rec.texto_aceptacion_tamano, TEXTO_ACEPTACION_FONT_PX['normal']
             )
+
+    @api.depends('qr_tamano')
+    def _compute_qr_tamano_px(self):
+        for rec in self:
+            rec.qr_tamano_px = QR_TAMANO_PX.get(rec.qr_tamano, QR_TAMANO_PX['grande'])
 
     @api.depends('cargo')
     def _compute_mostrar_ruta(self):

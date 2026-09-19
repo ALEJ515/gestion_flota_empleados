@@ -99,6 +99,8 @@
                                 <group string="Política de Informática">
                                     <field name="recibio_politica"/>
                                     <field name="politica_qr_imagen" widget="image"/>
+                                    <field name="mostrar_qr" string="Mostrar QR en el PDF"/>
+                                    <field name="qr_tamano" string="Tamaño del QR" invisible="not mostrar_qr"/>
                                 </group>
                             </group>
                             <group string="Aceptación y Responsabilidad (texto legal impreso en el PDF)">
