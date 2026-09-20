@@ -2,6 +2,8 @@ import base64
 import logging
 
 from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+from .phone_utils import whatsapp_url
 
 _logger = logging.getLogger(__name__)
 
@@ -259,6 +261,17 @@ class FlotaEntregaEquipo(models.Model):
                 vals.setdefault('recibido_por', empleado.name)
                 vals.setdefault('cargo', empleado.cargo)
         return vals
+
+    def action_open_whatsapp(self):
+        self.ensure_one()
+        url = whatsapp_url(self.telefono_flota)
+        if not url:
+            raise UserError(_('Esta acta no tiene un número válido para abrir WhatsApp.'))
+        return {
+            'type': 'ir.actions.act_url',
+            'url': url,
+            'target': 'new',
+        }
 
     @api.model_create_multi
     def create(self, vals_list):

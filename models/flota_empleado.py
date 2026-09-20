@@ -2,6 +2,7 @@ import logging
 import re
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
+from .phone_utils import whatsapp_url
 
 _logger = logging.getLogger(__name__)
 
@@ -248,6 +249,17 @@ class FlotaEmpleado(models.Model):
         if vals.get('numero_flota'):
             vals['numero_flota'] = _formatear_numero_flota(vals['numero_flota'])
         return super().write(vals)
+
+    def action_open_whatsapp(self):
+        self.ensure_one()
+        url = whatsapp_url(self.numero_flota)
+        if not url:
+            raise UserError(_('El empleado no tiene un número válido para abrir WhatsApp.'))
+        return {
+            'type': 'ir.actions.act_url',
+            'url': url,
+            'target': 'new',
+        }
 
     @api.constrains('numero_flota', 'name')
     def _check_unique_fields(self):

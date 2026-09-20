@@ -54,6 +54,7 @@
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="recibido_por"/>
                             <field name="telefono_flota"/>
+                            <button name="action_open_whatsapp" type="object" string="WhatsApp" icon="fa-whatsapp" class="btn-success" invisible="not telefono_flota"/>
                         </group>
                         <group string="Control Documental">
                             <field name="name" readonly="1"/>

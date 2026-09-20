@@ -28,6 +28,7 @@
                 <field name="ruta_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
+                <button name="action_open_whatsapp" type="object" string="WhatsApp" icon="fa-whatsapp" invisible="not numero_flota"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
@@ -72,7 +73,10 @@
                             <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
                         </group>
                         <group string="Contacto y Facturación">
-                            <field name="numero_flota" placeholder="Ej. 809 206-0146"/>
+                            <div class="d-flex align-items-center">
+                                <field name="numero_flota" placeholder="Ej. 809 206-0146"/>
+                                <button name="action_open_whatsapp" type="object" string="WhatsApp" icon="fa-whatsapp" class="btn-success ms-2" invisible="not numero_flota"/>
+                            </div>
                             <field name="ultima_facturacion_monto" widget="monetary" readonly="1"/>
                             <field name="penultima_facturacion_monto" widget="monetary" readonly="1"/>
                             <field name="comparativa_indicador_html" widget="html" string="Tendencia vs Anterior" readonly="1"/>
