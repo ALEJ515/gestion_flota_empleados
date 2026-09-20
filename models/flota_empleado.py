@@ -251,6 +251,8 @@ class FlotaEmpleado(models.Model):
         return super().write(vals)
 
     def action_open_whatsapp(self):
+        if len(self) != 1:
+            raise UserError(_('Seleccione un solo empleado para abrir WhatsApp.'))
         self.ensure_one()
         url = whatsapp_url(self.numero_flota)
         if not url:

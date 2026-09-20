@@ -16,6 +16,15 @@
         </field>
     </record>
 
+    <record id="action_flota_empleado_open_whatsapp" model="ir.actions.server">
+        <field name="name">Abrir WhatsApp</field>
+        <field name="model_id" ref="model_flota_empleado"/>
+        <field name="binding_model_id" ref="model_flota_empleado"/>
+        <field name="binding_view_types">list,form</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_open_whatsapp()</field>
+    </record>
+
     <!-- List View con Selector de Columnas y Facturación -->
     <record id="view_flota_empleado_list" model="ir.ui.view">
         <field name="name">flota.empleado.list</field>
@@ -28,7 +37,6 @@
                 <field name="ruta_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
-                <button name="action_open_whatsapp" type="object" string=" " title="Abrir WhatsApp" icon="fa-whatsapp" class="btn-link text-success o_whatsapp_list_button" invisible="not numero_flota"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
@@ -54,12 +62,6 @@
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_entregas_equipo" type="object" class="oe_stat_button" icon="fa-mobile">
                             <field name="entrega_equipo_count" widget="statinfo" string="Actas de Equipos"/>
-                        </button>
-                        <button name="action_open_whatsapp" type="object" class="oe_stat_button o_whatsapp_stat_button" icon="fa-whatsapp" invisible="not numero_flota">
-                            <div class="o_stat_info">
-                                <span class="o_stat_text">WhatsApp</span>
-                                <span class="o_stat_text">Mensaje</span>
-                            </div>
                         </button>
                     </div>
                     <widget name="web_ribbon" title="Borrador" bg_color="bg-warning" invisible="not active or estado != 'draft'"/>
