@@ -101,13 +101,13 @@
                             </tr>
                         </table>
 
-                        <!-- EQUIPOS RECIBIDOS POR TI (DEVOLUCIÓN): tabla dinámica, admite cualquier tipo de
-                             equipo del catálogo (flota, laptop, monitor, UPS, etc.) y varias líneas. Solo se
-                             imprime si hay al menos una línea cargada. -->
+                        <!-- EQUIPOS RECIBIDOS POR IT (DEVOLUCIÓN): tabla dinámica, admite cualquier tipo de
+                             equipo del catálogo (flota, laptop, monitor, UPS, impresora, etc.) y varias líneas.
+                             Solo se imprime si hay al menos una línea cargada. -->
                         <t t-set="lineas_devueltas_equipo" t-value="doc.linea_devuelta_ids.filtered(lambda l: not l.es_linea_licencia)"/>
                         <t t-set="lineas_devueltas_licencia" t-value="doc.linea_devuelta_ids.filtered(lambda l: l.es_linea_licencia)"/>
                         <table class="acta-tabla" t-if="lineas_devueltas_equipo">
-                            <tr><td colspan="6" class="acta-section">EQUIPOS RECIBIDOS POR TI (DEVOLUCIÓN)</td></tr>
+                            <tr><td colspan="6" class="acta-section">EQUIPOS RECIBIDOS POR IT (DEVOLUCIÓN)</td></tr>
                             <tr>
                                 <th class="acta-th">Tipo de Equipo</th>
                                 <th class="acta-th">Marca</th>
@@ -127,6 +127,25 @@
                                 </tr>
                             </t>
                         </table>
+
+                        <!-- ESTADO / OBSERVACIONES de los equipos devueltos: justo debajo de la tabla de
+                             EQUIPOS RECIBIDOS POR IT, antes de licencias devueltas. Solo si hay observaciones. -->
+                        <t t-if="lineas_devueltas_equipo.filtered(lambda l: l.observaciones)">
+                            <table class="acta-tabla">
+                                <tr><td class="acta-section">ESTADO / OBSERVACIONES</td></tr>
+                                <t t-foreach="lineas_devueltas_equipo" t-as="l">
+                                    <t t-if="l.observaciones">
+                                        <tr>
+                                            <td>
+                                                <strong><span t-field="l.tipo_equipo"/><t t-if="l.modelo"> — <span t-field="l.modelo"/></t>:</strong>
+                                                <span t-field="l.observaciones"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </t>
+                            </table>
+                        </t>
+
                         <table class="acta-tabla" t-if="lineas_devueltas_licencia">
                             <tr><td class="acta-section">LICENCIAS DEVUELTAS / REVOCADAS</td></tr>
                             <t t-foreach="lineas_devueltas_licencia" t-as="l">
@@ -140,24 +159,7 @@
                             </t>
                         </table>
 
-                        <!-- DATOS IMPRESORA (solo si el toggle está activo) -->
-                        <table class="acta-tabla" t-if="doc.mostrar_datos_impresora">
-                            <tr><td colspan="2" class="acta-section">DATOS IMPRESORA</td></tr>
-                            <tr>
-                                <td class="acta-label">Modelo:</td>
-                                <td><span t-field="doc.impresora_modelo"/><t t-if="not doc.impresora_modelo">N/A</t></td>
-                            </tr>
-                            <tr>
-                                <td class="acta-label">Serial:</td>
-                                <td><span t-field="doc.impresora_serial"/><t t-if="not doc.impresora_serial">N/A</t></td>
-                            </tr>
-                            <tr>
-                                <td class="acta-label">Estado:</td>
-                                <td><span t-field="doc.estado_impresora"/><t t-if="not doc.estado_impresora">N/A</t></td>
-                            </tr>
-                        </table>
-
-                        <!-- DATOS DE EQUIPO NUEVO ENTREGADO (justo debajo de Datos Impresora) -->
+                        <!-- DATOS DE EQUIPO NUEVO ENTREGADO -->
                         <t t-set="lineas_equipo" t-value="doc.linea_ids.filtered(lambda l: not l.es_linea_licencia)"/>
                         <t t-set="lineas_licencia" t-value="doc.linea_ids.filtered(lambda l: l.es_linea_licencia)"/>
                         <table class="acta-tabla" t-if="lineas_equipo">
@@ -182,24 +184,9 @@
                             </t>
                         </table>
 
-                        <!-- DATOS DE LICENCIAS ASIGNADAS: solo si hay líneas cuyo Tipo de Equipo está
-                             marcado como Licencia. Se imprime como líneas completas (no por columnas),
-                             ya que una licencia no tiene modelo/IMEI/serial como un equipo físico. -->
-                        <table class="acta-tabla" t-if="lineas_licencia">
-                            <tr><td class="acta-section">DATOS DE LICENCIAS ASIGNADAS</td></tr>
-                            <t t-foreach="lineas_licencia" t-as="l">
-                                <tr>
-                                    <td>
-                                        <strong><span t-field="l.tipo_equipo.name"/></strong>
-                                        <t t-if="l.cantidad and l.cantidad != 1"> — Cant: <span t-field="l.cantidad"/></t>
-                                        <t t-if="l.observaciones"> — <span t-field="l.observaciones"/></t>
-                                    </td>
-                                </tr>
-                            </t>
-                        </table>
-
-                        <!-- ESTADO / OBSERVACIONES: separado de la tabla anterior para que no se vea recortado.
-                             Solo para líneas de equipo (las licencias muestran su observación en su propia línea). -->
+                        <!-- ESTADO / OBSERVACIONES: justo debajo de la tabla de equipo nuevo entregado, antes
+                             de la tabla de licencias asignadas. Solo para líneas de equipo (las licencias
+                             muestran su observación en su propia línea). Solo se imprime si hay observaciones. -->
                         <t t-if="lineas_equipo.filtered(lambda l: l.observaciones)">
                             <table class="acta-tabla">
                                 <tr><td class="acta-section">ESTADO / OBSERVACIONES</td></tr>
@@ -216,6 +203,31 @@
                             </table>
                         </t>
 
+                        <!-- DATOS DE LICENCIAS ASIGNADAS: solo si hay líneas cuyo Tipo de Equipo está
+                             marcado como Licencia. Se imprime como líneas completas (no por columnas),
+                             ya que una licencia no tiene modelo/IMEI/serial como un equipo físico. -->
+                        <table class="acta-tabla" t-if="lineas_licencia">
+                            <tr><td class="acta-section">DATOS DE LICENCIAS ASIGNADAS</td></tr>
+                            <t t-foreach="lineas_licencia" t-as="l">
+                                <tr>
+                                    <td>
+                                        <strong><span t-field="l.tipo_equipo.name"/></strong>
+                                        <t t-if="l.cantidad and l.cantidad != 1"> — Cant: <span t-field="l.cantidad"/></t>
+                                        <t t-if="l.observaciones"> — <span t-field="l.observaciones"/></t>
+                                    </td>
+                                </tr>
+                            </t>
+                        </table>
+
+                        <!-- NOTAS ADICIONALES: campo libre de la pestaña "Firma y Política". Solo se
+                             imprime si tiene contenido. -->
+                        <table class="acta-tabla" t-if="doc.notas">
+                            <tr><td class="acta-section">NOTAS ADICIONALES</td></tr>
+                            <tr>
+                                <td><span t-field="doc.notas" t-options="{'widget': 'text'}"/></td>
+                            </tr>
+                        </table>
+
                         <br/>
 
                         <!-- FIRMAS: etiqueta arriba, línea en blanco debajo para firma física.
@@ -230,7 +242,7 @@
                                 <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.entregado_por"/></div>
                             </div>
                             <div style="width: 48%; float: left; text-align: left; padding-left: 2%; font-size: 13px; box-sizing: border-box;">
-                                <div style="font-weight: bold;">Recibido Por</div>
+                                <div style="font-weight: bold;">Recibido o Entregado Por</div>
                                 <div style="border-top: 1px solid #000; width: 92%; margin-top: 34px;">&#160;</div>
                                 <div style="font-size: 10px; color: #6B7280;">Nombre: <span t-field="doc.recibido_por"/> — Fecha: <span t-field="doc.fecha"/></div>
                             </div>

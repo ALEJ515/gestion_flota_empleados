@@ -62,12 +62,6 @@
                             <field name="version_formulario"/>
                         </group>
                     </group>
-                    <group string="Datos Impresora">
-                        <field name="mostrar_datos_impresora" widget="boolean_toggle" string="Incluir en el documento"/>
-                        <field name="impresora_modelo" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
-                        <field name="impresora_serial" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
-                        <field name="estado_impresora" invisible="not mostrar_datos_impresora"/>
-                    </group>
                     <notebook>
                         <page string="Equipo Nuevo Entregado" name="equipos">
                             <field name="linea_ids">
@@ -83,7 +77,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Equipos Recibidos por TI (Devolución)" name="equipos_devueltos">
+                        <page string="Equipos Recibidos por IT (Devolución)" name="equipos_devueltos">
                             <field name="linea_devuelta_ids">
                                 <list editable="bottom">
                                     <field name="tipo_equipo"/>
@@ -101,7 +95,7 @@
                             <group>
                                 <group string="Firmas (espacio para firma física al imprimir)">
                                     <field name="entregado_por" string="Firma Representante IT"/>
-                                    <field name="recibido_por" string="Recibido Por" readonly="1"/>
+                                    <field name="recibido_por" string="Recibido o Entregado Por" readonly="1"/>
                                 </group>
                                 <group string="Política de Informática">
                                     <field name="recibio_politica"/>
@@ -115,7 +109,7 @@
                                 <field name="texto_aceptacion" nolabel="1" colspan="2" placeholder="Escriba aquí el texto de Aceptación y Responsabilidad que debe salir en la hoja de entrega..."/>
                             </group>
                             <group>
-                                <field name="notas" placeholder="Notas adicionales..."/>
+                                <field name="notas" string="Notas Adicionales" placeholder="Notas adicionales... (se imprimen en el PDF, debajo de Aceptación y Responsabilidad)"/>
                             </group>
                         </page>
                     </notebook>
