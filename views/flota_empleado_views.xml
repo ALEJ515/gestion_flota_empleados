@@ -106,6 +106,7 @@
                                 <list>
                                     <field name="name" optional="show"/>
                                     <field name="cargo" optional="show"/>
+                                    <field name="ruta_id" optional="show"/>
                                     <field name="numero_flota" optional="show"/>
                                     <field name="ubicacion_id" optional="show"/>
                                     <field name="ultima_facturacion_monto" widget="monetary" optional="show"/>
