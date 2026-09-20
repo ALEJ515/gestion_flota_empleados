@@ -96,19 +96,6 @@ class FlotaEntregaEquipo(models.Model):
     recibido_por = fields.Char(string='Recibido por (Responsable)', tracking=True)
     telefono_flota = fields.Char(string='Núm. de Teléfono (Flota)', tracking=True)
 
-    # --- DATOS FLOTA RECIBIDA POR TI (equipo antiguo devuelto) ---
-    mostrar_flota_recibida = fields.Boolean(
-        string='Incluir Datos Flota Recibida por TI',
-        default=False,
-        help="Active esta opción para que la sección 'Datos Flota Recibida por TI' aparezca en el PDF y en el "
-             "Excel exportados. Desactívela si esta acta no aplica devolución de flota."
-    )
-    equipo_recibido_modelo = fields.Char(string='Modelo (Flota Recibida)')
-    equipo_recibido_serial = fields.Char(string='Serial / IMEI (Flota Recibida)')
-    estado_flota_recibida = fields.Selection(
-        ESTADO_EQUIPO_SELECTION, string='Estado (Flota Recibida)'
-    )
-
     # --- DATOS IMPRESORA ---
     mostrar_datos_impresora = fields.Boolean(
         string='Incluir Datos Impresora',
@@ -125,9 +112,25 @@ class FlotaEntregaEquipo(models.Model):
     # --- DATOS DE EQUIPO NUEVO ENTREGADO ---
     linea_ids = fields.One2many(
         'flota.entrega.equipo.linea', 'entrega_id',
-        string='Equipos Entregados'
+        string='Equipos Entregados',
+        domain=[('tipo_movimiento', '=', 'entregado')],
+        context={'default_tipo_movimiento': 'entregado'},
     )
     cantidad_equipos = fields.Integer(string='Cantidad de Equipos', compute='_compute_cantidad_equipos', store=True)
+
+    # --- EQUIPOS RECIBIDOS POR TI (DEVOLUCIÓN): equipo(s) antiguo(s) que el empleado devuelve, ya sea
+    # flota (teléfono), laptop, monitor, UPS, o cualquier otro artículo del catálogo 'Equipo o Licencias'.
+    # Puede haber varias líneas en una misma acta (ej. laptop + monitor + teléfono de flota).
+    linea_devuelta_ids = fields.One2many(
+        'flota.entrega.equipo.linea', 'entrega_id',
+        string='Equipos Recibidos por TI (Devolución)',
+        domain=[('tipo_movimiento', '=', 'devuelto')],
+        context={'default_tipo_movimiento': 'devuelto'},
+        help="Equipos que el empleado devuelve/entrega de vuelta a TI (por ejemplo al ser desvinculado o al "
+             "cambiar de equipo). No se limita a la flota: puede registrar cualquier equipo del catálogo "
+             "'Equipo o Licencias' (laptop, monitor, UPS, teléfono, etc.) y agregar tantas líneas como "
+             "artículos se reciban. Esta sección solo aparece en el PDF/Excel si tiene al menos una línea."
+    )
 
     # --- FIRMAS (espacio para firma física, sin firma digital) Y POLÍTICA ---
     entregado_por = fields.Char(
@@ -344,6 +347,14 @@ class FlotaEntregaEquipoLinea(models.Model):
     _order = 'id asc'
 
     entrega_id = fields.Many2one('flota.entrega.equipo', string='Acta de Entrega', required=True, ondelete='cascade', index=True)
+    tipo_movimiento = fields.Selection([
+        ('entregado', 'Entregado'),
+        ('devuelto', 'Devuelto'),
+    ], string='Movimiento', default='entregado', required=True, index=True,
+        help="Indica si esta línea corresponde a un equipo entregado al empleado o a un equipo que el "
+             "empleado devuelve a TI. Determina en qué sección del acta (Equipo Nuevo Entregado o Equipos "
+             "Recibidos por TI) se muestra esta línea."
+    )
     tipo_equipo = fields.Many2one(
         'flota.tipo.equipo',
         string='Tipo de Equipo',

@@ -62,23 +62,29 @@
                             <field name="version_formulario"/>
                         </group>
                     </group>
-                    <group>
-                        <group string="Datos Flota Recibida por TI">
-                            <field name="mostrar_flota_recibida" widget="boolean_toggle" string="Incluir en el documento"/>
-                            <field name="equipo_recibido_modelo" placeholder="N/A" invisible="not mostrar_flota_recibida"/>
-                            <field name="equipo_recibido_serial" placeholder="N/A" invisible="not mostrar_flota_recibida"/>
-                            <field name="estado_flota_recibida" invisible="not mostrar_flota_recibida"/>
-                        </group>
-                        <group string="Datos Impresora">
-                            <field name="mostrar_datos_impresora" widget="boolean_toggle" string="Incluir en el documento"/>
-                            <field name="impresora_modelo" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
-                            <field name="impresora_serial" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
-                            <field name="estado_impresora" invisible="not mostrar_datos_impresora"/>
-                        </group>
+                    <group string="Datos Impresora">
+                        <field name="mostrar_datos_impresora" widget="boolean_toggle" string="Incluir en el documento"/>
+                        <field name="impresora_modelo" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
+                        <field name="impresora_serial" placeholder="N/A" invisible="not mostrar_datos_impresora"/>
+                        <field name="estado_impresora" invisible="not mostrar_datos_impresora"/>
                     </group>
                     <notebook>
                         <page string="Equipo Nuevo Entregado" name="equipos">
                             <field name="linea_ids">
+                                <list editable="bottom">
+                                    <field name="tipo_equipo"/>
+                                    <field name="es_linea_licencia" column_invisible="1"/>
+                                    <field name="marca" invisible="es_linea_licencia"/>
+                                    <field name="modelo" invisible="es_linea_licencia"/>
+                                    <field name="cantidad"/>
+                                    <field name="imei_serial" invisible="es_linea_licencia"/>
+                                    <field name="estado_equipo" readonly="es_linea_licencia"/>
+                                    <field name="observaciones"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Equipos Recibidos por TI (Devolución)" name="equipos_devueltos">
+                            <field name="linea_devuelta_ids">
                                 <list editable="bottom">
                                     <field name="tipo_equipo"/>
                                     <field name="es_linea_licencia" column_invisible="1"/>

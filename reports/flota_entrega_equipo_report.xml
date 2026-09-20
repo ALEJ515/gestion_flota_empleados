@@ -101,21 +101,43 @@
                             </tr>
                         </table>
 
-                        <!-- DATOS FLOTA RECIBIDA POR TI (solo si el toggle está activo) -->
-                        <table class="acta-tabla" t-if="doc.mostrar_flota_recibida">
-                            <tr><td colspan="2" class="acta-section">DATOS FLOTA RECIBIDA POR TI</td></tr>
+                        <!-- EQUIPOS RECIBIDOS POR TI (DEVOLUCIÓN): tabla dinámica, admite cualquier tipo de
+                             equipo del catálogo (flota, laptop, monitor, UPS, etc.) y varias líneas. Solo se
+                             imprime si hay al menos una línea cargada. -->
+                        <t t-set="lineas_devueltas_equipo" t-value="doc.linea_devuelta_ids.filtered(lambda l: not l.es_linea_licencia)"/>
+                        <t t-set="lineas_devueltas_licencia" t-value="doc.linea_devuelta_ids.filtered(lambda l: l.es_linea_licencia)"/>
+                        <table class="acta-tabla" t-if="lineas_devueltas_equipo">
+                            <tr><td colspan="6" class="acta-section">EQUIPOS RECIBIDOS POR TI (DEVOLUCIÓN)</td></tr>
                             <tr>
-                                <td class="acta-label">Modelo:</td>
-                                <td><span t-field="doc.equipo_recibido_modelo"/><t t-if="not doc.equipo_recibido_modelo">N/A</t></td>
+                                <th class="acta-th">Tipo de Equipo</th>
+                                <th class="acta-th">Marca</th>
+                                <th class="acta-th">Modelo</th>
+                                <th class="acta-th">Cant.</th>
+                                <th class="acta-th">IMEI / Serial</th>
+                                <th class="acta-th">Estado</th>
                             </tr>
-                            <tr>
-                                <td class="acta-label">Serial/IMEI:</td>
-                                <td><span t-field="doc.equipo_recibido_serial"/><t t-if="not doc.equipo_recibido_serial">N/A</t></td>
-                            </tr>
-                            <tr>
-                                <td class="acta-label">Estado:</td>
-                                <td><span t-field="doc.estado_flota_recibida"/><t t-if="not doc.estado_flota_recibida">N/A</t></td>
-                            </tr>
+                            <t t-foreach="lineas_devueltas_equipo" t-as="l">
+                                <tr>
+                                    <td><span t-field="l.tipo_equipo"/></td>
+                                    <td><span t-field="l.marca"/></td>
+                                    <td><span t-field="l.modelo"/></td>
+                                    <td style="text-align: center;"><span t-field="l.cantidad"/></td>
+                                    <td><span t-field="l.imei_serial"/></td>
+                                    <td style="text-align: center;"><span t-field="l.estado_equipo"/></td>
+                                </tr>
+                            </t>
+                        </table>
+                        <table class="acta-tabla" t-if="lineas_devueltas_licencia">
+                            <tr><td class="acta-section">LICENCIAS DEVUELTAS / REVOCADAS</td></tr>
+                            <t t-foreach="lineas_devueltas_licencia" t-as="l">
+                                <tr>
+                                    <td>
+                                        <strong><span t-field="l.tipo_equipo.name"/></strong>
+                                        <t t-if="l.cantidad and l.cantidad != 1"> — Cant: <span t-field="l.cantidad"/></t>
+                                        <t t-if="l.observaciones"> — <span t-field="l.observaciones"/></t>
+                                    </td>
+                                </tr>
+                            </t>
                         </table>
 
                         <!-- DATOS IMPRESORA (solo si el toggle está activo) -->
