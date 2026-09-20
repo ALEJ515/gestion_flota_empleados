@@ -40,6 +40,14 @@
                     <field name="estado" widget="statusbar" statusbar_visible="draft,confirmado" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_whatsapp" type="object" class="oe_stat_button o_whatsapp_stat_button" icon="fa-whatsapp" invisible="not telefono_flota">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">WhatsApp</span>
+                                <span class="o_stat_text">Mensaje</span>
+                            </div>
+                        </button>
+                    </div>
                     <div class="oe_title mb-3" style="max-width: 100%;">
                         <label for="empleado_id" class="oe_edit_only" string="Empleado"/>
                         <h1 style="width: 100%;">
@@ -54,7 +62,6 @@
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="recibido_por"/>
                             <field name="telefono_flota"/>
-                            <button name="action_open_whatsapp" type="object" string="WhatsApp" icon="fa-whatsapp" class="btn-success" invisible="not telefono_flota"/>
                         </group>
                         <group string="Control Documental">
                             <field name="name" readonly="1"/>

@@ -74,3 +74,33 @@
     background-color: #FEFCE8 !important;
     color: #854D0E !important;
 }
+
+/* Acción WhatsApp: se presenta como smart button, no como botón suelto pegado al campo. */
+.o_form_view .oe_button_box .o_whatsapp_stat_button {
+    border-left: 3px solid #25D366 !important;
+}
+
+.o_form_view .oe_button_box .o_whatsapp_stat_button .fa,
+.o_list_table .o_whatsapp_list_button .fa {
+    color: #25D366 !important;
+}
+
+.o_form_view .oe_button_box .o_whatsapp_stat_button:hover {
+    background-color: #F0FDF4 !important;
+}
+
+.o_form_view .oe_button_box .o_whatsapp_stat_button:hover .o_stat_text {
+    color: #128C4A !important;
+}
+
+.o_list_table .o_whatsapp_list_button {
+    min-width: 28px;
+    padding: 0 6px !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.o_list_table .o_whatsapp_list_button:hover {
+    background-color: #DCFCE7 !important;
+    border-radius: 999px;
+}
