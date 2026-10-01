@@ -23,6 +23,7 @@
             <list decoration-muted="not active">
                 <field name="name" optional="show"/>
                 <field name="tipo" widget="badge" optional="show"/>
+                <field name="ubicacion_id" optional="show"/>
                 <field name="descripcion" optional="show"/>
                 <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0" optional="show"/>
                 <field name="empleados_activos_count" string="Activos" widget="badge" decoration-success="empleados_activos_count &gt; 0" optional="show"/>
@@ -57,6 +58,7 @@
                     <group>
                         <group string="Detalles Generales">
                             <field name="tipo"/>
+                            <field name="ubicacion_id" options="{'no_create_edit': False}" placeholder="Seleccionar localidad/CEDI..."/>
                             <field name="descripcion" placeholder="Ej. Zona Norte / Almacén 10"/>
                             <field name="active" widget="boolean_toggle"/>
                         </group>
@@ -151,12 +153,14 @@
             <search string="Buscar Rutas">
                 <field name="name" string="Código de Ruta"/>
                 <field name="descripcion"/>
+                <field name="ubicacion_id"/>
                 <filter string="Vendedor" name="tipo_vendedor" domain="[('tipo', '=', 'vendedor')]"/>
                 <filter string="Distribuidor" name="tipo_distribuidor" domain="[('tipo', '=', 'distribuidor')]"/>
                 <separator/>
                 <filter string="Archivadas" name="archived" domain="[('active', '=', False)]"/>
                 <group>
                     <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo'}"/>
+                    <filter string="Localidad / Ubicación" name="group_ubicacion" context="{'group_by': 'ubicacion_id'}"/>
                 </group>
             </search>
         </field>

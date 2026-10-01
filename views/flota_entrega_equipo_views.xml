@@ -37,10 +37,17 @@
                     <button name="action_confirmar" string="Confirmar" type="object" class="btn-primary" invisible="estado != 'draft'"/>
                     <button name="action_restablecer_borrador" string="Volver a Borrador" type="object" invisible="estado != 'confirmado'"/>
                     <button name="action_descargar_pdf" string="Descargar" type="object" class="btn-secondary" icon="fa-download"/>
+                    <button name="action_reasignar_empleado" string="Reasignar a Otro Empleado" type="object" class="btn-secondary" icon="fa-exchange"/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,confirmado" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
+                        <button name="action_ver_reasignaciones" type="object" class="oe_stat_button" icon="fa-exchange" invisible="reasignada_a_count == 0">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Reasignada en</span>
+                                <field name="reasignada_a_count" class="o_stat_value"/>
+                            </div>
+                        </button>
                         <button name="action_open_whatsapp" type="object" class="oe_stat_button o_whatsapp_stat_button" icon="fa-whatsapp" invisible="not telefono_flota">
                             <div class="o_stat_info">
                                 <span class="o_stat_text">WhatsApp</span>
@@ -53,6 +60,10 @@
                         <h1 style="width: 100%;">
                             <field name="empleado_id" options="{'no_create_edit': True}" placeholder="Seleccione el empleado..." class="w-100"/>
                         </h1>
+                        <div class="alert alert-info py-1 px-2 mb-0" role="alert" invisible="not reasignado_de_id" style="display:inline-block;">
+                            <i class="fa fa-exchange me-1"/> Acta generada por reasignación de equipos desde
+                            <field name="reasignado_de_id" readonly="1" class="oe_inline"/>
+                        </div>
                     </div>
                     <group>
                         <group string="Datos Entrega">

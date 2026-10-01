@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_flota_entrega_equipo_reasignar_wizard_form" model="ir.ui.view">
+        <field name="name">flota.entrega.equipo.reasignar.wizard.form</field>
+        <field name="model">flota.entrega.equipo.reasignar.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reasignar Equipos a Otro Empleado">
+                <sheet>
+                    <div class="alert alert-info shadow-sm rounded mb-4" role="alert">
+                        <i class="fa fa-info-circle me-2"/>
+                        Se creará una <strong>acta nueva en borrador</strong> a nombre del empleado que elija,
+                        copiando los equipos seleccionados abajo. La acta original
+                        (<field name="entrega_id" readonly="1" class="oe_inline"/>) no se modifica: queda intacta
+                        para conservar el historial del empleado anterior.
+                    </div>
+
+                    <group>
+                        <group string="Empleados">
+                            <field name="empleado_actual_id" readonly="1" string="Empleado Actual"/>
+                            <field name="nuevo_empleado_id" string="Nuevo Empleado (Reemplazo)" placeholder="Seleccionar empleado que recibirá los equipos..."/>
+                        </group>
+                        <group string="Equipos a Copiar">
+                            <label for="copiar_entregados" string="Equipos Nuevos Entregados"/>
+                            <div class="o_row">
+                                <field name="copiar_entregados" class="me-2"/>
+                                <span><field name="count_entregados" readonly="1" class="oe_inline"/> línea(s)</span>
+                            </div>
+                            <label for="copiar_devueltos" string="Equipos Recibidos por IT (Devolución)"/>
+                            <div class="o_row">
+                                <field name="copiar_devueltos" class="me-2"/>
+                                <span><field name="count_devueltos" readonly="1" class="oe_inline"/> línea(s)</span>
+                            </div>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="nota" placeholder="Ej. Empleado reemplaza a Juan Pérez, desvinculado el 01/09/2026"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_confirmar_reasignacion" string="Reasignar" type="object" class="btn-primary shadow-sm"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

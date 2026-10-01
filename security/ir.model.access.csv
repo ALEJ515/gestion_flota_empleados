@@ -22,3 +22,5 @@ access_flota_entrega_equipo_linea_user,flota.entrega.equipo.linea.user,model_flo
 access_flota_entrega_equipo_linea_manager,flota.entrega.equipo.linea.manager,model_flota_entrega_equipo_linea,group_flota_manager,1,1,1,1
 access_flota_tipo_equipo_user,flota.tipo.equipo.user,model_flota_tipo_equipo,group_flota_user,1,1,1,0
 access_flota_tipo_equipo_manager,flota.tipo.equipo.manager,model_flota_tipo_equipo,group_flota_manager,1,1,1,1
+access_flota_entrega_equipo_reasignar_wizard_user,flota.entrega.equipo.reasignar.wizard.user,model_flota_entrega_equipo_reasignar_wizard,group_flota_user,1,1,1,1
+access_flota_ruta_mass_update_wizard_user,flota.ruta.mass.update.wizard.user,model_flota_ruta_mass_update_wizard,group_flota_user,1,1,1,1

@@ -207,6 +207,26 @@ class FlotaEntregaEquipo(models.Model):
     notas = fields.Text(string='Notas')
     company_id = fields.Many2one('res.company', string='Compañía', default=lambda self: self.env.company)
 
+    # --- REASIGNACIÓN A OTRO EMPLEADO: permite crear una acta nueva para un empleado distinto,
+    # copiando los equipos (entregados y/o devueltos) de esta acta, sin tener que digitarlos de
+    # nuevo. Típico caso de uso: el empleado titular se desvincula y su equipo pasa a su reemplazo.
+    reasignado_de_id = fields.Many2one(
+        'flota.entrega.equipo', string='Reasignada desde el Acta', readonly=True, copy=False, index=True, tracking=True,
+        help="Indica que esta acta fue generada por reasignación de equipos desde otra acta (por ejemplo, al "
+             "reemplazar a un empleado que se desvinculó)."
+    )
+    reasignada_a_ids = fields.One2many(
+        'flota.entrega.equipo', 'reasignado_de_id', string='Actas Generadas por Reasignación'
+    )
+    reasignada_a_count = fields.Integer(
+        string='Cantidad de Reasignaciones', compute='_compute_reasignada_a_count'
+    )
+
+    @api.depends('reasignada_a_ids')
+    def _compute_reasignada_a_count(self):
+        for rec in self:
+            rec.reasignada_a_count = len(rec.reasignada_a_ids)
+
     @api.depends('linea_ids.cantidad')
     def _compute_cantidad_equipos(self):
         for rec in self:
@@ -272,6 +292,34 @@ class FlotaEntregaEquipo(models.Model):
             'url': url,
             'target': 'new',
         }
+
+    def action_reasignar_empleado(self):
+        """Abre el asistente para reasignar los equipos de esta acta a otro empleado (por
+        ejemplo, cuando el titular se desvincula y su reemplazo recibe el mismo equipo)."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Reasignar Equipos a Otro Empleado'),
+            'res_model': 'flota.entrega.equipo.reasignar.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_entrega_id': self.id},
+        }
+
+    def action_ver_reasignaciones(self):
+        """Abre la(s) acta(s) generadas por reasignación a partir de esta."""
+        self.ensure_one()
+        actas = self.reasignada_a_ids
+        action = {
+            'type': 'ir.actions.act_window',
+            'name': _('Actas Generadas por Reasignación'),
+            'res_model': 'flota.entrega.equipo',
+        }
+        if len(actas) == 1:
+            action.update({'view_mode': 'form', 'res_id': actas.id})
+        else:
+            action.update({'view_mode': 'list,form', 'domain': [('id', 'in', actas.ids)]})
+        return action
 
     @api.model_create_multi
     def create(self, vals_list):

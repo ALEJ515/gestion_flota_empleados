@@ -20,6 +20,10 @@ class FlotaRuta(models.Model):
         ('otro', 'Otro'),
     ], string='Tipo de Ruta', default='vendedor', tracking=True)
     descripcion = fields.Char(string='Descripción', tracking=True, help="Detalle adicional de la ruta, ej. nombre de la zona o almacén.")
+    ubicacion_id = fields.Many2one(
+        'flota.ubicacion', string='Localidad / Ubicación (CEDI)', tracking=True, ondelete='set null',
+        help="CEDI o localidad a la que pertenece esta ruta. Sirve para poder filtrar/agrupar rutas y empleados por zona."
+    )
     active = fields.Boolean(default=True, string='Activo', tracking=True)
 
     empleado_ids = fields.One2many(

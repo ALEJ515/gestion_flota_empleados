@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_flota_ruta_mass_update_wizard_form" model="ir.ui.view">
+        <field name="name">flota.ruta.mass.update.wizard.form</field>
+        <field name="model">flota.ruta.mass.update.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Asignación Masiva de Rutas">
+                <sheet>
+                    <div class="alert alert-info shadow-sm rounded mb-4" role="alert">
+                        <i class="fa fa-info-circle me-2"/>
+                        Se aplicarán los cambios a <strong><field name="count_rutas" readonly="1"/></strong> ruta(s) seleccionada(s). Marque las casillas de los campos que desea actualizar.
+                    </div>
+
+                    <group>
+                        <group string="Localidad y Tipo">
+                            <label for="set_ubicacion" string="Localidad / Ubicación (CEDI)"/>
+                            <div class="o_row">
+                                <field name="set_ubicacion" class="me-2"/>
+                                <field name="ubicacion_id" invisible="not set_ubicacion" placeholder="Seleccionar CEDI/Localidad..."/>
+                            </div>
+
+                            <label for="set_tipo" string="Tipo de Ruta"/>
+                            <div class="o_row">
+                                <field name="set_tipo" class="me-2"/>
+                                <field name="tipo" invisible="not set_tipo" required="set_tipo"/>
+                            </div>
+                        </group>
+
+                        <group string="Estado">
+                            <label for="set_active" string="Activo / Archivado"/>
+                            <div class="o_row">
+                                <field name="set_active" class="me-2"/>
+                                <field name="active" invisible="not set_active" widget="boolean_toggle"/>
+                            </div>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_apply_mass_update" string="Aplicar Cambios Masivos" type="object" class="btn-primary shadow-sm"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción vinculada al menú de Acciones en la vista lista de flota.ruta -->
+    <record id="action_flota_ruta_mass_update_wizard" model="ir.actions.act_window">
+        <field name="name">Asignación Masiva de Rutas</field>
+        <field name="res_model">flota.ruta.mass.update.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="model_flota_ruta"/>
+        <field name="binding_view_types">list</field>
+    </record>
+</odoo>
