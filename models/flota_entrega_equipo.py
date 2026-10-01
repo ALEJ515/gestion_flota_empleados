@@ -417,8 +417,22 @@ class FlotaEntregaEquipoLinea(models.Model):
              "en el catálogo 'Equipo o Licencias'. Controla si esta línea se muestra como equipo físico o "
              "como licencia."
     )
-    marca = fields.Char(string='Marca')
-    modelo = fields.Char(string='Modelo')
+    marca_id = fields.Many2one(
+        'flota.equipo.marca',
+        string='Marca',
+        ondelete='restrict',
+        index=True,
+        help="Marca del equipo seleccionable del catálogo de Marcas de Estructura y Recursos."
+    )
+    modelo_id = fields.Many2one(
+        'flota.equipo.modelo',
+        string='Modelo',
+        ondelete='restrict',
+        index=True,
+        help="Modelo del equipo seleccionable del catálogo de Modelos (filtrado según la Marca seleccionada)."
+    )
+    marca = fields.Char(string='Marca (Texto)')
+    modelo = fields.Char(string='Modelo (Texto)')
     cantidad = fields.Integer(string='Cant.', default=1, required=True)
     imei_serial = fields.Char(string='IMEI / Serial')
     estado_equipo = fields.Selection(ESTADO_EQUIPO_SELECTION, string='Estado', default='nuevo')
@@ -432,8 +446,29 @@ class FlotaEntregaEquipoLinea(models.Model):
         """Si el Tipo de Equipo elegido es una licencia, no aplica Marca ni un Estado físico:
         se limpia Marca y el Estado pasa automáticamente a 'N/A'."""
         if self.tipo_equipo and self.tipo_equipo.es_licencia:
+            self.marca_id = False
+            self.modelo_id = False
             self.marca = False
+            self.modelo = False
             self.estado_equipo = 'na'
+
+    @api.onchange('marca_id')
+    def _onchange_marca_id(self):
+        for rec in self:
+            if rec.marca_id:
+                rec.marca = rec.marca_id.name
+                if rec.modelo_id and rec.modelo_id.marca_id != rec.marca_id:
+                    rec.modelo_id = False
+                    rec.modelo = False
+
+    @api.onchange('modelo_id')
+    def _onchange_modelo_id(self):
+        for rec in self:
+            if rec.modelo_id:
+                rec.modelo = rec.modelo_id.name
+                if rec.modelo_id.marca_id and not rec.marca_id:
+                    rec.marca_id = rec.modelo_id.marca_id
+                    rec.marca = rec.modelo_id.marca_id.name
 
     def _aplicar_regla_licencia(self, vals):
         """Fuerza Marca vacía y Estado 'N/A' cuando el Tipo de Equipo (ya sea el que viene en vals o el
@@ -442,8 +477,23 @@ class FlotaEntregaEquipoLinea(models.Model):
         tipo_equipo_id = vals.get('tipo_equipo')
         tipo_equipo = self.env['flota.tipo.equipo'].browse(tipo_equipo_id) if tipo_equipo_id else self.tipo_equipo
         if tipo_equipo and tipo_equipo.es_licencia:
+            vals['marca_id'] = False
+            vals['modelo_id'] = False
             vals['marca'] = False
+            vals['modelo'] = False
             vals['estado_equipo'] = 'na'
+        else:
+            if 'marca_id' in vals and vals['marca_id']:
+                marca_rec = self.env['flota.equipo.marca'].browse(vals['marca_id'])
+                if marca_rec.exists():
+                    vals.setdefault('marca', marca_rec.name)
+            if 'modelo_id' in vals and vals['modelo_id']:
+                modelo_rec = self.env['flota.equipo.modelo'].browse(vals['modelo_id'])
+                if modelo_rec.exists():
+                    vals.setdefault('modelo', modelo_rec.name)
+                    if not vals.get('marca_id') and modelo_rec.marca_id:
+                        vals.setdefault('marca_id', modelo_rec.marca_id.id)
+                        vals.setdefault('marca', modelo_rec.marca_id.name)
         return vals
 
     @api.model_create_multi

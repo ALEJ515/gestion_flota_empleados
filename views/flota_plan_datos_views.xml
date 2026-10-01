@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ACCIÓN -->
+    <record id="action_flota_plan_datos" model="ir.actions.act_window">
+        <field name="name">Planes de Datos</field>
+        <field name="res_model">flota.plan.datos</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay planes de datos registrados.
+            </p>
+            <p>
+                Crea los planes telefónicos y de datos (ej. Plan 10GB, Plan Ilimitado) para asignarlos a los perfiles de los empleados.
+            </p>
+        </field>
+    </record>
+
+    <!-- LIST VIEW -->
+    <record id="view_flota_plan_datos_list" model="ir.ui.view">
+        <field name="name">flota.plan.datos.list</field>
+        <field name="model">flota.plan.datos</field>
+        <field name="arch" type="xml">
+            <list string="Planes de Datos" decoration-muted="not active">
+                <field name="name"/>
+                <field name="codigo" optional="show"/>
+                <field name="operador" widget="badge" optional="show"/>
+                <field name="capacidad_datos" optional="show"/>
+                <field name="minutos" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="costo_mensual" widget="monetary" optional="show"/>
+                <field name="total_empleados" widget="badge" decoration-info="total_empleados &gt; 0" optional="show"/>
+                <field name="active" widget="boolean_toggle" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- FORM VIEW -->
+    <record id="view_flota_plan_datos_form" model="ir.ui.view">
+        <field name="name">flota.plan.datos.form</field>
+        <field name="model">flota.plan.datos</field>
+        <field name="arch" type="xml">
+            <form string="Plan de Datos">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_empleados" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="total_empleados" widget="statinfo" string="Empleados"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archivado" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Nombre del Plan"/>
+                        <h1>
+                            <field name="name" placeholder="Ej. Plan Flota 10GB, Plan Ilimitado..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Detalles Técnicos">
+                            <field name="operador"/>
+                            <field name="codigo" placeholder="Ej. CL-CORP-10"/>
+                            <field name="capacidad_datos" placeholder="Ej. 10 GB, Ilimitado..."/>
+                            <field name="minutos" placeholder="Ej. Ilimitado cerrado, 500 min..."/>
+                        </group>
+                        <group string="Tarifa y Estado">
+                            <field name="costo_mensual" widget="monetary"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Condiciones / Descripción" name="descripcion">
+                            <field name="descripcion" placeholder="Detalles de la oferta, condiciones de permanencia, roaming, etc."/>
+                        </page>
+                        <page string="Empleados con este Plan Asignado" name="empleados">
+                            <field name="empleado_ids" readonly="1">
+                                <list>
+                                    <field name="name" optional="show"/>
+                                    <field name="departamento_id" optional="show"/>
+                                    <field name="ubicacion_id" optional="show"/>
+                                    <field name="cargo" optional="show"/>
+                                    <field name="numero_flota" optional="show"/>
+                                    <field name="estado" widget="badge" optional="show" decoration-success="estado == 'active'" decoration-warning="estado == 'draft'" decoration-danger="estado == 'inactive'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- SEARCH VIEW -->
+    <record id="view_flota_plan_datos_search" model="ir.ui.view">
+        <field name="name">flota.plan.datos.search</field>
+        <field name="model">flota.plan.datos</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Planes de Datos">
+                <field name="name"/>
+                <field name="codigo"/>
+                <field name="operador"/>
+                <filter string="Claro" name="operador_claro" domain="[('operador', '=', 'claro')]"/>
+                <filter string="Altice" name="operador_altice" domain="[('operador', '=', 'altice')]"/>
+                <separator/>
+                <filter string="Archivados" name="archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter string="Operador" name="group_operador" context="{'group_by': 'operador'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

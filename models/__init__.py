@@ -5,4 +5,6 @@ from . import flota_ruta
 from . import flota_empleado
 from . import flota_factura_conciliacion
 from . import flota_tipo_equipo
+from . import flota_equipo_marca_modelo
+from . import flota_plan_datos
 from . import flota_entrega_equipo

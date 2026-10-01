@@ -87,8 +87,10 @@
                                 <list editable="bottom">
                                     <field name="tipo_equipo"/>
                                     <field name="es_linea_licencia" column_invisible="1"/>
-                                    <field name="marca" invisible="es_linea_licencia"/>
-                                    <field name="modelo" invisible="es_linea_licencia"/>
+                                    <field name="marca_id" invisible="es_linea_licencia" options="{'no_create_edit': False}" placeholder="Marca..."/>
+                                    <field name="modelo_id" invisible="es_linea_licencia" domain="[('marca_id', '=', marca_id)]" options="{'no_create_edit': False}" placeholder="Modelo..."/>
+                                    <field name="marca" column_invisible="1"/>
+                                    <field name="modelo" column_invisible="1"/>
                                     <field name="cantidad"/>
                                     <field name="imei_serial" invisible="es_linea_licencia"/>
                                     <field name="estado_equipo" readonly="es_linea_licencia"/>
@@ -101,8 +103,10 @@
                                 <list editable="bottom">
                                     <field name="tipo_equipo"/>
                                     <field name="es_linea_licencia" column_invisible="1"/>
-                                    <field name="marca" invisible="es_linea_licencia"/>
-                                    <field name="modelo" invisible="es_linea_licencia"/>
+                                    <field name="marca_id" invisible="es_linea_licencia" options="{'no_create_edit': False}" placeholder="Marca..."/>
+                                    <field name="modelo_id" invisible="es_linea_licencia" domain="[('marca_id', '=', marca_id)]" options="{'no_create_edit': False}" placeholder="Modelo..."/>
+                                    <field name="marca" column_invisible="1"/>
+                                    <field name="modelo" column_invisible="1"/>
                                     <field name="cantidad"/>
                                     <field name="imei_serial" invisible="es_linea_licencia"/>
                                     <field name="estado_equipo" readonly="es_linea_licencia"/>

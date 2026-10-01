@@ -51,4 +51,22 @@
               action="action_flota_tipo_equipo"
               sequence="40"/>
 
+    <menuitem id="menu_flota_equipo_marca"
+              name="Marcas de Equipos"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_equipo_marca"
+              sequence="50"/>
+
+    <menuitem id="menu_flota_equipo_modelo"
+              name="Modelos de Equipos"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_equipo_modelo"
+              sequence="60"/>
+
+    <menuitem id="menu_flota_plan_datos"
+              name="Planes de Datos"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_plan_datos"
+              sequence="70"/>
+
 </odoo>

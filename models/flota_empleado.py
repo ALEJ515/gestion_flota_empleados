@@ -75,6 +75,14 @@ class FlotaEmpleado(models.Model):
              "guiones ni paréntesis). Se usa para que la búsqueda encuentre el número sin importar cómo se "
              "haya escrito (con o sin espacios/guiones)."
     )
+    plan_datos_id = fields.Many2one(
+        'flota.plan.datos',
+        string='Plan de Datos',
+        ondelete='set null',
+        index=True,
+        tracking=True,
+        help="Plan de datos o paquete telefónico contratado para la flota de este empleado."
+    )
     estado = fields.Selection([
         ('draft', 'Borrador'),
         ('active', 'Activo'),

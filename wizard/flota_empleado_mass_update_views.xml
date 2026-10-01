@@ -39,6 +39,12 @@
                                 <field name="cargo" invisible="not set_cargo" required="set_cargo" placeholder="Ej. Supervisor de Logística"/>
                             </div>
 
+                            <label for="set_plan_datos" string="Plan de Datos"/>
+                            <div class="o_row">
+                                <field name="set_plan_datos" class="me-2"/>
+                                <field name="plan_datos_id" invisible="not set_plan_datos" placeholder="Seleccionar Plan de Datos..."/>
+                            </div>
+
                             <label for="set_estado" string="Estado"/>
                             <div class="o_row">
                                 <field name="set_estado" class="me-2"/>

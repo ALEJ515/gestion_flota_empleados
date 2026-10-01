@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ACCIONES -->
+    <record id="action_flota_equipo_marca" model="ir.actions.act_window">
+        <field name="name">Marcas de Equipos</field>
+        <field name="res_model">flota.equipo.marca</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay marcas registradas.
+            </p>
+            <p>
+                Crea las marcas de equipos (ej. Samsung, Apple, Dell, Lenovo, HP, Motorola) para seleccionarlas al generar actas de entrega.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_flota_equipo_modelo" model="ir.actions.act_window">
+        <field name="name">Modelos de Equipos</field>
+        <field name="res_model">flota.equipo.modelo</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay modelos registrados.
+            </p>
+            <p>
+                Registra los modelos específicos asociados a cada marca (ej. Galaxy A14, ThinkPad E14, Latitude 3420) para agilizar el llenado de actas.
+            </p>
+        </field>
+    </record>
+
+    <!-- VISTAS MARCA -->
+    <record id="view_flota_equipo_marca_list" model="ir.ui.view">
+        <field name="name">flota.equipo.marca.list</field>
+        <field name="model">flota.equipo.marca</field>
+        <field name="arch" type="xml">
+            <list string="Marcas de Equipos" decoration-muted="not active">
+                <field name="name"/>
+                <field name="descripcion" optional="show"/>
+                <field name="total_modelos" widget="badge" decoration-info="total_modelos &gt; 0" optional="show"/>
+                <field name="active" widget="boolean_toggle" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_flota_equipo_marca_form" model="ir.ui.view">
+        <field name="name">flota.equipo.marca.form</field>
+        <field name="model">flota.equipo.marca</field>
+        <field name="arch" type="xml">
+            <form string="Marca de Equipos">
+                <sheet>
+                    <widget name="web_ribbon" title="Archivada" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Nombre de la Marca"/>
+                        <h1>
+                            <field name="name" placeholder="Ej. Samsung, Apple, Lenovo, Dell..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="descripcion" placeholder="Notas sobre la marca..."/>
+                        </group>
+                        <group>
+                            <field name="active" widget="boolean_toggle"/>
+                            <field name="total_modelos" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Modelos Registrados" name="modelos">
+                            <field name="modelo_ids">
+                                <list editable="bottom">
+                                    <field name="name" string="Nombre del Modelo"/>
+                                    <field name="tipo_equipo_id" options="{'no_create_edit': False}" optional="show"/>
+                                    <field name="descripcion" optional="show"/>
+                                    <field name="active" widget="boolean_toggle" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_flota_equipo_marca_search" model="ir.ui.view">
+        <field name="name">flota.equipo.marca.search</field>
+        <field name="model">flota.equipo.marca</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Marcas">
+                <field name="name"/>
+                <field name="descripcion"/>
+                <filter string="Archivadas" name="archived" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- VISTAS MODELO -->
+    <record id="view_flota_equipo_modelo_list" model="ir.ui.view">
+        <field name="name">flota.equipo.modelo.list</field>
+        <field name="model">flota.equipo.modelo</field>
+        <field name="arch" type="xml">
+            <list string="Modelos de Equipos" decoration-muted="not active">
+                <field name="name"/>
+                <field name="marca_id"/>
+                <field name="tipo_equipo_id" optional="show"/>
+                <field name="descripcion" optional="show"/>
+                <field name="active" widget="boolean_toggle" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_flota_equipo_modelo_form" model="ir.ui.view">
+        <field name="name">flota.equipo.modelo.form</field>
+        <field name="model">flota.equipo.modelo</field>
+        <field name="arch" type="xml">
+            <form string="Modelo de Equipos">
+                <sheet>
+                    <widget name="web_ribbon" title="Archivado" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name" class="oe_edit_only" string="Nombre del Modelo"/>
+                        <h1>
+                            <field name="name" placeholder="Ej. Galaxy A14, ThinkPad E14, Latitude 3420..."/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Marca y Tipo">
+                            <field name="marca_id" options="{'no_create_edit': False}"/>
+                            <field name="tipo_equipo_id" options="{'no_create_edit': False}"/>
+                        </group>
+                        <group string="Detalles y Estado">
+                            <field name="descripcion" placeholder="Especificaciones, memoria, etc."/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_flota_equipo_modelo_search" model="ir.ui.view">
+        <field name="name">flota.equipo.modelo.search</field>
+        <field name="model">flota.equipo.modelo</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Modelos">
+                <field name="name"/>
+                <field name="marca_id"/>
+                <field name="tipo_equipo_id"/>
+                <separator/>
+                <filter string="Archivados" name="archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter string="Marca" name="group_marca" context="{'group_by': 'marca_id'}"/>
+                    <filter string="Tipo de Equipo" name="group_tipo" context="{'group_by': 'tipo_equipo_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+</odoo>

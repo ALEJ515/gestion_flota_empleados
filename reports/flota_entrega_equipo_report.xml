@@ -119,8 +119,8 @@
                             <t t-foreach="lineas_devueltas_equipo" t-as="l">
                                 <tr>
                                     <td><span t-field="l.tipo_equipo"/></td>
-                                    <td><span t-field="l.marca"/></td>
-                                    <td><span t-field="l.modelo"/></td>
+                                    <td><span t-field="l.marca_id" t-if="l.marca_id"/><span t-field="l.marca" t-elif="l.marca"/></td>
+                                    <td><span t-field="l.modelo_id" t-if="l.modelo_id"/><span t-field="l.modelo" t-elif="l.modelo"/></td>
                                     <td style="text-align: center;"><span t-field="l.cantidad"/></td>
                                     <td><span t-field="l.imei_serial"/></td>
                                     <td style="text-align: center;"><span t-field="l.estado_equipo"/></td>
@@ -137,7 +137,7 @@
                                     <t t-if="l.observaciones">
                                         <tr>
                                             <td>
-                                                <strong><span t-field="l.tipo_equipo"/><t t-if="l.modelo"> — <span t-field="l.modelo"/></t>:</strong>
+                                                <strong><span t-field="l.tipo_equipo"/><t t-if="l.modelo_id"> — <span t-field="l.modelo_id.name"/></t><t t-elif="l.modelo"> — <span t-field="l.modelo"/></t>:</strong>
                                                 <span t-field="l.observaciones"/>
                                             </td>
                                         </tr>
@@ -175,8 +175,8 @@
                             <t t-foreach="lineas_equipo" t-as="l">
                                 <tr>
                                     <td><span t-field="l.tipo_equipo"/></td>
-                                    <td><span t-field="l.marca"/></td>
-                                    <td><span t-field="l.modelo"/></td>
+                                    <td><span t-field="l.marca_id" t-if="l.marca_id"/><span t-field="l.marca" t-elif="l.marca"/></td>
+                                    <td><span t-field="l.modelo_id" t-if="l.modelo_id"/><span t-field="l.modelo" t-elif="l.modelo"/></td>
                                     <td style="text-align: center;"><span t-field="l.cantidad"/></td>
                                     <td><span t-field="l.imei_serial"/></td>
                                     <td style="text-align: center;"><span t-field="l.estado_equipo"/></td>
@@ -194,7 +194,7 @@
                                     <t t-if="l.observaciones">
                                         <tr>
                                             <td>
-                                                <strong><span t-field="l.tipo_equipo"/><t t-if="l.modelo"> — <span t-field="l.modelo"/></t>:</strong>
+                                                <strong><span t-field="l.tipo_equipo"/><t t-if="l.modelo_id"> — <span t-field="l.modelo_id.name"/></t><t t-elif="l.modelo"> — <span t-field="l.modelo"/></t>:</strong>
                                                 <span t-field="l.observaciones"/>
                                             </td>
                                         </tr>

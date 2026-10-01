@@ -37,6 +37,7 @@
                 <field name="ruta_id" optional="show"/>
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
+                <field name="plan_datos_id" optional="show"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
@@ -82,6 +83,7 @@
                         </group>
                         <group string="Contacto y Facturación">
                             <field name="numero_flota" placeholder="Ej. 809 206-0146"/>
+                            <field name="plan_datos_id" options="{'no_create_edit': False}" placeholder="Seleccionar Plan de Datos..."/>
                             <field name="ultima_facturacion_monto" widget="monetary" readonly="1"/>
                             <field name="penultima_facturacion_monto" widget="monetary" readonly="1"/>
                             <field name="comparativa_indicador_html" widget="html" string="Tendencia vs Anterior" readonly="1"/>
@@ -198,6 +200,7 @@
                 <field name="ubicacion_id"/>
                 <field name="ruta_id"/>
                 <field name="numero_flota"/>
+                <field name="plan_datos_id"/>
                 <filter string="Activos" name="active_filter" domain="[('estado', '=', 'active')]"/>
                 <filter string="Inactivos" name="inactive_filter" domain="[('estado', '=', 'inactive')]"/>
                 <filter string="Borradores" name="draft_filter" domain="[('estado', '=', 'draft')]"/>
@@ -208,6 +211,7 @@
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
+                    <filter string="Plan de Datos" name="group_plan_datos" context="{'group_by': 'plan_datos_id'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
                 </group>
                 <searchpanel>

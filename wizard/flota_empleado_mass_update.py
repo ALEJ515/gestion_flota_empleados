@@ -23,6 +23,9 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
     set_cargo = fields.Boolean(string='Modificar Cargo')
     cargo = fields.Char(string='Cargo')
 
+    set_plan_datos = fields.Boolean(string='Modificar Plan de Datos')
+    plan_datos_id = fields.Many2one('flota.plan.datos', string='Plan de Datos', ondelete='set null')
+
     set_estado = fields.Boolean(string='Modificar Estado')
     estado = fields.Selection([
         ('draft', 'Borrador'),
@@ -68,6 +71,10 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
                 raise UserError(_('Por favor introduzca un Cargo válido.'))
             vals['cargo'] = self.cargo.strip()
             changes_desc.append(f"Cargo: {self.cargo.strip()}")
+
+        if self.set_plan_datos:
+            vals['plan_datos_id'] = self.plan_datos_id.id or False
+            changes_desc.append(f"Plan de Datos: {self.plan_datos_id.name if self.plan_datos_id else 'Sin asignar'}")
 
         if self.set_estado:
             if not self.estado:
