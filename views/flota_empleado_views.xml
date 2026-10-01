@@ -38,6 +38,15 @@
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
                 <field name="plan_datos_id" optional="show"/>
+                <field name="estado_cambiazo" widget="badge" string="Cambiazo" optional="show"
+                       decoration-success="estado_cambiazo in ('apto_12', 'apto_18')"
+                       decoration-warning="estado_cambiazo == 'proximo'"
+                       decoration-info="estado_cambiazo == 'en_espera'"
+                       decoration-muted="estado_cambiazo in ('sin_plan', 'sin_fecha')"/>
+                <field name="fecha_ultimo_cambiazo" optional="hide"/>
+                <field name="fecha_cambiazo_12m" optional="hide"/>
+                <field name="fecha_cambiazo_18m" optional="hide"/>
+                <field name="dias_para_cambiazo" optional="hide"/>
                 <field name="en_ultima_factura" string="En Factura Claro" widget="boolean" optional="show"/>
                 <field name="currency_id" column_invisible="1"/>
                 <field name="ultima_facturacion_monto" widget="monetary" string="Última Factura (RD$)" optional="show" sum="Total Facturado"/>
@@ -57,12 +66,17 @@
         <field name="arch" type="xml">
             <form string="Empleado y Flota">
                 <header>
+                    <button name="action_registrar_cambiazo" type="object" string="Registrar Cambiazo"
+                            class="btn-primary" icon="fa-refresh" invisible="not plan_datos_id or not id"/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,active,inactive" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
                         <button name="action_view_entregas_equipo" type="object" class="oe_stat_button" icon="fa-mobile">
                             <field name="entrega_equipo_count" widget="statinfo" string="Actas de Equipos"/>
+                        </button>
+                        <button name="action_view_cambiazos" type="object" class="oe_stat_button" icon="fa-refresh">
+                            <field name="cambiazo_count" widget="statinfo" string="Cambiazos"/>
                         </button>
                     </div>
                     <widget name="web_ribbon" title="Borrador" bg_color="bg-warning" invisible="not active or estado != 'draft'"/>
@@ -92,6 +106,22 @@
                             <field name="active" widget="boolean_toggle" string="Activo en Sistema"/>
                         </group>
                     </group>
+                    <group string="Cambiazo de Equipo" name="cambiazo">
+                        <group>
+                            <field name="fecha_ultimo_cambiazo"/>
+                            <field name="estado_cambiazo" widget="badge"
+                                   decoration-success="estado_cambiazo in ('apto_12', 'apto_18')"
+                                   decoration-warning="estado_cambiazo == 'proximo'"
+                                   decoration-info="estado_cambiazo == 'en_espera'"
+                                   decoration-muted="estado_cambiazo in ('sin_plan', 'sin_fecha')"/>
+                            <field name="meses_desde_cambiazo" invisible="not fecha_ultimo_cambiazo"/>
+                        </group>
+                        <group>
+                            <field name="fecha_cambiazo_12m" invisible="not fecha_ultimo_cambiazo"/>
+                            <field name="fecha_cambiazo_18m" invisible="not fecha_ultimo_cambiazo"/>
+                            <field name="dias_para_cambiazo" invisible="not fecha_ultimo_cambiazo or estado_cambiazo in ('sin_plan', 'apto_18')"/>
+                        </group>
+                    </group>
                     <notebook>
                         <page string="Historial de Consumo Telefónico" name="invoice_history">
                             <field name="historial_factura_linea_ids" readonly="1">
@@ -109,6 +139,20 @@
                                     <field name="monto_roaming" widget="monetary" string="Roaming separado (no informado)" optional="hide"/>
                                     <field name="total_linea" widget="monetary" string="Total (RD$)" optional="show"/>
                                     <field name="estado_linea" widget="badge" optional="show" decoration-success="estado_linea=='ok'" decoration-info="estado_linea=='sin_consumo'" decoration-warning="estado_linea in ['exceso_data', 'exceso_roaming', 'exceso_data_roaming']" decoration-danger="estado_linea=='desconocido'"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Historial de Cambiazos" name="cambiazos">
+                            <field name="cambiazo_ids" readonly="1">
+                                <list>
+                                    <field name="fecha"/>
+                                    <field name="tipo_cambiazo" widget="badge"/>
+                                    <field name="meses_desde_anterior"/>
+                                    <field name="plan_datos_id"/>
+                                    <field name="modelo_anterior_id"/>
+                                    <field name="modelo_nuevo_id"/>
+                                    <field name="imei_nuevo" optional="hide"/>
+                                    <field name="notas" optional="hide"/>
                                 </list>
                             </field>
                         </page>
@@ -206,17 +250,26 @@
                 <filter string="Borradores" name="draft_filter" domain="[('estado', '=', 'draft')]"/>
                 <separator/>
                 <filter string="Archivados" name="archived" domain="[('active', '=', False)]"/>
+                <separator/>
+                <filter string="Aptos para Cambiazo" name="cambiazo_aptos" domain="[('estado_cambiazo', 'in', ('apto_12', 'apto_18'))]"/>
+                <filter string="Apto Cambiazo 12 Meses" name="cambiazo_apto_12" domain="[('estado_cambiazo', '=', 'apto_12')]"/>
+                <filter string="Apto Cambiazo 18 Meses" name="cambiazo_apto_18" domain="[('estado_cambiazo', '=', 'apto_18')]"/>
+                <filter string="Próximos a Cambiazo (30 días)" name="cambiazo_proximo" domain="[('estado_cambiazo', '=', 'proximo')]"/>
+                <filter string="Sin Fecha de Cambiazo" name="cambiazo_sin_fecha" domain="[('estado_cambiazo', '=', 'sin_fecha')]"/>
+                <filter string="Sin Plan de Datos" name="sin_plan_datos" domain="[('plan_datos_id', '=', False)]"/>
                 <group>
                     <filter string="Cargo" name="group_cargo" context="{'group_by': 'cargo'}"/>
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
                     <filter string="Plan de Datos" name="group_plan_datos" context="{'group_by': 'plan_datos_id'}"/>
+                    <filter string="Estado Cambiazo" name="group_estado_cambiazo" context="{'group_by': 'estado_cambiazo'}"/>
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
                 </group>
                 <searchpanel>
                     <field name="ubicacion_id" string="Ubicación" icon="fa-map-marker" enable_counters="1"/>
                     <field name="departamento_id" string="Departamento" icon="fa-building" enable_counters="1"/>
+                    <field name="estado_cambiazo" string="Cambiazo" icon="fa-refresh" enable_counters="1"/>
                 </searchpanel>
             </search>
         </field>

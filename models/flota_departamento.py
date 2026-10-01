@@ -4,7 +4,7 @@ from odoo.exceptions import ValidationError
 class FlotaDepartamento(models.Model):
     _name = 'flota.departamento'
     _description = 'Departamento de Flota'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
 
     name = fields.Char(string='Nombre del Departamento', required=True, index=True, tracking=True)

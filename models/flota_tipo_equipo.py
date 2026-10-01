@@ -4,6 +4,7 @@ from odoo import models, fields
 class FlotaTipoEquipo(models.Model):
     _name = 'flota.tipo.equipo'
     _description = 'Equipo o Licencia (Catálogo)'
+    _inherit = ['flota.import.mixin']
     _order = 'name asc'
 
     name = fields.Char(string='Equipo o Licencia', required=True, index=True)

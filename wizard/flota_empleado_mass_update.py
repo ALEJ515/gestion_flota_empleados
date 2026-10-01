@@ -26,6 +26,9 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
     set_plan_datos = fields.Boolean(string='Modificar Plan de Datos')
     plan_datos_id = fields.Many2one('flota.plan.datos', string='Plan de Datos', ondelete='set null')
 
+    set_fecha_cambiazo = fields.Boolean(string='Modificar Fecha Último Cambiazo')
+    fecha_ultimo_cambiazo = fields.Date(string='Fecha Último Cambiazo')
+
     set_estado = fields.Boolean(string='Modificar Estado')
     estado = fields.Selection([
         ('draft', 'Borrador'),
@@ -75,6 +78,11 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
         if self.set_plan_datos:
             vals['plan_datos_id'] = self.plan_datos_id.id or False
             changes_desc.append(f"Plan de Datos: {self.plan_datos_id.name if self.plan_datos_id else 'Sin asignar'}")
+
+        if self.set_fecha_cambiazo:
+            vals['fecha_ultimo_cambiazo'] = self.fecha_ultimo_cambiazo or False
+            fecha_txt = fields.Date.to_string(self.fecha_ultimo_cambiazo) if self.fecha_ultimo_cambiazo else 'Sin fecha'
+            changes_desc.append(f"Fecha Último Cambiazo: {fecha_txt}")
 
         if self.set_estado:
             if not self.estado:

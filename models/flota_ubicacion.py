@@ -4,7 +4,7 @@ from odoo.exceptions import ValidationError
 class FlotaUbicacion(models.Model):
     _name = 'flota.ubicacion'
     _description = 'Ubicación de Flota'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
 
     name = fields.Char(string='Nombre de la Ubicación', required=True, index=True, tracking=True)

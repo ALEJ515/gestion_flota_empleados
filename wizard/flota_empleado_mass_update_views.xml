@@ -45,6 +45,12 @@
                                 <field name="plan_datos_id" invisible="not set_plan_datos" placeholder="Seleccionar Plan de Datos..."/>
                             </div>
 
+                            <label for="set_fecha_cambiazo" string="Fecha Último Cambiazo"/>
+                            <div class="o_row">
+                                <field name="set_fecha_cambiazo" class="me-2"/>
+                                <field name="fecha_ultimo_cambiazo" invisible="not set_fecha_cambiazo"/>
+                            </div>
+
                             <label for="set_estado" string="Estado"/>
                             <div class="o_row">
                                 <field name="set_estado" class="me-2"/>

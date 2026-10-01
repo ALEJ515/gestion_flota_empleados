@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_flota_cambiazo_list" model="ir.ui.view">
+        <field name="name">flota.cambiazo.list</field>
+        <field name="model">flota.cambiazo</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="fecha"/>
+                <field name="empleado_id"/>
+                <field name="numero_flota"/>
+                <field name="departamento_id" optional="show"/>
+                <field name="ubicacion_id" optional="hide"/>
+                <field name="plan_datos_id" optional="show"/>
+                <field name="tipo_cambiazo" widget="badge" optional="show"
+                       decoration-info="tipo_cambiazo == 'inicial'"
+                       decoration-warning="tipo_cambiazo == 'anticipado'"
+                       decoration-success="tipo_cambiazo in ('12', '18')"/>
+                <field name="fecha_cambiazo_anterior" optional="hide"/>
+                <field name="meses_desde_anterior" optional="hide"/>
+                <field name="modelo_anterior_id" optional="show"/>
+                <field name="modelo_nuevo_id" optional="show"/>
+                <field name="imei_nuevo" optional="hide"/>
+                <field name="user_id" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_flota_cambiazo_form" model="ir.ui.view">
+        <field name="name">flota.cambiazo.form</field>
+        <field name="model">flota.cambiazo</field>
+        <field name="arch" type="xml">
+            <form string="Cambiazo de Equipo">
+                <sheet>
+                    <div class="alert alert-info mb-3" role="alert">
+                        <i class="fa fa-info-circle me-2"/>
+                        Al guardar, la <strong>Fecha del Cambiazo</strong> pasa a ser la fecha del último cambiazo
+                        del número y desde ese día se vuelven a contar los 12 y 18 meses.
+                    </div>
+                    <group>
+                        <group string="Número">
+                            <field name="empleado_id" options="{'no_create': True}"/>
+                            <field name="numero_flota"/>
+                            <field name="plan_datos_id" options="{'no_create': True}"/>
+                        </group>
+                        <group string="Cambiazo">
+                            <field name="fecha"/>
+                            <field name="fecha_cambiazo_anterior" invisible="not fecha_cambiazo_anterior"/>
+                            <field name="meses_desde_anterior" invisible="not fecha_cambiazo_anterior"/>
+                            <field name="tipo_cambiazo" widget="badge" invisible="not id"/>
+                            <field name="user_id" invisible="not id"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Equipo Entregado (anterior)">
+                            <field name="marca_anterior_id" options="{'no_create_edit': True}"/>
+                            <field name="modelo_anterior_id" options="{'no_create_edit': True}"/>
+                            <field name="imei_anterior"/>
+                        </group>
+                        <group string="Equipo Recibido (nuevo)">
+                            <field name="marca_nueva_id" options="{'no_create_edit': True}"/>
+                            <field name="modelo_nuevo_id" options="{'no_create_edit': True}"/>
+                            <field name="imei_nuevo"/>
+                        </group>
+                    </group>
+                    <field name="notas" placeholder="Observaciones del cambiazo (penalidad, promoción, condición del equipo, etc.)"/>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_flota_cambiazo_search" model="ir.ui.view">
+        <field name="name">flota.cambiazo.search</field>
+        <field name="model">flota.cambiazo</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Cambiazos">
+                <field name="empleado_id"/>
+                <field name="numero_flota"/>
+                <field name="plan_datos_id"/>
+                <field name="modelo_nuevo_id"/>
+                <field name="imei_nuevo"/>
+                <filter string="A los 12 meses" name="tipo_12" domain="[('tipo_cambiazo', '=', '12')]"/>
+                <filter string="A los 18 meses" name="tipo_18" domain="[('tipo_cambiazo', '=', '18')]"/>
+                <filter string="Anticipados" name="tipo_anticipado" domain="[('tipo_cambiazo', '=', 'anticipado')]"/>
+                <separator/>
+                <filter string="Fecha" name="filter_fecha" date="fecha"/>
+                <group>
+                    <filter string="Empleado" name="group_empleado" context="{'group_by': 'empleado_id'}"/>
+                    <filter string="Departamento" name="group_departamento" context="{'group_by': 'departamento_id'}"/>
+                    <filter string="Plan de Datos" name="group_plan" context="{'group_by': 'plan_datos_id'}"/>
+                    <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo_cambiazo'}"/>
+                    <filter string="Mes" name="group_mes" context="{'group_by': 'fecha:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_flota_cambiazo" model="ir.actions.act_window">
+        <field name="name">Historial de Cambiazos</field>
+        <field name="res_model">flota.cambiazo</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">No hay cambiazos registrados.</p>
+            <p>Registre un cambiazo desde el perfil del empleado con el botón <strong>Registrar Cambiazo</strong>.</p>
+        </field>
+    </record>
+
+    <record id="ir_cron_flota_actualizar_cambiazos" model="ir.cron">
+        <field name="name">Flota: Actualizar estado de cambiazos</field>
+        <field name="model_id" ref="model_flota_empleado"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_actualizar_estado_cambiazo()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>

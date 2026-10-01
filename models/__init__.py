@@ -1,4 +1,5 @@
 from . import phone_utils
+from . import flota_import_mixin
 from . import flota_departamento
 from . import flota_ubicacion
 from . import flota_ruta
@@ -8,3 +9,4 @@ from . import flota_tipo_equipo
 from . import flota_equipo_marca_modelo
 from . import flota_plan_datos
 from . import flota_entrega_equipo
+from . import flota_cambiazo

@@ -4,7 +4,7 @@ from odoo import models, fields, api
 class FlotaPlanDatos(models.Model):
     _name = 'flota.plan.datos'
     _description = 'Plan de Datos y Telefonía'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
 
     name = fields.Char(

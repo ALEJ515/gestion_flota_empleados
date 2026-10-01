@@ -5,7 +5,7 @@ from odoo.exceptions import ValidationError
 class FlotaEquipoMarca(models.Model):
     _name = 'flota.equipo.marca'
     _description = 'Marca de Equipos'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
 
     name = fields.Char(string='Marca', required=True, index=True, tracking=True)
@@ -36,7 +36,7 @@ class FlotaEquipoMarca(models.Model):
 class FlotaEquipoModelo(models.Model):
     _name = 'flota.equipo.modelo'
     _description = 'Modelo de Equipos'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'marca_id asc, name asc'
 
     name = fields.Char(string='Modelo', required=True, index=True, tracking=True)
@@ -61,6 +61,19 @@ class FlotaEquipoModelo(models.Model):
     _sql_constraints = [
         ('marca_name_uniq', 'unique(marca_id, name)', 'Ya existe este modelo registrado para la misma marca.'),
     ]
+
+    @api.model
+    def _flota_import_buscar_existente(self, fila):
+        """Un modelo se identifica por nombre + marca (el mismo nombre puede repetirse en marcas distintas)."""
+        nombre = fila.get('name')
+        if not isinstance(nombre, str) or not nombre.strip():
+            return self.browse()
+        dominio = [('name', '=ilike', nombre.strip())]
+        marca = fila.get('marca_id')
+        if isinstance(marca, str) and marca.strip():
+            dominio.append(('marca_id.name', '=ilike', marca.strip()))
+        encontrados = self.with_context(active_test=False).search(dominio, limit=2)
+        return encontrados if len(encontrados) == 1 else self.browse()
 
     @api.depends('name', 'marca_id.name')
     def _compute_display_name(self):

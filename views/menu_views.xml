@@ -19,6 +19,12 @@
               action="action_flota_entrega_equipo"
               sequence="20"/>
 
+    <menuitem id="menu_flota_cambiazo"
+              name="Historial de Cambiazos"
+              parent="menu_flota_root"
+              action="action_flota_cambiazo"
+              sequence="25"/>
+
     <!-- Catálogo "Estructura y Recursos": agrupa los catálogos de apoyo
          (Departamentos, Ubicaciones, Rutas y Equipo o Licencias) para no
          saturar visualmente el menú raíz con muchos catálogos sueltos. -->

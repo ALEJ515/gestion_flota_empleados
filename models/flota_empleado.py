@@ -1,10 +1,25 @@
 import logging
 import re
+from dateutil.relativedelta import relativedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from .phone_utils import whatsapp_url
 
 _logger = logging.getLogger(__name__)
+
+# Plazos (en meses) desde el último cambiazo en los que el número vuelve a ser apto.
+MESES_CAMBIAZO_1 = 12
+MESES_CAMBIAZO_2 = 18
+DIAS_AVISO_CAMBIAZO = 30
+
+ESTADOS_CAMBIAZO = [
+    ('sin_plan', 'Sin Plan de Datos'),
+    ('sin_fecha', 'Sin Fecha de Cambiazo'),
+    ('en_espera', 'En Espera (< 12 meses)'),
+    ('proximo', 'Próximo a Aplicar (≤ 30 días)'),
+    ('apto_12', 'Apto Cambiazo 12 Meses'),
+    ('apto_18', 'Apto Cambiazo 18 Meses'),
+]
 
 def _normalize_phone(phone_str):
     if not phone_str:
@@ -30,7 +45,7 @@ def _formatear_numero_flota(valor):
 class FlotaEmpleado(models.Model):
     _name = 'flota.empleado'
     _description = 'Empleado y Flota Telefónica'
-    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc, id desc'
 
     def _auto_init(self):
@@ -82,6 +97,53 @@ class FlotaEmpleado(models.Model):
         index=True,
         tracking=True,
         help="Plan de datos o paquete telefónico contratado para la flota de este empleado."
+    )
+
+    # Cambiazo de equipo: el número vuelve a ser apto a los 12 y a los 18 meses
+    # contados desde el último cambiazo, siempre que tenga Plan de Datos.
+    fecha_ultimo_cambiazo = fields.Date(
+        string='Fecha Último Cambiazo',
+        tracking=True,
+        help="Día en que se realizó el último cambiazo de equipo de este número. "
+             "Desde esta fecha se cuentan los 12 y 18 meses. Se actualiza sola al registrar un cambiazo."
+    )
+    fecha_cambiazo_12m = fields.Date(
+        string='Apto Cambiazo (12 meses)',
+        compute='_compute_fechas_cambiazo',
+        store=True
+    )
+    fecha_cambiazo_18m = fields.Date(
+        string='Apto Cambiazo (18 meses)',
+        compute='_compute_fechas_cambiazo',
+        store=True
+    )
+    meses_desde_cambiazo = fields.Integer(
+        string='Meses desde Último Cambiazo',
+        compute='_compute_estado_cambiazo',
+        store=True
+    )
+    dias_para_cambiazo = fields.Integer(
+        string='Días para Próximo Cambiazo',
+        compute='_compute_estado_cambiazo',
+        store=True,
+        help="Días que faltan para que el número sea apto (12 meses) o pase a apto de 18 meses. 0 = ya aplica."
+    )
+    estado_cambiazo = fields.Selection(
+        ESTADOS_CAMBIAZO,
+        string='Estado Cambiazo',
+        compute='_compute_estado_cambiazo',
+        store=True,
+        index=True,
+        help="Se recalcula automáticamente todos los días."
+    )
+    cambiazo_ids = fields.One2many(
+        'flota.cambiazo',
+        'empleado_id',
+        string='Historial de Cambiazos'
+    )
+    cambiazo_count = fields.Integer(
+        string='Cambiazos',
+        compute='_compute_cambiazo_count'
     )
     estado = fields.Selection([
         ('draft', 'Borrador'),
@@ -245,6 +307,95 @@ class FlotaEmpleado(models.Model):
     def _compute_numero_flota_digits(self):
         for record in self:
             record.numero_flota_digits = _normalize_phone(record.numero_flota)
+
+    @api.depends('cambiazo_ids')
+    def _compute_cambiazo_count(self):
+        for rec in self:
+            rec.cambiazo_count = len(rec.cambiazo_ids)
+
+    @api.depends('fecha_ultimo_cambiazo')
+    def _compute_fechas_cambiazo(self):
+        for rec in self:
+            fecha = rec.fecha_ultimo_cambiazo
+            rec.fecha_cambiazo_12m = fecha + relativedelta(months=MESES_CAMBIAZO_1) if fecha else False
+            rec.fecha_cambiazo_18m = fecha + relativedelta(months=MESES_CAMBIAZO_2) if fecha else False
+
+    @api.depends('fecha_ultimo_cambiazo', 'fecha_cambiazo_12m', 'fecha_cambiazo_18m', 'plan_datos_id')
+    def _compute_estado_cambiazo(self):
+        hoy = fields.Date.context_today(self)
+        for rec in self:
+            fecha = rec.fecha_ultimo_cambiazo
+            if fecha and hoy > fecha:
+                diff = relativedelta(hoy, fecha)
+                rec.meses_desde_cambiazo = diff.years * 12 + diff.months
+            else:
+                rec.meses_desde_cambiazo = 0
+
+            if not rec.plan_datos_id:
+                rec.estado_cambiazo = 'sin_plan'
+                rec.dias_para_cambiazo = 0
+            elif not fecha:
+                rec.estado_cambiazo = 'sin_fecha'
+                rec.dias_para_cambiazo = 0
+            elif hoy < rec.fecha_cambiazo_12m:
+                dias = (rec.fecha_cambiazo_12m - hoy).days
+                rec.dias_para_cambiazo = dias
+                rec.estado_cambiazo = 'proximo' if dias <= DIAS_AVISO_CAMBIAZO else 'en_espera'
+            elif hoy < rec.fecha_cambiazo_18m:
+                rec.estado_cambiazo = 'apto_12'
+                rec.dias_para_cambiazo = (rec.fecha_cambiazo_18m - hoy).days
+            else:
+                rec.estado_cambiazo = 'apto_18'
+                rec.dias_para_cambiazo = 0
+
+    @api.model
+    def _cron_actualizar_estado_cambiazo(self):
+        """Los estados dependen de la fecha de hoy: se recalculan una vez al día."""
+        empleados = self.with_context(active_test=False).search([])
+        for fname in ('meses_desde_cambiazo', 'dias_para_cambiazo', 'estado_cambiazo'):
+            self.env.add_to_compute(self._fields[fname], empleados)
+        self.env.flush_all()
+
+    def action_registrar_cambiazo(self):
+        self.ensure_one()
+        if not self.plan_datos_id:
+            raise UserError(_('El número %s no tiene Plan de Datos asignado; el cambiazo solo aplica a números con plan.') % (self.numero_flota or self.name))
+        return {
+            'name': _('Registrar Cambiazo - %s') % self.name,
+            'type': 'ir.actions.act_window',
+            'res_model': 'flota.cambiazo',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_empleado_id': self.id},
+        }
+
+    def action_view_cambiazos(self):
+        self.ensure_one()
+        return {
+            'name': _('Cambiazos - %s') % self.name,
+            'type': 'ir.actions.act_window',
+            'res_model': 'flota.cambiazo',
+            'view_mode': 'list,form',
+            'domain': [('empleado_id', '=', self.id)],
+            'context': {'default_empleado_id': self.id},
+        }
+
+    @api.model
+    def _flota_import_buscar_existente(self, fila):
+        """Al importar sin ID se identifica al empleado por su Número de Flota y, si no viene, por su nombre."""
+        Empleado = self.with_context(active_test=False)
+        numero = fila.get('numero_flota')
+        digitos = _normalize_phone(numero) if numero else ''
+        if digitos:
+            encontrado = Empleado.search([('numero_flota_digits', '=', digitos)], limit=2)
+            if len(encontrado) == 1:
+                return encontrado
+        nombre = fila.get('name')
+        if isinstance(nombre, str) and nombre.strip():
+            encontrado = Empleado.search([('name', '=ilike', nombre.strip())], limit=2)
+            if len(encontrado) == 1:
+                return encontrado
+        return self.browse()
 
     @api.model_create_multi
     def create(self, vals_list):
