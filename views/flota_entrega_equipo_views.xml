@@ -72,6 +72,10 @@
                             <field name="ruta_id" options="{'no_create_edit': False}"/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="recibido_por"/>
+                            <div class="text-muted" colspan="2">
+                                Nombre, cargo, ruta, localidad y teléfono están vinculados al perfil del empleado.
+                                Editarlos actualiza su perfil y todas sus actas, incluidas las confirmadas.
+                            </div>
                             <field name="telefono_flota"/>
                         </group>
                         <group string="Control Documental">

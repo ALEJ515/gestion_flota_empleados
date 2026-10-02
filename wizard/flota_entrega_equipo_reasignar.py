@@ -60,11 +60,6 @@ class FlotaEntregaEquipoReasignarWizard(models.TransientModel):
 
         default_vals = {
             'empleado_id': nuevo_empleado.id,
-            'ruta_id': nuevo_empleado.ruta_id.id,
-            'ubicacion_id': nuevo_empleado.ubicacion_id.id,
-            'telefono_flota': nuevo_empleado.numero_flota,
-            'recibido_por': nuevo_empleado.name,
-            'cargo': nuevo_empleado.cargo,
             'estado': 'draft',
             'fecha': fields.Date.context_today(self),
             'reasignado_de_id': origen.id,

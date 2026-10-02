@@ -38,12 +38,12 @@
                 <field name="cargo" optional="show"/>
                 <field name="numero_flota" optional="show"/>
                 <field name="plan_datos_id" optional="show"/>
-                <field name="estado_cambiazo" widget="badge" string="Cambiazo" optional="show"
+                <field name="estado_cambiazo" widget="badge" string="Estado Cambiazo (Calculado)" optional="show"
                        decoration-success="estado_cambiazo in ('apto_12', 'apto_18')"
                        decoration-warning="estado_cambiazo == 'proximo'"
                        decoration-info="estado_cambiazo == 'en_espera'"
                        decoration-muted="estado_cambiazo in ('sin_plan', 'sin_fecha')"/>
-                <field name="fecha_ultimo_cambiazo" optional="hide"/>
+                <field name="fecha_ultimo_cambiazo" optional="show"/>
                 <field name="fecha_cambiazo_12m" optional="hide"/>
                 <field name="fecha_cambiazo_18m" optional="hide"/>
                 <field name="dias_para_cambiazo" optional="hide"/>

@@ -4,6 +4,23 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.88.0] - 2026-10-02
+### Fechas de cambiazo y datos vinculados de las actas
+- La lista de empleados muestra **Fecha Último Cambiazo** y distingue el **Estado Cambiazo (Calculado)**.
+- Para actualizar fechas desde una plantilla: exportar **ID** y **Fecha Último Cambiazo**, conservar los IDs,
+  escribir fechas como `2025-10-01` (AAAA-MM-DD) e importar mapeando esa columna a **Fecha Último Cambiazo**.
+  Con Plan de Datos, las fechas de 12/18 meses y el estado se recalculan al guardar. Sin plan no aplica;
+  sin fecha queda pendiente. Las columnas calculadas/facturación se pueden conservar y se ignoran al importar.
+- Cargar la fecha desde una plantilla actualiza la referencia del conteo, pero no crea un evento de historial
+  ni un acta. El botón **Registrar Cambiazo** sigue siendo la opción para registrar el evento completo.
+- La columna Modelo y el PDF muestran solamente el nombre del modelo; Marca continúa en su propia columna.
+- Nombre/responsable, cargo, ruta, localidad y teléfono del acta se vinculan al perfil del empleado.
+  Los cambios en cualquiera de las dos pantallas se reflejan en las demás actas y en los PDF generados
+  después, incluidas las actas confirmadas. No se modifican PDF ya descargados, equipos, firmas ni fechas.
+- La actualización del módulo sincroniza las actas existentes con los datos vigentes del empleado.
+
+---
+
 ## [v1.29.0] - 2026-09-05
 ### Corrección del Desglose por Empleado
 - Se corrigieron las etiquetas para diferenciar renta del plan y otros servicios.

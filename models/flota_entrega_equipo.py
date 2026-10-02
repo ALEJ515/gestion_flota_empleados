@@ -67,7 +67,8 @@ class FlotaEntregaEquipo(models.Model):
         ondelete='restrict',
         index=True,
         tracking=True,
-        help="Empleado al que se le entrega o recibe el equipo. Al seleccionarlo se autocompletan Ruta, Localidad, Teléfono de flota y Responsable."
+        help="Empleado al que se le entrega o recibe el equipo. Ruta, Localidad, Teléfono, Responsable "
+             "y Cargo están vinculados a su perfil; al editarlos también se actualiza el empleado."
     )
     fecha = fields.Date(string='Fecha', default=fields.Date.context_today, required=True, tracking=True)
     estado = fields.Selection([
@@ -75,12 +76,14 @@ class FlotaEntregaEquipo(models.Model):
         ('confirmado', 'Confirmado'),
     ], string='Estado', default='draft', required=True, tracking=True, index=True)
 
-    # --- DATOS ENTREGA (autocompletados desde el Empleado, editables) ---
+    # Datos compartidos con el empleado, también editables desde el acta.
     cargo = fields.Char(
         string='Cargo',
+        related='empleado_id.cargo',
+        store=True,
+        readonly=False,
         tracking=True,
-        help="Cargo del empleado. Se autocompleta desde su ficha en Flota Empleados al seleccionar el Empleado, "
-             "pero puede editarse manualmente si es necesario."
+        help="Cargo vinculado al perfil del empleado. Editarlo actualiza su perfil y sus otras actas."
     )
     mostrar_ruta = fields.Boolean(
         string='Mostrar Ruta en el Documento',
@@ -93,10 +96,23 @@ class FlotaEntregaEquipo(models.Model):
         'res.users', string='Preparado por',
         default=lambda self: self.env.user, tracking=True
     )
-    ruta_id = fields.Many2one('flota.ruta', string='Ruta', tracking=True)
-    ubicacion_id = fields.Many2one('flota.ubicacion', string='Localidad', tracking=True)
-    recibido_por = fields.Char(string='Recibido por (Responsable)', tracking=True)
-    telefono_flota = fields.Char(string='Núm. de Teléfono (Flota)', tracking=True)
+    ruta_id = fields.Many2one(
+        'flota.ruta', string='Ruta', related='empleado_id.ruta_id',
+        store=True, readonly=False, tracking=True
+    )
+    ubicacion_id = fields.Many2one(
+        'flota.ubicacion', string='Localidad', related='empleado_id.ubicacion_id',
+        store=True, readonly=False, tracking=True
+    )
+    recibido_por = fields.Char(
+        string='Recibido o Entregado Por', related='empleado_id.name',
+        store=True, readonly=False, tracking=True,
+        help="Nombre vinculado al empleado. Editarlo cambia su nombre en el perfil y en todas sus actas."
+    )
+    telefono_flota = fields.Char(
+        string='Núm. de Teléfono (Flota)', related='empleado_id.numero_flota',
+        store=True, readonly=False, tracking=True
+    )
 
     # --- DATOS DE EQUIPO NUEVO ENTREGADO ---
     linea_ids = fields.One2many(
@@ -256,32 +272,6 @@ class FlotaEntregaEquipo(models.Model):
             cargo = (rec.cargo or '').strip().lower()
             rec.mostrar_ruta = bool(cargo) and any(k in cargo for k in ('vendedor', 'distribuidor'))
 
-    @api.onchange('empleado_id')
-    def _onchange_empleado_id(self):
-        for rec in self:
-            if rec.empleado_id:
-                rec.ruta_id = rec.empleado_id.ruta_id
-                rec.ubicacion_id = rec.empleado_id.ubicacion_id
-                rec.telefono_flota = rec.empleado_id.numero_flota
-                rec.recibido_por = rec.empleado_id.name
-                rec.cargo = rec.empleado_id.cargo
-
-    def _completar_datos_empleado(self, vals):
-        """Si vals trae un nuevo empleado_id, autocompleta (con setdefault, sin pisar valores que
-        ya vengan explícitos en el mismo vals) Ruta, Localidad, Teléfono de flota, Responsable y
-        Cargo desde la ficha de ese empleado. Sirve de respaldo a nivel de servidor del onchange
-        del formulario, para que estos datos queden siempre sincronizados con el Empleado
-        seleccionado sin importar el origen de la escritura (formulario, importación, etc.)."""
-        if vals.get('empleado_id'):
-            empleado = self.env['flota.empleado'].browse(vals['empleado_id'])
-            if empleado.exists():
-                vals.setdefault('ruta_id', empleado.ruta_id.id)
-                vals.setdefault('ubicacion_id', empleado.ubicacion_id.id)
-                vals.setdefault('telefono_flota', empleado.numero_flota)
-                vals.setdefault('recibido_por', empleado.name)
-                vals.setdefault('cargo', empleado.cargo)
-        return vals
-
     def action_open_whatsapp(self):
         self.ensure_one()
         url = whatsapp_url(self.telefono_flota)
@@ -326,15 +316,12 @@ class FlotaEntregaEquipo(models.Model):
         for vals in vals_list:
             if vals.get('name', _('Nuevo')) == _('Nuevo'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('flota.entrega.equipo') or _('Nuevo')
-            self._completar_datos_empleado(vals)
         records = super().create(vals_list)
         records._guardar_qr_por_defecto()
         records._guardar_texto_aceptacion_por_defecto()
         return records
 
     def write(self, vals):
-        if 'empleado_id' in vals:
-            vals = self._completar_datos_empleado(dict(vals))
         res = super().write(vals)
         if 'politica_qr_imagen' in vals:
             self._guardar_qr_por_defecto()

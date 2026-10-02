@@ -75,11 +75,7 @@ class FlotaEquipoModelo(models.Model):
         encontrados = self.with_context(active_test=False).search(dominio, limit=2)
         return encontrados if len(encontrados) == 1 else self.browse()
 
-    @api.depends('name', 'marca_id.name')
+    @api.depends('name')
     def _compute_display_name(self):
         for rec in self:
-            if rec.marca_id and rec.marca_id.name:
-                rec.display_name = f"{rec.marca_id.name} {rec.name}"
-            else:
-                rec.display_name = rec.name or ''
-
+            rec.display_name = rec.name or ''

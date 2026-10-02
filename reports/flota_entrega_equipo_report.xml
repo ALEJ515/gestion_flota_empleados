@@ -120,7 +120,7 @@
                                 <tr>
                                     <td><span t-field="l.tipo_equipo"/></td>
                                     <td><span t-field="l.marca_id" t-if="l.marca_id"/><span t-field="l.marca" t-elif="l.marca"/></td>
-                                    <td><span t-field="l.modelo_id" t-if="l.modelo_id"/><span t-field="l.modelo" t-elif="l.modelo"/></td>
+                                    <td><span t-field="l.modelo_id.name" t-if="l.modelo_id"/><span t-field="l.modelo" t-elif="l.modelo"/></td>
                                     <td style="text-align: center;"><span t-field="l.cantidad"/></td>
                                     <td><span t-field="l.imei_serial"/></td>
                                     <td style="text-align: center;"><span t-field="l.estado_equipo"/></td>
@@ -176,7 +176,7 @@
                                 <tr>
                                     <td><span t-field="l.tipo_equipo"/></td>
                                     <td><span t-field="l.marca_id" t-if="l.marca_id"/><span t-field="l.marca" t-elif="l.marca"/></td>
-                                    <td><span t-field="l.modelo_id" t-if="l.modelo_id"/><span t-field="l.modelo" t-elif="l.modelo"/></td>
+                                    <td><span t-field="l.modelo_id.name" t-if="l.modelo_id"/><span t-field="l.modelo" t-elif="l.modelo"/></td>
                                     <td style="text-align: center;"><span t-field="l.cantidad"/></td>
                                     <td><span t-field="l.imei_serial"/></td>
                                     <td style="text-align: center;"><span t-field="l.estado_equipo"/></td>
@@ -282,4 +282,3 @@
         </t>
     </template>
 </odoo>
-

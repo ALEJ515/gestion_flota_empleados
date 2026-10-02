@@ -105,7 +105,9 @@ class FlotaEmpleado(models.Model):
         string='Fecha Último Cambiazo',
         tracking=True,
         help="Día en que se realizó el último cambiazo de equipo de este número. "
-             "Desde esta fecha se cuentan los 12 y 18 meses. Se actualiza sola al registrar un cambiazo."
+             "Desde esta fecha se cuentan los 12 y 18 meses. Se actualiza sola al registrar un cambiazo. "
+             "Para actualizar desde Excel/CSV, exporte e importe esta columna con fechas AAAA-MM-DD "
+             "(ejemplo: 2025-10-01). El Estado Cambiazo se calcula automáticamente; no escriba fechas allí."
     )
     fecha_cambiazo_12m = fields.Date(
         string='Apto Cambiazo (12 meses)',
