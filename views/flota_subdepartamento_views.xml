@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_flota_subdepartamento_list" model="ir.ui.view">
+        <field name="name">flota.subdepartamento.list</field>
+        <field name="model">flota.subdepartamento</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="name"/>
+                <field name="departamento_id"/>
+                <field name="total_empleados"/>
+                <field name="active" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_flota_subdepartamento_form" model="ir.ui.view">
+        <field name="name">flota.subdepartamento.form</field>
+        <field name="model">flota.subdepartamento</field>
+        <field name="arch" type="xml">
+            <form string="Subdepartamento">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_empleados" type="object" class="oe_stat_button" icon="fa-users">
+                            <field name="total_empleados" widget="statinfo" string="Empleados"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archivado" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Ej. Canal Tradicional Norte"/></h1>
+                    </div>
+                    <group>
+                        <field name="departamento_id"/>
+                        <field name="active" widget="boolean_toggle"/>
+                    </group>
+                    <field name="empleado_ids" readonly="1">
+                        <list>
+                            <field name="name"/>
+                            <field name="departamento_id"/>
+                            <field name="cargo"/>
+                            <field name="numero_flota"/>
+                            <field name="ubicacion_id" optional="show"/>
+                            <field name="ruta_id" optional="show"/>
+                            <field name="estado" widget="badge"/>
+                        </list>
+                    </field>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_flota_subdepartamento_search" model="ir.ui.view">
+        <field name="name">flota.subdepartamento.search</field>
+        <field name="model">flota.subdepartamento</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Subdepartamentos">
+                <field name="name"/>
+                <field name="departamento_id"/>
+                <filter name="archived" string="Archivados" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_departamento" string="Departamento" context="{'group_by': 'departamento_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_flota_subdepartamento" model="ir.actions.act_window">
+        <field name="name">Subdepartamentos</field>
+        <field name="res_model">flota.subdepartamento</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Crea las divisiones de cada departamento.</p>
+            <p>Por ejemplo, Canal Tradicional Norte y Canal Tradicional Sur dentro de Canal Tradicional.</p>
+        </field>
+    </record>
+</odoo>

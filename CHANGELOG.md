@@ -4,6 +4,27 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.89.0] - 2026-10-05
+### Subdepartamentos
+- Nuevo catálogo en **Estructura y Recursos > Subdepartamentos**, también editable desde la pestaña
+  **Subdepartamentos** de cada departamento. Cada división pertenece a un departamento y se puede archivar.
+- Campo opcional **Subdepartamento** en el perfil, lista, tarjetas y compañeros de departamento.
+  Los departamentos, consolidados de facturación y totales existentes mantienen su agrupación original.
+- El panel izquierdo permite elegir Departamento y luego uno o varios Subdepartamentos de ese departamento,
+  con contadores. Se incorporan búsqueda global, filtro **Sin Subdepartamento** y agrupación por división.
+- Asignación Masiva permite asignar o retirar la división. Para empleados de distintos departamentos,
+  se debe modificar también el Departamento o seleccionar empleados compatibles.
+- Cambiar un departamento limpia las asignaciones anteriores que ya no correspondan. Una división
+  explícita incompatible se rechaza, también por importación/API. No se puede mover una división a otro
+  departamento mientras conserve empleados incompatibles, incluidos los archivados.
+- Para Excel: crear primero las divisiones, exportar en modo compatible con importación con **ID**
+  y **Subdepartamento**, editar e importar. Si un nombre se repite en varios departamentos, usar
+  **Subdepartamento / ID** (ID externo) para identificar la división sin ambigüedad.
+- Los empleados existentes quedan sin subdepartamento hasta su asignación; no se crean divisiones ni
+  se reasignan empleados automáticamente. Se incluyen pruebas de reglas, importación y filtros.
+
+---
+
 ## [19.0.1.88.0] - 2026-10-02
 ### Fechas de cambiazo y datos vinculados de las actas
 - La lista de empleados muestra **Fecha Último Cambiazo** y distingue el **Estado Cambiazo (Calculado)**.

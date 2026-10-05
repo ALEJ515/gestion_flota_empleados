@@ -32,3 +32,5 @@ access_flota_entrega_equipo_reasignar_wizard_user,flota.entrega.equipo.reasignar
 access_flota_ruta_mass_update_wizard_user,flota.ruta.mass.update.wizard.user,model_flota_ruta_mass_update_wizard,group_flota_user,1,1,1,1
 access_flota_cambiazo_user,flota.cambiazo.user,model_flota_cambiazo,group_flota_user,1,1,1,0
 access_flota_cambiazo_manager,flota.cambiazo.manager,model_flota_cambiazo,group_flota_manager,1,1,1,1
+access_flota_subdepartamento_user,flota.subdepartamento.user,model_flota_subdepartamento,group_flota_user,1,1,1,0
+access_flota_subdepartamento_manager,flota.subdepartamento.manager,model_flota_subdepartamento,group_flota_manager,1,1,1,1

@@ -33,6 +33,7 @@
             <list decoration-danger="not en_ultima_factura" decoration-muted="estado == 'inactive' or not active">
                 <field name="name" optional="show"/>
                 <field name="departamento_id" optional="show"/>
+                <field name="subdepartamento_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
                 <field name="ruta_id" optional="show"/>
                 <field name="cargo" optional="show"/>
@@ -91,6 +92,12 @@
                     <group>
                         <group string="Información Laboral">
                             <field name="departamento_id" options="{'no_create_edit': False}"/>
+                            <field name="subdepartamento_id"
+                                   domain="[('departamento_id', '=', departamento_id)]"
+                                   context="{'default_departamento_id': departamento_id}"
+                                   readonly="not departamento_id"
+                                   options="{'no_create': True}"
+                                   placeholder="Seleccionar división (opcional)..."/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
                             <field name="ruta_id" options="{'no_create_edit': False}"/>
                             <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
@@ -160,6 +167,7 @@
                             <field name="companeros_departamento_ids" readonly="1">
                                 <list>
                                     <field name="name" optional="show"/>
+                                    <field name="subdepartamento_id" optional="show"/>
                                     <field name="cargo" optional="show"/>
                                     <field name="ruta_id" optional="show"/>
                                     <field name="numero_flota" optional="show"/>
@@ -185,6 +193,7 @@
                 <field name="id"/>
                 <field name="name"/>
                 <field name="departamento_id"/>
+                <field name="subdepartamento_id"/>
                 <field name="ubicacion_id"/>
                 <field name="ruta_id"/>
                 <field name="cargo"/>
@@ -203,6 +212,10 @@
                                 <div class="text-muted small mb-1">
                                     <span class="fa fa-briefcase me-1" title="Cargo"/>
                                     <field name="cargo"/>
+                                </div>
+                                <div class="text-muted small mb-1" t-if="record.subdepartamento_id.raw_value">
+                                    <span class="fa fa-sitemap me-1" title="Subdepartamento"/>
+                                    <field name="subdepartamento_id"/>
                                 </div>
                                 <div class="text-muted small mb-1">
                                     <span class="fa fa-map-marker me-1" title="Ubicación"/>
@@ -238,9 +251,10 @@
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
             <search string="Buscar Empleados y Flotas">
-                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Ubic, Ruta)" filter_domain="['|', '|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('numero_flota_digits', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
+                <field name="name" string="Búsqueda Global (Nombre, Flota, Cargo, Dept, Subdepto, Ubic, Ruta)" filter_domain="['|', '|', '|', '|', '|', '|', '|', ('name', 'ilike', self), ('numero_flota', 'ilike', self), ('numero_flota_digits', 'ilike', self), ('cargo', 'ilike', self), ('departamento_id.name', 'ilike', self), ('subdepartamento_id.name', 'ilike', self), ('ubicacion_id.name', 'ilike', self), ('ruta_id.name', 'ilike', self)]"/>
                 <field name="cargo"/>
                 <field name="departamento_id"/>
+                <field name="subdepartamento_id"/>
                 <field name="ubicacion_id"/>
                 <field name="ruta_id"/>
                 <field name="numero_flota"/>
@@ -251,6 +265,8 @@
                 <separator/>
                 <filter string="Archivados" name="archived" domain="[('active', '=', False)]"/>
                 <separator/>
+                <filter string="Sin Subdepartamento" name="sin_subdepartamento" domain="[('subdepartamento_id', '=', False)]"/>
+                <separator/>
                 <filter string="Aptos para Cambiazo" name="cambiazo_aptos" domain="[('estado_cambiazo', 'in', ('apto_12', 'apto_18'))]"/>
                 <filter string="Apto Cambiazo 12 Meses" name="cambiazo_apto_12" domain="[('estado_cambiazo', '=', 'apto_12')]"/>
                 <filter string="Apto Cambiazo 18 Meses" name="cambiazo_apto_18" domain="[('estado_cambiazo', '=', 'apto_18')]"/>
@@ -260,6 +276,7 @@
                 <group>
                     <filter string="Cargo" name="group_cargo" context="{'group_by': 'cargo'}"/>
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
+                    <filter string="Subdepartamento" name="group_subdepartamento" context="{'group_by': 'subdepartamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
                     <filter string="Plan de Datos" name="group_plan_datos" context="{'group_by': 'plan_datos_id'}"/>
@@ -269,6 +286,9 @@
                 <searchpanel>
                     <field name="ubicacion_id" string="Ubicación" icon="fa-map-marker" enable_counters="1"/>
                     <field name="departamento_id" string="Departamento" icon="fa-building" enable_counters="1"/>
+                    <field name="subdepartamento_id" string="Subdepartamento" icon="fa-sitemap"
+                           select="multi" enable_counters="1"
+                           domain="[('departamento_id', '=?', departamento_id)]"/>
                     <field name="estado_cambiazo" string="Cambiazo" icon="fa-refresh" enable_counters="1"/>
                 </searchpanel>
             </search>

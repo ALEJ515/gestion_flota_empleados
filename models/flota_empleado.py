@@ -64,6 +64,16 @@ class FlotaEmpleado(models.Model):
         index=True,
         tracking=True
     )
+    subdepartamento_id = fields.Many2one(
+        'flota.subdepartamento',
+        string='Subdepartamento',
+        ondelete='restrict',
+        index=True,
+        tracking=True,
+        domain="[('departamento_id', '=', departamento_id)]",
+        help="División opcional del departamento. Al cambiar el departamento se limpia "
+             "una división que ya no corresponda. También se puede asignar por Excel o de forma masiva."
+    )
     ubicacion_id = fields.Many2one(
         'flota.ubicacion', 
         string='Ubicación', 
@@ -407,9 +417,39 @@ class FlotaEmpleado(models.Model):
         return super().create(vals_list)
 
     def write(self, vals):
+        vals = dict(vals)
         if vals.get('numero_flota'):
             vals['numero_flota'] = _formatear_numero_flota(vals['numero_flota'])
+        if 'departamento_id' in vals and 'subdepartamento_id' not in vals:
+            # Una escritura masiva puede mezclar divisiones válidas y divisiones de otro departamento.
+            departamento_id = vals['departamento_id'] or False
+            limpiar = self.filtered(
+                lambda rec: rec.subdepartamento_id
+                and rec.subdepartamento_id.departamento_id.id != departamento_id
+            )
+            if limpiar:
+                super(FlotaEmpleado, limpiar).write(dict(vals, subdepartamento_id=False))
+                restantes = self - limpiar
+                if restantes:
+                    super(FlotaEmpleado, restantes).write(vals)
+                return True
         return super().write(vals)
+
+    @api.onchange('departamento_id')
+    def _onchange_departamento_subdepartamento(self):
+        for rec in self:
+            if rec.subdepartamento_id and rec.subdepartamento_id.departamento_id != rec.departamento_id:
+                rec.subdepartamento_id = False
+
+    @api.constrains('departamento_id', 'subdepartamento_id')
+    def _check_subdepartamento(self):
+        for rec in self:
+            if rec.subdepartamento_id and rec.subdepartamento_id.departamento_id != rec.departamento_id:
+                raise ValidationError(_(
+                    'El subdepartamento %(sub)s no pertenece al departamento de %(empleado)s. '
+                    'Seleccione un subdepartamento del departamento asignado.',
+                    sub=rec.subdepartamento_id.name, empleado=rec.name,
+                ))
 
     def action_open_whatsapp(self):
         if len(self) != 1:

@@ -45,6 +45,12 @@
               action="action_flota_ubicacion"
               sequence="20"/>
 
+    <menuitem id="menu_flota_subdepartamentos"
+              name="Subdepartamentos"
+              parent="menu_flota_estructura_recursos"
+              action="action_flota_subdepartamento"
+              sequence="15"/>
+
     <menuitem id="menu_flota_rutas"
               name="Rutas"
               parent="menu_flota_estructura_recursos"

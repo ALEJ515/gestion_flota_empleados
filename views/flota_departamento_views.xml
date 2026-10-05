@@ -74,10 +74,20 @@
                         </group>
                     </group>
                     <notebook>
+                        <page string="Subdepartamentos" name="subdepartments">
+                            <field name="subdepartamento_ids" context="{'default_departamento_id': id}">
+                                <list editable="bottom">
+                                    <field name="name"/>
+                                    <field name="total_empleados" readonly="1"/>
+                                    <field name="active"/>
+                                </list>
+                            </field>
+                        </page>
                         <page string="Empleados en este Departamento" name="employees">
                             <field name="empleado_ids" readonly="1">
                                 <list>
                                     <field name="name" optional="show"/>
+                                    <field name="subdepartamento_id" optional="show"/>
                                     <field name="ubicacion_id" optional="show"/>
                                     <field name="ruta_id" optional="show"/>
                                     <field name="cargo" optional="show"/>

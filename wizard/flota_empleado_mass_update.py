@@ -20,6 +20,31 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
     set_departamento = fields.Boolean(string='Modificar Departamento')
     departamento_id = fields.Many2one('flota.departamento', string='Departamento', ondelete='set null')
 
+    set_subdepartamento = fields.Boolean(string='Modificar Subdepartamento')
+    subdepartamento_id = fields.Many2one(
+        'flota.subdepartamento', string='Subdepartamento', ondelete='set null',
+        help="Deje vacío para retirar la asignación. Para asignarlo a empleados de distintos "
+             "departamentos, marque también Modificar Departamento."
+    )
+    departamentos_disponibles_ids = fields.Many2many(
+        'flota.departamento', compute='_compute_departamentos_disponibles'
+    )
+
+    @api.depends('set_departamento', 'departamento_id', 'empleado_ids.departamento_id')
+    def _compute_departamentos_disponibles(self):
+        for rec in self:
+            rec.departamentos_disponibles_ids = (
+                rec.departamento_id if rec.set_departamento else rec.empleado_ids.mapped('departamento_id')
+            )
+
+    @api.onchange('set_departamento', 'departamento_id', 'empleado_ids')
+    def _onchange_departamento_subdepartamento(self):
+        for rec in self:
+            if rec.subdepartamento_id and (
+                rec.subdepartamento_id.departamento_id not in rec.departamentos_disponibles_ids
+            ):
+                rec.subdepartamento_id = False
+
     set_cargo = fields.Boolean(string='Modificar Cargo')
     cargo = fields.Char(string='Cargo')
 
@@ -68,6 +93,23 @@ class FlotaEmpleadoMassUpdateWizard(models.TransientModel):
                 raise UserError(_('Por favor seleccione un Departamento válido.'))
             vals['departamento_id'] = self.departamento_id.id
             changes_desc.append(f"Departamento: {self.departamento_id.name}")
+
+        if self.set_subdepartamento:
+            if self.subdepartamento_id:
+                departamento = self.subdepartamento_id.departamento_id
+                incompatible = (
+                    departamento != self.departamento_id if self.set_departamento
+                    else any(emp.departamento_id != departamento for emp in self.empleado_ids)
+                )
+                if incompatible:
+                    raise UserError(_(
+                        'El subdepartamento seleccionado no corresponde a todos los empleados. '
+                        'Seleccione empleados del mismo departamento o modifique también el Departamento.'
+                    ))
+            vals['subdepartamento_id'] = self.subdepartamento_id.id or False
+            changes_desc.append(
+                f"Subdepartamento: {self.subdepartamento_id.name if self.subdepartamento_id else 'Sin asignar'}"
+            )
 
         if self.set_cargo:
             if not self.cargo or not self.cargo.strip():

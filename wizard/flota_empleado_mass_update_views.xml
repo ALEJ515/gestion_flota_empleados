@@ -30,6 +30,16 @@
                                 <field name="set_departamento" class="me-2"/>
                                 <field name="departamento_id" invisible="not set_departamento" required="set_departamento" placeholder="Seleccionar Departamento..."/>
                             </div>
+
+                            <field name="departamentos_disponibles_ids" invisible="1"/>
+                            <label for="set_subdepartamento" string="Subdepartamento"/>
+                            <div class="o_row">
+                                <field name="set_subdepartamento" class="me-2"/>
+                                <field name="subdepartamento_id" invisible="not set_subdepartamento"
+                                       domain="[('departamento_id', 'in', departamentos_disponibles_ids)]"
+                                       options="{'no_create': True}"
+                                       placeholder="Seleccionar o dejar vacío para retirar..."/>
+                            </div>
                         </group>
 
                         <group string="Cargo y Estado">

@@ -42,6 +42,9 @@ class FlotaDepartamento(models.Model):
         'departamento_id', 
         string='Empleados'
     )
+    subdepartamento_ids = fields.One2many(
+        'flota.subdepartamento', 'departamento_id', string='Subdepartamentos'
+    )
     total_empleados = fields.Integer(
         string='Total Empleados', 
         compute='_compute_empleados_counts', 
