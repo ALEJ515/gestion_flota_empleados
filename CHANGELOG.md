@@ -4,6 +4,23 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.90.0] - 2026-10-05
+### Nombres uniformes e importación sin distinguir mayúsculas
+- Empleados, Departamentos, Subdepartamentos y Ubicaciones normalizan su nombre al crear o editar,
+  también desde Excel/API: `  VENTAS   CANAL TRADICIONAL  ` pasa a `Ventas Canal Tradicional`.
+  Se conservan acentos y las siglas IT, TI, UPS y CEDI.
+- No se modifican códigos de rutas, códigos internos, modelos, marcas, IMEI, teléfonos ni correos.
+- Las referencias por nombre al importar usan una clave exacta que ignora mayúsculas y espacios
+  sobrantes. Así un Departamento en mayúsculas encuentra el registro existente sin crear otro.
+- La búsqueda no interpreta `%` ni `_` como comodines. Si un nombre identifica varios registros
+  (por ejemplo un subdepartamento repetido), se muestra un error y se debe importar por ID externo.
+- Los nombres existentes no se renombrarán en bloque durante la actualización del módulo.
+  Importar una referencia tampoco cambia el nombre del catálogo; editar o importar directamente
+  la columna Nombre de ese registro sí aplica el formato uniforme.
+- Mantener la columna ID en las plantillas de actualización sigue siendo la opción recomendada.
+
+---
+
 ## [19.0.1.89.0] - 2026-10-05
 ### Subdepartamentos
 - Nuevo catálogo en **Estructura y Recursos > Subdepartamentos**, también editable desde la pestaña

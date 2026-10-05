@@ -45,7 +45,7 @@ def _formatear_numero_flota(valor):
 class FlotaEmpleado(models.Model):
     _name = 'flota.empleado'
     _description = 'Empleado y Flota Telefónica'
-    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.nombre.mixin']
     _order = 'name asc, id desc'
 
     def _auto_init(self):
@@ -402,12 +402,7 @@ class FlotaEmpleado(models.Model):
             encontrado = Empleado.search([('numero_flota_digits', '=', digitos)], limit=2)
             if len(encontrado) == 1:
                 return encontrado
-        nombre = fila.get('name')
-        if isinstance(nombre, str) and nombre.strip():
-            encontrado = Empleado.search([('name', '=ilike', nombre.strip())], limit=2)
-            if len(encontrado) == 1:
-                return encontrado
-        return self.browse()
+        return super()._flota_import_buscar_existente(fila)
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -485,7 +480,6 @@ class FlotaEmpleado(models.Model):
                         if ot.numero_flota_digits == norm:
                             raise ValidationError(_('El número de flota (%s) ya pertenece al empleado %s.') % (record.numero_flota, ot.name))
             if record.name:
-                clean_n = record.name.strip()
-                domain_name = [('name', '=ilike', clean_n), ('id', '!=', record.id)]
+                domain_name = [('nombre_busqueda', '=', record.nombre_busqueda), ('id', '!=', record.id)]
                 if self.with_context(active_test=False).search_count(domain_name) > 0:
                     raise ValidationError(_('El nombre completo (%s) ya está registrado en el sistema.') % record.name)

@@ -4,7 +4,7 @@ from odoo.exceptions import ValidationError
 class FlotaUbicacion(models.Model):
     _name = 'flota.ubicacion'
     _description = 'Ubicación de Flota'
-    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.nombre.mixin']
     _order = 'name asc'
 
     name = fields.Char(string='Nombre de la Ubicación', required=True, index=True, tracking=True)
@@ -41,8 +41,8 @@ class FlotaUbicacion(models.Model):
     def _check_name_unique(self):
         for record in self:
             if record.name:
-                domain = [('name', '=ilike', record.name), ('id', '!=', record.id)]
-                if self.search_count(domain) > 0:
+                domain = [('nombre_busqueda', '=', record.nombre_busqueda), ('id', '!=', record.id)]
+                if self.with_context(active_test=False).search_count(domain) > 0:
                     raise ValidationError('El nombre de la ubicación debe ser único.')
 
     @api.depends('empleado_ids', 'empleado_ids.estado', 'empleado_ids.active')

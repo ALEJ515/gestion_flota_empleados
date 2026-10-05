@@ -1,5 +1,6 @@
 from . import phone_utils
 from . import flota_import_mixin
+from . import flota_nombre_mixin
 from . import flota_departamento
 from . import flota_subdepartamento
 from . import flota_ubicacion

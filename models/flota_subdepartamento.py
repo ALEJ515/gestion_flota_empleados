@@ -1,11 +1,12 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
+from .nombre_utils import clave_nombre
 
 
 class FlotaSubdepartamento(models.Model):
     _name = 'flota.subdepartamento'
     _description = 'Subdepartamento de Flota'
-    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.nombre.mixin']
     _order = 'departamento_id, name, id'
 
     name = fields.Char(string='Subdepartamento', required=True, index=True, tracking=True)
@@ -32,7 +33,7 @@ class FlotaSubdepartamento(models.Model):
             if self.with_context(active_test=False).search_count([
                 ('id', '!=', rec.id),
                 ('departamento_id', '=', rec.departamento_id.id),
-                ('name', '=ilike', rec.name.strip()),
+                ('nombre_busqueda', '=', rec.nombre_busqueda),
             ]):
                 raise ValidationError(_(
                     'Ya existe el subdepartamento %(sub)s en %(departamento)s.',
@@ -57,12 +58,17 @@ class FlotaSubdepartamento(models.Model):
         nombre = fila.get('name')
         if not isinstance(nombre, str) or not nombre.strip():
             return self.browse()
-        domain = [('name', '=ilike', nombre.strip())]
+        domain = [('nombre_busqueda', '=', clave_nombre(nombre))]
         departamento = fila.get('departamento_id')
         if isinstance(departamento, str) and departamento.strip():
-            domain.append(('departamento_id.name', '=ilike', departamento.strip()))
+            domain.append(('departamento_id.nombre_busqueda', '=', clave_nombre(departamento)))
         candidatos = self.with_context(active_test=False).search(domain, limit=2)
-        return candidatos if len(candidatos) == 1 else self.browse()
+        if len(candidatos) > 1:
+            raise ValidationError(_(
+                'El subdepartamento "%s" existe en varios departamentos. Conserve su ID externo '
+                'o incluya el Departamento para actualizarlo.'
+            ) % nombre)
+        return candidatos
 
     def action_view_empleados(self):
         self.ensure_one()
