@@ -4,6 +4,22 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.95.0] - 2026-10-07
+### Importación: se restablecen las opciones nativas de Odoo (crear, omitir, dejar vacío)
+- La versión 19.0.1.94.0 creaba los catálogos faltantes automáticamente y sin preguntar. **Se retira.**
+  Ahora, cuando un Departamento, Ubicación, Ruta, Plan, etc. no existe, Odoo vuelve a mostrar sus
+  opciones habituales para ese valor: **crear nuevos valores**, **omitir el registro** o **dejar el
+  valor vacío**. Nada se crea sin que se elija.
+- Se conservan las mejoras que evitan errores al reimportar un archivo exportado: nombres sin distinguir
+  mayúsculas ni espacios, catálogos archivados, códigos de ruta con `_` o `%` y celdas vacías de Estado.
+- Subdepartamentos con el mismo nombre en varios Departamentos: la importación los escribe
+  `Departamento / Subdepartamento` usando el Departamento de la misma fila (o el del registro existente).
+  Si aun así es ambiguo, solo esa fila da error, sin detener todo el archivo. «Crear nuevos valores»
+  crea el Subdepartamento dentro de ese Departamento; también se puede escribir ese formato en el archivo.
+- Ya no se cambian las columnas a identificadores internos ni se muestra el aviso de altas automáticas.
+
+---
+
 ## [19.0.1.94.0] - 2026-10-07
 ### Importación/exportación sin errores: reimportar, actualizar y crear catálogos
 - **Reimportar un archivo exportado ya no falla** aunque no se haya cambiado nada. Causas corregidas:

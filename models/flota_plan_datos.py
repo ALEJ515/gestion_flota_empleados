@@ -6,7 +6,7 @@ class FlotaPlanDatos(models.Model):
     _description = 'Plan de Datos y Telefonía'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
-    _flota_import_autocrear = True
+    _flota_import_catalogo = True
 
     name = fields.Char(
         string='Nombre del Plan',

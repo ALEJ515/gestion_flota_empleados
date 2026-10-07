@@ -6,7 +6,7 @@ class FlotaDepartamento(models.Model):
     _description = 'Departamento de Flota'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.nombre.mixin']
     _order = 'name asc'
-    _flota_import_autocrear = True
+    _flota_import_catalogo = True
 
     name = fields.Char(string='Nombre del Departamento', required=True, index=True, tracking=True)
     code = fields.Char(string='Código Interno', tracking=True)

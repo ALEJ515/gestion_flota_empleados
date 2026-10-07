@@ -41,10 +41,15 @@ class FlotaNombreMixin(models.AbstractModel):
                 limit=0 if not limit else max(limit, 2),
             )
             if len(matches) > 1:
-                raise ValidationError(_(
-                    'El nombre "%s" corresponde a varios registros. Importe la referencia '
-                    'por ID externo para identificarla sin ambigüedad.'
-                ) % name)
+                mensaje = _(
+                    'El nombre "%s" corresponde a varios registros. Indique el Departamento en la '
+                    'misma fila, use el formato "Departamento / Subdepartamento" o importe la '
+                    'referencia por ID externo.'
+                ) % name
+                if self.env.context.get('import_file'):
+                    # Un ValueError se informa como error de esa fila en lugar de abortar todo el archivo.
+                    raise ValueError(mensaje.replace('%', '%%'))
+                raise ValidationError(mensaje)
             return [(rec.id, rec.display_name) for rec in matches]
         return super().name_search(name=name, domain=domain, operator=operator, limit=limit)
 

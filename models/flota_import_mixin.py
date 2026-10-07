@@ -1,14 +1,8 @@
-import logging
 import uuid
-from odoo import api, models, _
-from odoo.exceptions import AccessError
+from odoo import api, models
 
-from .flota_import_resolver import ErrorResolucion, resolver_referencias
+from .flota_import_resolver import normalizar_referencias
 from .nombre_utils import clave_nombre
-
-_logger = logging.getLogger(__name__)
-
-MAX_NOMBRES_AVISO = 15
 
 
 def _escapar_like(valor):
@@ -16,19 +10,11 @@ def _escapar_like(valor):
 
 
 class _ProveedorCatalogos:
-    """Busca (incluso archivados) y crea catálogos referenciados por nombre durante una importación."""
+    """Busca catálogos por nombre (incluidos los archivados) durante una importación."""
 
     def __init__(self, env):
         self.env = env
         self._indices = {}
-        self.creados = {}
-
-    def tiene_padre(self, comodel):
-        return bool(self.env[comodel]._flota_import_campo_padre)
-
-    def etiqueta_padre(self, comodel):
-        modelo = self.env[comodel]
-        return modelo._fields[modelo._flota_import_campo_padre].string
 
     def _indice(self, comodel):
         if comodel not in self._indices:
@@ -37,31 +23,13 @@ class _ProveedorCatalogos:
             indice = {}
             for rec in modelo.search([]):
                 indice.setdefault(clave_nombre(rec.name), []).append(
-                    (rec[padre].id if padre else 0, rec.id)
+                    (rec[padre].id if padre else 0, rec.id, rec.name)
                 )
             self._indices[comodel] = indice
         return self._indices[comodel]
 
     def candidatos(self, comodel, texto):
         return list(self._indice(comodel).get(clave_nombre(texto), []))
-
-    def crear(self, comodel, texto, padre_id):
-        modelo = self.env[comodel].with_context(
-            tracking_disable=True, mail_create_nolog=True, mail_create_nosubscribe=True,
-        )
-        try:
-            with self.env.cr.savepoint():
-                rec = modelo.create(modelo._flota_import_valores_creacion(texto, padre_id))
-        except AccessError:
-            raise ErrorResolucion(_('no tiene permiso para crearlo'))
-        except Exception as error:  # noqa: BLE001
-            raise ErrorResolucion(_('no se pudo crear: %s') % str(error)[:80])
-        con_padre = bool(modelo._flota_import_campo_padre)
-        self._indice(comodel).setdefault(clave_nombre(rec.name), []).append(
-            (padre_id if con_padre else 0, rec.id)
-        )
-        self.creados.setdefault(modelo._description, []).append(rec.display_name)
-        return rec.id
 
 
 class FlotaImportMixin(models.AbstractModel):
@@ -74,24 +42,29 @@ class FlotaImportMixin(models.AbstractModel):
        por su clave natural (nombre, número de flota, etc.) y lo ACTUALIZA en lugar de
        intentar crearlo de nuevo y chocar con las validaciones de duplicados.
     3. Las referencias a catálogos (Departamento, Subdepartamento, Ubicación, Ruta, Plan,
-       Marca...) se resuelven por nombre sin distinguir mayúsculas, incluso si están
-       archivadas, usando el Departamento de la fila para los Subdepartamentos repetidos.
-       Si no existen, se crean automáticamente (se informa en un aviso).
+       Marca...) se encuentran sin distinguir mayúsculas ni espacios, incluso si están
+       archivadas, y los Subdepartamentos repetidos se resuelven con el Departamento de la
+       fila. Lo que no existe NO se crea solo: Odoo ofrece sus opciones habituales
+       (crear, omitir el registro o dejar el valor vacío).
     """
     _name = 'flota.import.mixin'
     _description = 'Importación con actualización automática (Flota)'
 
-    # Los catálogos que se pueden crear por nombre al importar lo activan en True.
-    _flota_import_autocrear = False
+    # Catálogos cuyas referencias por nombre se normalizan al importar.
+    _flota_import_catalogo = False
     # Campo del propio catálogo que lo acota (p. ej. el Departamento de un Subdepartamento).
     _flota_import_campo_padre = None
 
     @api.model
-    def _flota_import_valores_creacion(self, texto, padre_id=None):
-        valores = {'name': texto}
-        if self._flota_import_campo_padre and padre_id:
-            valores[self._flota_import_campo_padre] = padre_id
-        return valores
+    def name_search(self, name='', domain=None, operator='ilike', limit=100):
+        # Odoo resuelve las referencias de importación con name_search(operator='=').
+        if name and operator == '=' and 'nombre_busqueda' not in self._fields:
+            encontrados = self.with_context(active_test=False).search(
+                [('name', '=ilike', _escapar_like(' '.join(name.split())))] + list(domain or []),
+                limit=limit or None,
+            )
+            return [(rec.id, rec.display_name) for rec in encontrados]
+        return super().name_search(name=name, domain=domain, operator=operator, limit=limit)
 
     @api.model
     def _flota_import_campo_ignorado(self, fname):
@@ -162,7 +135,7 @@ class FlotaImportMixin(models.AbstractModel):
             if not field or field.type != 'many2one':
                 continue
             comodelo = self.env[field.comodel_name]
-            if getattr(comodelo, '_flota_import_autocrear', False):
+            if getattr(comodelo, '_flota_import_catalogo', False):
                 columnas[fname] = {
                     'comodel': field.comodel_name,
                     'padre': comodelo._flota_import_campo_padre or None,
@@ -174,16 +147,6 @@ class FlotaImportMixin(models.AbstractModel):
         if valor is None or valor is False:
             return False
         return bool(str(valor).strip())
-
-    @api.model
-    def _flota_import_aviso_creados(self, creados):
-        partes = []
-        for tipo, nombres in creados.items():
-            mostrados = ', '.join(nombres[:MAX_NOMBRES_AVISO])
-            if len(nombres) > MAX_NOMBRES_AVISO:
-                mostrados += _(' y %s más') % (len(nombres) - MAX_NOMBRES_AVISO)
-            partes.append('%s: %s' % (tipo, mostrados))
-        return _('Se crean automáticamente porque no existían: %s', '; '.join(partes))
 
     @api.model
     def load(self, fields, data):
@@ -226,32 +189,15 @@ class FlotaImportMixin(models.AbstractModel):
 
         def padre_existente(numero, campo):
             registro = registros.get(numero)
-            if registro and campo in registro._fields:
-                return registro[campo].id
+            if registro and campo in registro._fields and registro[campo]:
+                return registro[campo].id, registro[campo].name
             return None
 
-        proveedor = _ProveedorCatalogos(self.env)
         columnas = {} if self.env.context.get('flota_import_sin_referencias') \
             else self._flota_import_columnas_catalogo(fields)
-        # Las altas automáticas se deshacen si la importación termina con errores.
-        savepoint = self.env.cr.savepoint()
-        try:
-            if columnas:
-                fields = resolver_referencias(
-                    fields, data, columnas, proveedor, padre_existente=padre_existente,
-                    crear=not self.env.context.get('flota_import_no_crear'),
-                )
-            resultado = super().load(fields, data)
-        except Exception:
-            savepoint.close(rollback=True)
-            raise
-        con_errores = resultado.get('ids') is False
-        savepoint.close(rollback=con_errores)
-
-        if proveedor.creados and not con_errores:
-            _logger.info('Importación %s: catálogos creados: %s', self._name, proveedor.creados)
-            resultado['messages'].append({
-                'type': 'warning',
-                'message': self._flota_import_aviso_creados(proveedor.creados),
-            })
-        return resultado
+        if columnas:
+            fields, data = normalizar_referencias(
+                fields, data, columnas, _ProveedorCatalogos(self.env),
+                padre_existente=padre_existente,
+            )
+        return super().load(fields, data)

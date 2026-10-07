@@ -6,7 +6,7 @@ class FlotaTipoEquipo(models.Model):
     _description = 'Equipo o Licencia (Catálogo)'
     _inherit = ['flota.import.mixin']
     _order = 'name asc'
-    _flota_import_autocrear = True
+    _flota_import_catalogo = True
 
     name = fields.Char(string='Equipo o Licencia', required=True, index=True)
     descripcion = fields.Char(string='Descripción', help="Detalle adicional opcional, ej. marca o familia típica.")

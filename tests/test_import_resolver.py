@@ -12,35 +12,16 @@ spec.loader.exec_module(resolver)
 
 
 class FakeProvider:
-    def __init__(self, existentes=None, fallar=()):
-        self.registros = {'dep': [], 'sub': [], 'ruta': []}
-        self.siguiente = 100
-        self.creados = []
-        self.fallar = set(fallar)
-        for comodel, nombre, padre, id_ in existentes or []:
-            self.registros[comodel].append((self._clave(nombre), padre, id_))
-
-    @staticmethod
-    def _clave(texto):
-        return ' '.join(texto.split()).casefold()
-
-    def tiene_padre(self, comodel):
-        return comodel == 'sub'
-
-    def etiqueta_padre(self, comodel):
-        return 'Departamento'
+    def __init__(self, registros):
+        self.registros = registros
 
     def candidatos(self, comodel, texto):
-        clave = self._clave(texto)
-        return [(p, i) for c, p, i in self.registros[comodel] if c == clave]
+        clave = ' '.join(texto.split()).casefold()
+        return [(p, i, n) for c, n, p, i in self.registros.get(comodel, []) if c == clave]
 
-    def crear(self, comodel, texto, padre_id):
-        if texto in self.fallar:
-            raise resolver.ErrorResolucion('sin permiso')
-        self.siguiente += 1
-        self.registros[comodel].append((self._clave(texto), padre_id or 0, self.siguiente))
-        self.creados.append((comodel, texto, padre_id))
-        return self.siguiente
+
+def registro(nombre, padre, id_):
+    return (nombre.casefold(), nombre, padre, id_)
 
 
 COLUMNAS = {
@@ -50,109 +31,82 @@ COLUMNAS = {
 }
 
 
-class TestResolverReferencias(unittest.TestCase):
+class TestNormalizarReferencias(unittest.TestCase):
     def setUp(self):
-        self.existentes = [
-            ('dep', 'Canal Tradicional', 0, 1),
-            ('dep', 'Canal Moderno', 0, 2),
-            ('sub', 'Norte', 1, 11),
-            ('sub', 'Norte', 2, 12),
-            ('ruta', 'NTP_01', 0, 21),
-        ]
+        self.proveedor = FakeProvider({
+            'dep': [registro('Canal Tradicional', 0, 1), registro('Canal Moderno', 0, 2)],
+            'sub': [registro('Norte', 1, 11), registro('Norte', 2, 12), registro('Sur', 1, 13)],
+            'ruta': [registro('NTP_01', 0, 21)],
+        })
 
     def correr(self, fields, data, **kwargs):
-        proveedor = kwargs.pop('proveedor', None) or FakeProvider(self.existentes)
-        fields = resolver.resolver_referencias(fields, data, COLUMNAS, proveedor, **kwargs)
-        return fields, data, proveedor
+        return resolver.normalizar_referencias(fields, data, COLUMNAS, self.proveedor, **kwargs)
 
-    def test_resolves_names_case_insensitive_and_renames_columns(self):
-        fields, data, _ = self.correr(
+    def test_existing_records_use_their_exact_name_and_keep_columns(self):
+        fields, data = self.correr(
             ['id', 'departamento_id', 'ruta_id', 'name'],
             [['x.1', ' CANAL   moderno ', 'ntp_01', 'Ana']],
         )
-        self.assertEqual(fields, ['id', 'departamento_id/.id', 'ruta_id/.id', 'name'])
-        self.assertEqual(data, [['x.1', '2', '21', 'Ana']])
+        self.assertEqual(fields, ['id', 'departamento_id', 'ruta_id', 'name'])
+        self.assertEqual(data, [['x.1', 'Canal Moderno', 'NTP_01', 'Ana']])
 
-    def test_repeated_subdepartment_name_uses_row_department(self):
-        _, data, _ = self.correr(
+    def test_repeated_subdepartment_name_is_qualified_with_row_department(self):
+        _, data = self.correr(
             ['departamento_id', 'subdepartamento_id'],
-            [['Canal Tradicional', 'Norte'], ['canal moderno', 'NORTE']],
+            [['CANAL TRADICIONAL', 'norte'], ['canal moderno', 'NORTE']],
         )
-        self.assertEqual(data, [['1', '11'], ['2', '12']])
+        self.assertEqual(data, [
+            ['Canal Tradicional', 'Canal Tradicional / Norte'],
+            ['Canal Moderno', 'Canal Moderno / Norte'],
+        ])
 
-    def test_subdepartment_column_can_precede_department_column(self):
-        _, data, _ = self.correr(
-            ['subdepartamento_id', 'departamento_id'], [['Norte', 'Canal Moderno']],
+    def test_subdepartment_column_is_moved_after_its_department(self):
+        fields, data = self.correr(
+            ['subdepartamento_id', 'name', 'departamento_id'], [['Norte', 'Ana', 'Canal Moderno']],
         )
-        self.assertEqual(data, [['12', '2']])
+        self.assertEqual(fields, ['name', 'departamento_id', 'subdepartamento_id'])
+        self.assertEqual(data, [['Ana', 'Canal Moderno', 'Canal Moderno / Norte']])
 
     def test_missing_department_column_uses_existing_record_department(self):
-        _, data, _ = self.correr(
-            ['subdepartamento_id'], [['Norte'], ['Norte']],
-            padre_existente=lambda fila, campo: 2 if fila == 0 else 1,
+        _, data = self.correr(
+            ['subdepartamento_id'], [['Norte'], ['norte']],
+            padre_existente=lambda fila, campo: (2, 'Canal Moderno') if fila == 0 else (1, 'Canal Tradicional'),
         )
-        self.assertEqual(data, [['12'], ['11']])
+        self.assertEqual(data, [['Canal Moderno / Norte'], ['Canal Tradicional / Norte']])
 
-    def test_ambiguous_subdepartment_without_department_is_reported(self):
-        _, data, proveedor = self.correr(['subdepartamento_id'], [['Norte']])
-        self.assertEqual(data, [['Norte [existe en varios; indique Departamento]']])
-        self.assertFalse(proveedor.creados)
-
-    def test_unique_subdepartment_resolves_without_department(self):
-        proveedor = FakeProvider(self.existentes + [('sub', 'Sur', 1, 13)])
-        _, data, _ = self.correr(['subdepartamento_id'], [['sur']], proveedor=proveedor)
-        self.assertEqual(data, [['13']])
-
-    def test_creates_missing_parent_before_child_and_only_once(self):
-        _, data, proveedor = self.correr(
-            ['subdepartamento_id', 'departamento_id', 'ruta_id'],
-            [['Centro', 'Mercadeo Nuevo', 'RUTA-X'], ['centro', 'MERCADEO NUEVO', 'ruta-x']],
+    def test_unknown_department_of_the_row_is_kept_so_odoo_can_offer_to_create_it(self):
+        _, data = self.correr(
+            ['departamento_id', 'subdepartamento_id'], [['Mercadeo Nuevo', 'Centro']],
         )
-        self.assertEqual(data[0], data[1])
-        self.assertEqual(
-            proveedor.creados,
-            [('dep', 'Mercadeo Nuevo', None), ('ruta', 'RUTA-X', None), ('sub', 'Centro', 101)],
+        self.assertEqual(data, [['Mercadeo Nuevo', 'Mercadeo Nuevo / Centro']])
+
+    def test_new_subdepartment_in_existing_department_keeps_the_department(self):
+        _, data = self.correr(
+            ['departamento_id', 'subdepartamento_id'], [['canal moderno', 'Oeste']],
         )
-        self.assertEqual(data[0], ['103', '101', '102'])
+        self.assertEqual(data, [['Canal Moderno', 'Canal Moderno / Oeste']])
 
-    def test_creates_subdepartment_in_existing_department(self):
-        _, data, proveedor = self.correr(
-            ['departamento_id', 'subdepartamento_id'], [['Canal Moderno', 'Sur']],
+    def test_unknown_values_without_department_are_left_untouched(self):
+        _, data = self.correr(
+            ['subdepartamento_id', 'ruta_id'], [['Norte', 'RUTA-NUEVA'], ['Inexistente', '']],
         )
-        self.assertEqual(proveedor.creados, [('sub', 'Sur', 2)])
-        self.assertEqual(data, [['2', '101']])
+        self.assertEqual(data, [['Norte', 'RUTA-NUEVA'], ['Inexistente', '']])
 
-    def test_new_subdepartment_without_department_is_not_created(self):
-        _, data, proveedor = self.correr(['subdepartamento_id'], [['Inexistente']])
-        self.assertEqual(data, [['Inexistente [indique Departamento para crearlo]']])
-        self.assertFalse(proveedor.creados)
-
-    def test_creation_can_be_disabled(self):
-        _, data, proveedor = self.correr(
-            ['departamento_id'], [['Nuevo'], ['Canal Moderno']], crear=False,
+    def test_blank_cells_stay_blank_and_nothing_is_created(self):
+        fields, data = self.correr(
+            ['name', 'departamento_id', 'ruta_id'], [['Ana', '   ', ''], ['Luis', None, 'ntp_01']],
         )
-        self.assertEqual(data, [['Nuevo [no existe]'], ['2']])
-        self.assertFalse(proveedor.creados)
+        self.assertEqual(fields, ['name', 'departamento_id', 'ruta_id'])
+        self.assertEqual(data, [['Ana', '', ''], ['Luis', '', 'NTP_01']])
 
-    def test_creation_failure_is_reported_per_row(self):
-        proveedor = FakeProvider(self.existentes, fallar=['Bloqueado'])
-        _, data, _ = self.correr(
-            ['departamento_id'], [['Bloqueado'], ['Canal Moderno']], proveedor=proveedor,
-        )
-        self.assertEqual(data, [['Bloqueado [sin permiso]'], ['2']])
+    def test_without_catalog_columns_data_is_unchanged(self):
+        fields, data = self.correr(['name', 'cargo'], [['Ana', 'Jefe']])
+        self.assertEqual((fields, data), (['name', 'cargo'], [['Ana', 'Jefe']]))
 
-    def test_blank_cells_are_cleared_not_created(self):
-        fields, data, proveedor = self.correr(
-            ['name', 'departamento_id', 'ruta_id'], [['Ana', '   ', ''], ['Luis', None, 'NTP_01']],
-        )
-        self.assertEqual(fields, ['name', 'departamento_id/.id', 'ruta_id/.id'])
-        self.assertEqual(data, [['Ana', '', ''], ['Luis', '', '21']])
-        self.assertFalse(proveedor.creados)
-
-    def test_unlisted_columns_and_row_count_are_preserved(self):
-        fields, data, _ = self.correr(['name', 'cargo'], [['Ana', 'Jefe']])
-        self.assertEqual(fields, ['name', 'cargo'])
-        self.assertEqual(data, [['Ana', 'Jefe']])
+    def test_input_is_not_mutated(self):
+        original = [['Canal Moderno', 'norte']]
+        self.correr(['departamento_id', 'subdepartamento_id'], original)
+        self.assertEqual(original, [['Canal Moderno', 'norte']])
 
 
 if __name__ == '__main__':

@@ -1,17 +1,15 @@
-"""Resolución y alta automática de catálogos referenciados por nombre al importar.
+"""Normalización de referencias a catálogos por nombre al importar (sin dependencias de Odoo).
 
-Sin dependencias de Odoo para poder probar la lógica de forma aislada. El proveedor
-debe implementar:
+No crea ni descarta nada: solo reescribe el texto de la celda con un nombre que Odoo pueda
+resolver sin ambigüedad, para que sus opciones nativas (crear, omitir, dejar vacío) sigan
+disponibles cuando el valor realmente no existe.
 
-    tiene_padre(comodel) -> bool
-    etiqueta_padre(comodel) -> str
-    candidatos(comodel, texto) -> list[(padre_id, id)]   # incluye archivados
-    crear(comodel, texto, padre_id) -> id                # lanza ErrorResolucion
+El proveedor debe implementar:
+
+    candidatos(comodel, texto) -> list[(padre_id, id, nombre)]   # incluye archivados
 """
 
-
-class ErrorResolucion(Exception):
-    pass
+SEPARADOR_PADRE = ' / '
 
 
 def _texto(valor):
@@ -20,74 +18,76 @@ def _texto(valor):
     return ' '.join(str(valor).split())
 
 
-def _resolver_valor(proveedor, comodel, texto, padre_id, crear):
-    """Devuelve (id, motivo); motivo solo informa cuando no se pudo resolver."""
-    candidatos = proveedor.candidatos(comodel, texto)
-    if proveedor.tiene_padre(comodel):
-        etiqueta = proveedor.etiqueta_padre(comodel)
-        if not padre_id:
-            if len(candidatos) == 1:
-                return candidatos[0][1], None
-            if candidatos:
-                return None, 'existe en varios; indique %s' % etiqueta
-            return None, 'indique %s para crearlo' % etiqueta
-        for candidato_padre, candidato_id in candidatos:
-            if candidato_padre == padre_id:
-                return candidato_id, None
-    elif candidatos:
-        return candidatos[0][1], None
+def normalizar_referencias(fields, data, columnas, proveedor, padre_existente=None):
+    """Devuelve ``(fields, data)`` con el texto de las columnas de catálogo normalizado.
 
-    if not crear:
-        return None, 'no existe'
-    try:
-        return proveedor.crear(comodel, texto, padre_id), None
-    except ErrorResolucion as error:
-        return None, str(error)
+    - Un registro existente se escribe con su nombre exacto (mayúsculas y espacios correctos).
+    - Un registro con padre (Subdepartamento) se escribe ``Padre / Nombre`` cuando el padre es
+      conocido: por la columna del padre en la fila o, si no viene, por el registro existente.
+      Así un nombre repetido en varios padres se resuelve en el correcto, y si no existe, Odoo
+      puede crearlo dentro de ese padre.
+    - Lo desconocido queda tal cual para que Odoo lo informe con sus opciones habituales.
+    - Las columnas con padre se mueven después de la columna del padre, para que un padre
+      creado en la misma importación ya exista cuando se resuelva el hijo.
 
-
-def resolver_referencias(fields, data, columnas, proveedor, padre_existente=None, crear=True):
-    """Convierte las columnas de catálogo (nombre) en columnas ``campo/.id``.
-
-    ``data`` se modifica en el sitio. Los valores que no se pueden resolver quedan como
-    ``texto [motivo]`` para que Odoo los informe como error de esa fila en lugar de
-    asignar un registro equivocado. Devuelve la nueva lista de campos.
-
-    ``columnas`` mapea nombre de campo -> {'comodel': str, 'padre': campo|None}.
-    ``padre_existente(fila, campo)`` aporta el padre del registro ya existente cuando
-    el archivo no trae la columna del padre.
+    ``columnas`` mapea campo -> {'comodel': str, 'padre': campo|None}.
+    ``padre_existente(fila, campo)`` devuelve ``(id, nombre)`` del padre del registro existente.
     """
     fields = list(fields)
+    data = [list(fila) for fila in data]
     indices = {f: fields.index(f) for f in columnas if f in fields}
     if not indices:
-        return fields
+        return fields, data
 
+    hijos = [f for f in indices if columnas[f].get('padre') and columnas[f]['padre'] in indices]
     orden = sorted(indices, key=lambda f: bool(columnas[f].get('padre')))
     for numero, fila in enumerate(data):
-        resueltos = {}
+        encontrados = {}
+        textos = {}
         for campo in orden:
             i = indices[campo]
             if i >= len(fila):
                 continue
             texto = _texto(fila[i])
+            fila[i] = texto
             if not texto:
-                fila[i] = ''
                 continue
+            textos[campo] = texto
+            comodel = columnas[campo]['comodel']
             padre = columnas[campo].get('padre')
-            padre_id = None
-            if padre:
-                if padre in indices:
-                    padre_id = resueltos.get(padre)
-                elif padre_existente:
-                    padre_id = padre_existente(numero, padre)
-            id_, motivo = _resolver_valor(
-                proveedor, columnas[campo]['comodel'], texto, padre_id, crear,
-            )
-            if id_:
-                fila[i] = str(id_)
-                resueltos[campo] = id_
-            else:
-                fila[i] = '%s [%s]' % (texto, motivo)
+            candidatos = proveedor.candidatos(comodel, texto)
 
-    for campo, i in indices.items():
-        fields[i] = '%s/.id' % campo
-    return fields
+            if not padre:
+                if candidatos:
+                    _, id_, nombre = candidatos[0]
+                    fila[i] = nombre
+                    encontrados[campo] = (id_, nombre)
+                continue
+
+            padre_id = padre_nombre = None
+            if padre in indices:
+                if padre in encontrados:
+                    padre_id, padre_nombre = encontrados[padre]
+                else:
+                    padre_nombre = textos.get(padre)
+            elif padre_existente:
+                datos = padre_existente(numero, padre)
+                if datos:
+                    padre_id, padre_nombre = datos
+            if not padre_nombre:
+                continue
+            nombre = texto
+            for candidato_padre, _, candidato_nombre in candidatos:
+                if padre_id and candidato_padre == padre_id:
+                    nombre = candidato_nombre
+                    break
+            fila[i] = '%s%s%s' % (padre_nombre, SEPARADOR_PADRE, nombre)
+
+    if hijos:
+        resto = [i for f, i in sorted(indices.items(), key=lambda x: x[1]) if f not in hijos]
+        movidos = [indices[f] for f in hijos]
+        fijas = [i for i in range(len(fields)) if i not in indices.values()]
+        nuevo_orden = sorted(fijas + resto) + sorted(movidos)
+        fields = [fields[i] for i in nuevo_orden]
+        data = [[fila[i] if i < len(fila) else '' for i in nuevo_orden] for fila in data]
+    return fields, data

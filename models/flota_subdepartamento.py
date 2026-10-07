@@ -1,6 +1,7 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 from .nombre_utils import clave_nombre
+from .flota_import_resolver import SEPARADOR_PADRE
 
 
 class FlotaSubdepartamento(models.Model):
@@ -8,7 +9,7 @@ class FlotaSubdepartamento(models.Model):
     _description = 'Subdepartamento de Flota'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.nombre.mixin']
     _order = 'departamento_id, name, id'
-    _flota_import_autocrear = True
+    _flota_import_catalogo = True
     _flota_import_campo_padre = 'departamento_id'
 
     name = fields.Char(string='Subdepartamento', required=True, index=True, tracking=True)
@@ -54,6 +55,32 @@ class FlotaSubdepartamento(models.Model):
                     'asignados a otro departamento. Retire primero esas asignaciones.',
                     sub=rec.name,
                 ))
+
+    @api.model
+    def name_search(self, name='', domain=None, operator='ilike', limit=100):
+        # "Departamento / Subdepartamento" identifica sin ambigüedad una división con nombre repetido.
+        if name and operator == '=' and SEPARADOR_PADRE in name:
+            departamento, subdepartamento = name.split(SEPARADOR_PADRE, 1)
+            encontrados = self.with_context(active_test=False).search([
+                ('nombre_busqueda', '=', clave_nombre(subdepartamento)),
+                ('departamento_id.nombre_busqueda', '=', clave_nombre(departamento)),
+            ] + list(domain or []), limit=1)
+            if encontrados:
+                return [(rec.id, rec.display_name) for rec in encontrados]
+        return super().name_search(name=name, domain=domain, operator=operator, limit=limit)
+
+    @api.model
+    def name_create(self, name):
+        # Al importar, «Crear nuevos valores» crea la división dentro del Departamento indicado.
+        if name and SEPARADOR_PADRE in name:
+            departamento, subdepartamento = name.split(SEPARADOR_PADRE, 1)
+            padre = self.env['flota.departamento'].with_context(active_test=False).search(
+                [('nombre_busqueda', '=', clave_nombre(departamento))], limit=1,
+            )
+            if padre:
+                rec = self.create({'name': subdepartamento, 'departamento_id': padre.id})
+                return rec.id, rec.display_name
+        return super().name_create(name)
 
     @api.model
     def _flota_import_buscar_existente(self, fila):

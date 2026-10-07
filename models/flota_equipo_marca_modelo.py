@@ -7,7 +7,7 @@ class FlotaEquipoMarca(models.Model):
     _description = 'Marca de Equipos'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
-    _flota_import_autocrear = True
+    _flota_import_catalogo = True
 
     name = fields.Char(string='Marca', required=True, index=True, tracking=True)
     descripcion = fields.Char(string='Descripción / Notas', tracking=True)
