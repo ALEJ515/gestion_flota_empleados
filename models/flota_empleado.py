@@ -4,6 +4,7 @@ from dateutil.relativedelta import relativedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from .phone_utils import whatsapp_url
+from .flota_schema import prepare_employee_assignment_schema
 
 _logger = logging.getLogger(__name__)
 
@@ -49,10 +50,7 @@ class FlotaEmpleado(models.Model):
     _order = 'name asc, id desc'
 
     def _auto_init(self):
-        self.env.cr.execute("""
-            ALTER TABLE flota_empleado 
-            ADD COLUMN IF NOT EXISTS penultima_facturacion_periodo VARCHAR;
-        """)
+        prepare_employee_assignment_schema(self.env.cr)
         return super()._auto_init()
 
     name = fields.Char(

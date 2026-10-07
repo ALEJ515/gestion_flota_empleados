@@ -4,6 +4,21 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.92.0] - 2026-10-06
+### Preparación del esquema de asignación durante la actualización
+- Se prepara `estado_asignacion` antes de inicializar el ORM, mediante una migración previa
+  y la inicialización del modelo. Evita lecturas de esa columna inexistente durante la actualización.
+- Los registros existentes sin estado se inicializan como **Asignada**; los estados ya registrados,
+  incluidos **Disponible**, se conservan. La preparación es idempotente.
+- Se retiran las restricciones SQL de nombre/cargo obligatorios para permitir líneas disponibles;
+  las líneas asignadas siguen validándose en el modelo. En instalaciones nuevas el ORM crea la tabla.
+- Incluye pruebas de regresión para esquema antiguo, ejecución repetida y conservación de estados.
+- Despliegue: respaldar la base, descargar el código y actualizar `gestion_flota_empleados`
+  en la base afectada (`-u gestion_flota_empleados --stop-after-init` con la configuración correcta).
+  Reiniciar sin actualizar el módulo no ejecuta estas migraciones ni carga las vistas y permisos.
+
+---
+
 ## [19.0.1.91.0] - 2026-10-06
 ### Líneas disponibles y traslado seguro de departamentos
 - La ficha de Empleados y Flotas distingue **Asignada** y **Disponible**. Una línea disponible conserva

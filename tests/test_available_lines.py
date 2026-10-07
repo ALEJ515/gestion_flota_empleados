@@ -1,5 +1,6 @@
 from odoo.exceptions import UserError, ValidationError
 from odoo.tests import TransactionCase, tagged
+from ..models.flota_schema import prepare_employee_assignment_schema
 
 
 @tagged('post_install', '-at_install')
@@ -159,3 +160,31 @@ class TestAvailableLines(TransactionCase):
         with self.assertRaises(UserError), self.cr.savepoint():
             self.departamento.unlink()
         self.assertTrue(self.departamento.exists())
+
+    def test_schema_preparation_preserves_available_and_assigned_states(self):
+        available = self.env['flota.empleado'].create({
+            'numero_flota': '8095550410', 'estado_asignacion': 'disponible',
+        })
+        self.env.flush_all()
+        prepare_employee_assignment_schema(self.cr)
+        prepare_employee_assignment_schema(self.cr)
+        self.cr.execute(
+            'SELECT estado_asignacion FROM flota_empleado WHERE id = %s',
+            (available.id,),
+        )
+        self.assertEqual(self.cr.fetchone()[0], 'disponible')
+        self.cr.execute(
+            'SELECT estado_asignacion FROM flota_empleado WHERE id = %s',
+            (self.employee.id,),
+        )
+        self.assertEqual(self.cr.fetchone()[0], 'asignada')
+
+    def test_schema_preparation_restores_missing_column(self):
+        self.env.flush_all()
+        self.cr.execute('ALTER TABLE flota_empleado DROP COLUMN estado_asignacion')
+        prepare_employee_assignment_schema(self.cr)
+        self.cr.execute(
+            'SELECT estado_asignacion FROM flota_empleado WHERE id = %s',
+            (self.employee.id,),
+        )
+        self.assertEqual(self.cr.fetchone()[0], 'asignada')
