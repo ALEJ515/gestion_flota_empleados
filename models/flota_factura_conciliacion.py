@@ -591,19 +591,17 @@ class FlotaFacturaConciliacion(models.Model):
             mapped_values = map_claro_columns(ordered_values, source_extractor=pdf_extractor)
             emp = emp_map.get(clean_phone) or emp_map.get(clean_phone[-10:]) or (emp_map.get(clean_phone[-7:]) if len(clean_phone) >= 7 else None)
             if not emp:
-                emp_name = f"Empleado Flota {clean_phone}"
                 emp = self.env['flota.empleado'].with_context(tracking_disable=True, mail_create_nosubscribe=True).create({
-                    'name': emp_name,
                     'numero_flota': clean_phone,
-                    'cargo': 'Asignación Automática Claro',
                     'departamento_id': False,
                     'ubicacion_id': False,
+                    'estado_asignacion': 'disponible',
                     'estado': 'active',
                     'en_ultima_factura': True,
                     'es_nuevo_auto': True,
-                    'notas': f'Nuevo número registrado desde Factura Claro ({self.periodo}). Complete la ficha de empleado.'
+                    'notas': f'Número registrado desde Factura Claro ({self.periodo}) sin persona asignada. Asigne un empleado cuando corresponda.'
                 })
-                nuevos_empleados_log[emp.id] = _("Empleado registrado automáticamente al aparecer un nuevo número en la factura de Claro (%s): <b>%s</b>.") % (self.periodo, clean_phone)
+                nuevos_empleados_log[emp.id] = _("Línea disponible registrada automáticamente desde la factura de Claro (%s): <b>%s</b>. Asigne el número a una persona cuando corresponda.") % (self.periodo, clean_phone)
                 emp_map[clean_phone] = emp
                 if len(clean_phone) >= 10:
                     emp_map[clean_phone[-10:]] = emp

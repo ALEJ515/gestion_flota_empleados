@@ -58,7 +58,8 @@
                     <div class="oe_title mb-3" style="max-width: 100%;">
                         <label for="empleado_id" class="oe_edit_only" string="Empleado"/>
                         <h1 style="width: 100%;">
-                            <field name="empleado_id" options="{'no_create_edit': True}" placeholder="Seleccione el empleado..." class="w-100"/>
+                            <field name="empleado_id" domain="[('estado_asignacion', '=', 'asignada')]"
+                                   options="{'no_create_edit': True}" placeholder="Seleccione el empleado..." class="w-100"/>
                         </h1>
                         <div class="alert alert-info py-1 px-2 mb-0" role="alert" invisible="not reasignado_de_id" style="display:inline-block;">
                             <i class="fa fa-exchange me-1"/> Acta generada por reasignación de equipos desde

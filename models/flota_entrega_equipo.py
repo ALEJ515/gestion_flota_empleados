@@ -2,7 +2,7 @@ import base64
 import logging
 
 from odoo import models, fields, api, _
-from odoo.exceptions import UserError
+from odoo.exceptions import UserError, ValidationError
 from .phone_utils import whatsapp_url
 
 _logger = logging.getLogger(__name__)
@@ -67,7 +67,9 @@ class FlotaEntregaEquipo(models.Model):
         ondelete='restrict',
         index=True,
         tracking=True,
-        help="Empleado al que se le entrega o recibe el equipo. Ruta, Localidad, Teléfono, Responsable "
+        domain="[('estado_asignacion', '=', 'asignada')]",
+        help="Empleado al que se le entrega o recibe el equipo. No se pueden asociar actas a una línea "
+             "que todavía esté disponible. Ruta, Localidad, Teléfono, Responsable "
              "y Cargo están vinculados a su perfil; al editarlos también se actualiza el empleado."
     )
     fecha = fields.Date(string='Fecha', default=fields.Date.context_today, required=True, tracking=True)
@@ -271,6 +273,14 @@ class FlotaEntregaEquipo(models.Model):
         for rec in self:
             cargo = (rec.cargo or '').strip().lower()
             rec.mostrar_ruta = bool(cargo) and any(k in cargo for k in ('vendedor', 'distribuidor'))
+
+    @api.constrains('empleado_id')
+    def _check_empleado_asignado(self):
+        for rec in self:
+            if rec.empleado_id and rec.empleado_id.estado_asignacion != 'asignada':
+                raise ValidationError(_(
+                    'No se puede emitir un acta para una línea Disponible. Asigne primero el número a una persona.'
+                ))
 
     def action_open_whatsapp(self):
         self.ensure_one()

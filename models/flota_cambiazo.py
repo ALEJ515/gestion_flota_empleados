@@ -109,6 +109,11 @@ class FlotaCambiazo(models.Model):
     @api.constrains('empleado_id')
     def _check_plan_datos(self):
         for rec in self:
+            if rec.empleado_id.estado_asignacion != 'asignada':
+                raise ValidationError(_(
+                    'No se puede registrar un cambiazo para una línea disponible. '
+                    'Asigne primero el número a una persona.'
+                ))
             if not rec.empleado_id.plan_datos_id and not rec.plan_datos_id:
                 raise ValidationError(_(
                     'El número de %s no tiene Plan de Datos. El cambiazo solo aplica a números con plan; '

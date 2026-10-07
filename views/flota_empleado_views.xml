@@ -31,7 +31,10 @@
         <field name="model">flota.empleado</field>
         <field name="arch" type="xml">
             <list decoration-danger="not en_ultima_factura" decoration-muted="estado == 'inactive' or not active">
-                <field name="name" optional="show"/>
+                <field name="estado_asignacion" widget="badge" optional="show"
+                       decoration-info="estado_asignacion == 'disponible'"
+                       decoration-success="estado_asignacion == 'asignada'"/>
+                <field name="name" string="Empleado / Responsable" optional="show"/>
                 <field name="departamento_id" optional="show"/>
                 <field name="subdepartamento_id" optional="show"/>
                 <field name="ubicacion_id" optional="show"/>
@@ -68,7 +71,8 @@
             <form string="Empleado y Flota">
                 <header>
                     <button name="action_registrar_cambiazo" type="object" string="Registrar Cambiazo"
-                            class="btn-primary" icon="fa-refresh" invisible="not plan_datos_id or not id"/>
+                            class="btn-primary" icon="fa-refresh"
+                            invisible="not plan_datos_id or not id or estado_asignacion != 'asignada'"/>
                     <field name="estado" widget="statusbar" statusbar_visible="draft,active,inactive" options="{'clickable': '1'}"/>
                 </header>
                 <sheet>
@@ -84,10 +88,20 @@
                     <widget name="web_ribbon" title="Inactivo" bg_color="bg-danger" invisible="not active or estado != 'inactive'"/>
                     <widget name="web_ribbon" title="Archivado" bg_color="bg-danger" invisible="active"/>
                     <div class="oe_title">
-                        <label for="name" class="oe_edit_only" string="Nombre Completo"/>
+                        <label for="name" class="oe_edit_only" string="Nombre Completo"
+                               invisible="estado_asignacion == 'disponible'"/>
                         <h1>
-                            <field name="name" placeholder="Ej. Karina Virginia Victoriano Vásquez"/>
+                            <field name="name" placeholder="Ej. Karina Virginia Victoriano Vásquez"
+                                   invisible="estado_asignacion == 'disponible'"
+                                   required="estado_asignacion == 'asignada'"/>
+                            <span class="text-info" invisible="estado_asignacion != 'disponible'">
+                                <i class="fa fa-phone me-1"/> Línea disponible para asignación
+                            </span>
                         </h1>
+                    </div>
+                    <div class="alert alert-info" role="alert" invisible="estado_asignacion != 'disponible'">
+                        Este número está libre y todavía no tiene una persona asignada. Complete el responsable y
+                        el cargo para asignarlo; el número y su historial de facturación se conservan.
                     </div>
                     <group>
                         <group string="Información Laboral">
@@ -95,14 +109,19 @@
                             <field name="subdepartamento_id"
                                    domain="[('departamento_id', '=', departamento_id)]"
                                    context="{'default_departamento_id': departamento_id}"
-                                   readonly="not departamento_id"
+                                   readonly="not departamento_id or estado_asignacion == 'disponible'"
+                                   invisible="estado_asignacion == 'disponible'"
                                    options="{'no_create': True}"
                                    placeholder="Seleccionar división (opcional)..."/>
                             <field name="ubicacion_id" options="{'no_create_edit': False}"/>
-                            <field name="ruta_id" options="{'no_create_edit': False}"/>
-                            <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"/>
+                            <field name="ruta_id" options="{'no_create_edit': False}"
+                                   invisible="estado_asignacion == 'disponible'"/>
+                            <field name="cargo" placeholder="Ej. Coord Integración y Capacitación"
+                                   invisible="estado_asignacion == 'disponible'"
+                                   required="estado_asignacion == 'asignada'"/>
                         </group>
                         <group string="Contacto y Facturación">
+                            <field name="estado_asignacion"/>
                             <field name="numero_flota" placeholder="Ej. 809 206-0146"/>
                             <field name="plan_datos_id" options="{'no_create_edit': False}" placeholder="Seleccionar Plan de Datos..."/>
                             <field name="ultima_facturacion_monto" widget="monetary" readonly="1"/>
@@ -113,7 +132,7 @@
                             <field name="active" widget="boolean_toggle" string="Activo en Sistema"/>
                         </group>
                     </group>
-                    <group string="Cambiazo de Equipo" name="cambiazo">
+                    <group string="Cambiazo de Equipo" name="cambiazo" invisible="estado_asignacion == 'disponible'">
                         <group>
                             <field name="fecha_ultimo_cambiazo"/>
                             <field name="estado_cambiazo" widget="badge"
@@ -168,6 +187,7 @@
                                 <list>
                                     <field name="name" optional="show"/>
                                     <field name="subdepartamento_id" optional="show"/>
+                                    <field name="estado_asignacion" widget="badge" optional="show"/>
                                     <field name="cargo" optional="show"/>
                                     <field name="ruta_id" optional="show"/>
                                     <field name="numero_flota" optional="show"/>
@@ -192,6 +212,7 @@
             <kanban default_group_by="departamento_id" class="o_kanban_small_column">
                 <field name="id"/>
                 <field name="name"/>
+                <field name="estado_asignacion"/>
                 <field name="departamento_id"/>
                 <field name="subdepartamento_id"/>
                 <field name="ubicacion_id"/>
@@ -207,9 +228,12 @@
                         <div class="d-flex flex-column justify-content-between p-2">
                             <div>
                                 <strong class="o_kanban_record_title fs-6 d-block mb-1">
-                                    <field name="name"/>
+                                    <field name="name" invisible="record.estado_asignacion.raw_value == 'disponible'"/>
+                                    <span t-if="record.estado_asignacion.raw_value == 'disponible'">
+                                        <i class="fa fa-phone text-info me-1"/> Línea Disponible
+                                    </span>
                                 </strong>
-                                <div class="text-muted small mb-1">
+                                <div class="text-muted small mb-1" t-if="record.estado_asignacion.raw_value == 'asignada'">
                                     <span class="fa fa-briefcase me-1" title="Cargo"/>
                                     <field name="cargo"/>
                                 </div>
@@ -259,6 +283,7 @@
                 <field name="ruta_id"/>
                 <field name="numero_flota"/>
                 <field name="plan_datos_id"/>
+                <field name="estado_asignacion"/>
                 <filter string="Activos" name="active_filter" domain="[('estado', '=', 'active')]"/>
                 <filter string="Inactivos" name="inactive_filter" domain="[('estado', '=', 'inactive')]"/>
                 <filter string="Borradores" name="draft_filter" domain="[('estado', '=', 'draft')]"/>
@@ -266,6 +291,9 @@
                 <filter string="Archivados" name="archived" domain="[('active', '=', False)]"/>
                 <separator/>
                 <filter string="Sin Subdepartamento" name="sin_subdepartamento" domain="[('subdepartamento_id', '=', False)]"/>
+                <separator/>
+                <filter string="Líneas Disponibles" name="lineas_disponibles" domain="[('estado_asignacion', '=', 'disponible')]"/>
+                <filter string="Líneas Asignadas" name="lineas_asignadas" domain="[('estado_asignacion', '=', 'asignada')]"/>
                 <separator/>
                 <filter string="Aptos para Cambiazo" name="cambiazo_aptos" domain="[('estado_cambiazo', 'in', ('apto_12', 'apto_18'))]"/>
                 <filter string="Apto Cambiazo 12 Meses" name="cambiazo_apto_12" domain="[('estado_cambiazo', '=', 'apto_12')]"/>
@@ -276,6 +304,7 @@
                 <group>
                     <filter string="Cargo" name="group_cargo" context="{'group_by': 'cargo'}"/>
                     <filter string="Departamento" name="group_dept" context="{'group_by': 'departamento_id'}"/>
+                    <filter string="Asignación de Línea" name="group_asignacion" context="{'group_by': 'estado_asignacion'}"/>
                     <filter string="Subdepartamento" name="group_subdepartamento" context="{'group_by': 'subdepartamento_id'}"/>
                     <filter string="Ubicación" name="group_ubi" context="{'group_by': 'ubicacion_id'}"/>
                     <filter string="Ruta" name="group_ruta" context="{'group_by': 'ruta_id'}"/>
@@ -290,6 +319,7 @@
                            select="multi" enable_counters="1"
                            domain="[('departamento_id', '=?', departamento_id)]"/>
                     <field name="estado_cambiazo" string="Cambiazo" icon="fa-refresh" enable_counters="1"/>
+                    <field name="estado_asignacion" string="Asignación de Línea" icon="fa-phone" enable_counters="1"/>
                 </searchpanel>
             </search>
         </field>

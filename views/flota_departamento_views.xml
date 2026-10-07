@@ -45,6 +45,11 @@
             <form string="Departamento">
                 <sheet>
                     <div class="oe_button_box" name="button_box">
+                        <button name="action_open_transfer_delete_wizard" type="object"
+                                class="oe_stat_button text-danger" icon="fa-trash"
+                                string="Eliminar y trasladar a N/A"
+                                groups="gestion_flota_empleados.group_flota_manager"
+                                invisible="name == 'N/A'"/>
                         <button name="action_view_empleados" type="object" class="oe_stat_button" icon="fa-users">
                             <field name="total_empleados" widget="statinfo" string="Total Empleados"/>
                         </button>

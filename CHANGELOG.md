@@ -4,6 +4,28 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.91.0] - 2026-10-06
+### Líneas disponibles y traslado seguro de departamentos
+- La ficha de Empleados y Flotas distingue **Asignada** y **Disponible**. Una línea disponible conserva
+  su número, factura, plan, ubicación y departamento, pero no tiene nombre, cargo, ruta ni subdepartamento.
+- Al importar nombres legado como `Disponible`, `Disponible 2`, etc. junto con Número de Flota, el importador
+  limpia los campos de persona y actualiza por el número existente; no crea empleados ficticios duplicados.
+- Los números nuevos registrados automáticamente desde una factura Claro quedan como líneas disponibles
+  en vez de crear nombres ficticios. El filtro y panel lateral incluyen el estado de asignación.
+- Para asignar una línea, editar **Empleado / Responsable** y **Cargo**; al guardar, el estado cambia a
+  **Asignada**. Los números disponibles no se pueden seleccionar para actas, cambiazo o WhatsApp.
+- Las líneas que ya tienen actas no se pueden liberar ni migrar automáticamente a disponibles, para evitar
+  que sus documentos históricos pierdan el nombre de la persona. La migración automática solo convierte
+  `Disponible [número]` cuando el registro no tiene actas.
+- En Departamentos se añade **Eliminar y trasladar a N/A** (solo Administradores). Mueve todas las líneas,
+  incluidas las archivadas/disponibles, conserva o consolida los subdepartamentos y traslada los resúmenes
+  históricos de factura a N/A, creando ese departamento si hace falta. La confirmación informa del impacto.
+- La eliminación directa queda bloqueada si hay empleados/líneas, subdepartamentos o resúmenes asociados;
+  la alternativa segura sigue siendo archivar. El traslado y borrado ocurren en una sola transacción.
+- Se incluyen pruebas de integración para crear/importar/asignar líneas y transferir departamentos.
+
+---
+
 ## [19.0.1.90.0] - 2026-10-05
 ### Nombres uniformes e importación sin distinguir mayúsculas
 - Empleados, Departamentos, Subdepartamentos y Ubicaciones normalizan su nombre al crear o editar,

@@ -55,7 +55,16 @@ class FlotaEmpleado(models.Model):
         """)
         return super()._auto_init()
 
-    name = fields.Char(string='Nombre Completo', required=True, index=True, tracking=True)
+    name = fields.Char(
+        string='Empleado / Responsable', index=True, tracking=True,
+        help="Se deja vacío únicamente para una línea telefónica sin persona asignada."
+    )
+    estado_asignacion = fields.Selection([
+        ('asignada', 'Asignada'),
+        ('disponible', 'Disponible'),
+    ], string='Asignación de Línea', default='asignada', required=True, index=True, tracking=True,
+        help="Disponible significa que el número de flota se conserva para asignarlo más adelante; "
+             "no representa a un empleado.")
     departamento_id = fields.Many2one(
         'flota.departamento', 
         string='Departamento', 
@@ -89,7 +98,7 @@ class FlotaEmpleado(models.Model):
         tracking=True,
         help="Ruta asignada al empleado. Ej. NTP0103 (vendedor) o DIST+10 (distribuidor)."
     )
-    cargo = fields.Char(string='Cargo', required=True, tracking=True)
+    cargo = fields.Char(string='Cargo', tracking=True)
     numero_flota = fields.Char(string='Número Flota', required=True, index=True, tracking=True)
     numero_flota_digits = fields.Char(
         string='Número Flota (Normalizado)',
@@ -320,6 +329,40 @@ class FlotaEmpleado(models.Model):
         for record in self:
             record.numero_flota_digits = _normalize_phone(record.numero_flota)
 
+    @api.depends('name', 'numero_flota', 'estado_asignacion')
+    def _compute_display_name(self):
+        for record in self:
+            if record.estado_asignacion == 'disponible':
+                record.display_name = _('Disponible — %s') % (record.numero_flota or _('Línea telefónica'))
+            else:
+                record.display_name = record.name or record.numero_flota or _('Línea telefónica')
+
+    @api.constrains('name', 'cargo', 'numero_flota', 'estado_asignacion')
+    def _check_assignment_data(self):
+        for record in self:
+            if record.estado_asignacion == 'disponible':
+                if record.name or record.cargo:
+                    raise ValidationError(_(
+                        'Una línea Disponible no debe tener nombre ni cargo de empleado. '
+                        'Limpie esos campos o márquela como Asignada.'
+                    ))
+                continue
+            if not record.name or not record.name.strip():
+                raise ValidationError(_('Una línea Asignada debe tener el nombre de la persona responsable.'))
+            if not record.cargo or not record.cargo.strip():
+                raise ValidationError(_('Una línea Asignada debe tener el cargo de la persona responsable.'))
+            if not record.numero_flota or not record.numero_flota.strip():
+                raise ValidationError(_('Toda línea telefónica debe conservar su Número de Flota.'))
+
+    @api.constrains('estado_asignacion')
+    def _check_available_line_has_no_actas(self):
+        for record in self:
+            if record.estado_asignacion == 'disponible' and record.entrega_equipo_ids:
+                raise ValidationError(_(
+                    'Este número tiene actas de entrega asociadas. Para conservar los nombres y datos '
+                    'impresos en esos documentos, no se puede convertir todavía en Disponible.'
+                ))
+
     @api.depends('cambiazo_ids')
     def _compute_cambiazo_count(self):
         for rec in self:
@@ -370,6 +413,8 @@ class FlotaEmpleado(models.Model):
 
     def action_registrar_cambiazo(self):
         self.ensure_one()
+        if self.estado_asignacion != 'asignada':
+            raise UserError(_('Asigne esta línea a una persona antes de registrar un cambiazo.'))
         if not self.plan_datos_id:
             raise UserError(_('El número %s no tiene Plan de Datos asignado; el cambiazo solo aplica a números con plan.') % (self.numero_flota or self.name))
         return {
@@ -402,19 +447,74 @@ class FlotaEmpleado(models.Model):
             encontrado = Empleado.search([('numero_flota_digits', '=', digitos)], limit=2)
             if len(encontrado) == 1:
                 return encontrado
+            if len(encontrado) > 1:
+                raise ValidationError(_(
+                    'El número de flota %s está duplicado. Corrija el catálogo antes de importar para '
+                    'evitar actualizar o crear una línea incorrecta.'
+                ) % numero)
         return super()._flota_import_buscar_existente(fila)
+
+    @api.model
+    def load(self, fields, data):
+        fields = list(fields)
+        data = [list(row) for row in data]
+        name_index = fields.index('name') if 'name' in fields else None
+        cargo_index = fields.index('cargo') if 'cargo' in fields else None
+        state_index = fields.index('estado_asignacion') if 'estado_asignacion' in fields else None
+        has_number = 'numero_flota' in fields
+        if name_index is not None and has_number:
+            if state_index is None:
+                fields.append('estado_asignacion')
+                state_index = len(fields) - 1
+                for row in data:
+                    row.append('')
+            for row in data:
+                name = row[name_index] if name_index < len(row) else ''
+                if isinstance(name, str) and re.fullmatch(r'disponible(?:\s+\d+)?', name.strip(), re.IGNORECASE):
+                    row[name_index] = ''
+                    if cargo_index is not None and cargo_index < len(row):
+                        row[cargo_index] = ''
+                    row[state_index] = 'Disponible'
+        return super().load(fields, data)
 
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get('numero_flota'):
                 vals['numero_flota'] = _formatear_numero_flota(vals['numero_flota'])
+            name = vals.get('name')
+            if (
+                isinstance(name, str)
+                and re.fullmatch(r'disponible(?:\s+\d+)?', name.strip(), re.IGNORECASE)
+                and vals.get('numero_flota')
+            ):
+                vals['estado_asignacion'] = 'disponible'
+            if vals.get('estado_asignacion') == 'disponible':
+                vals.update({'name': False, 'cargo': False, 'subdepartamento_id': False, 'ruta_id': False})
         return super().create(vals_list)
 
     def write(self, vals):
         vals = dict(vals)
         if vals.get('numero_flota'):
             vals['numero_flota'] = _formatear_numero_flota(vals['numero_flota'])
+        name = vals.get('name')
+        if (
+            isinstance(name, str)
+            and re.fullmatch(r'disponible(?:\s+\d+)?', name.strip(), re.IGNORECASE)
+        ):
+            vals['estado_asignacion'] = 'disponible'
+        if vals.get('estado_asignacion') == 'disponible':
+            if self.filtered('entrega_equipo_ids'):
+                raise UserError(_(
+                    'No se puede liberar una línea que tiene actas asociadas. Los datos de la persona '
+                    'en esos documentos dejarían de ser correctos.'
+                ))
+            vals.update({'name': False, 'cargo': False, 'subdepartamento_id': False, 'ruta_id': False})
+        elif 'name' in vals or 'cargo' in vals:
+            if any(record.estado_asignacion == 'disponible' for record in self) and (
+                vals.get('name') or vals.get('cargo')
+            ):
+                vals['estado_asignacion'] = 'asignada'
         if 'departamento_id' in vals and 'subdepartamento_id' not in vals:
             # Una escritura masiva puede mezclar divisiones válidas y divisiones de otro departamento.
             departamento_id = vals['departamento_id'] or False
@@ -450,6 +550,8 @@ class FlotaEmpleado(models.Model):
         if len(self) != 1:
             raise UserError(_('Seleccione un solo empleado para abrir WhatsApp.'))
         self.ensure_one()
+        if self.estado_asignacion != 'asignada':
+            raise UserError(_('Las líneas disponibles no tienen una persona asignada para contactar por WhatsApp.'))
         url = whatsapp_url(self.numero_flota)
         if not url:
             raise UserError(_('El empleado no tiene un número válido para abrir WhatsApp.'))
@@ -479,7 +581,7 @@ class FlotaEmpleado(models.Model):
                     for ot in candidatos:
                         if ot.numero_flota_digits == norm:
                             raise ValidationError(_('El número de flota (%s) ya pertenece al empleado %s.') % (record.numero_flota, ot.name))
-            if record.name:
+            if record.name and record.estado_asignacion == 'asignada':
                 domain_name = [('nombre_busqueda', '=', record.nombre_busqueda), ('id', '!=', record.id)]
                 if self.with_context(active_test=False).search_count(domain_name) > 0:
                     raise ValidationError(_('El nombre completo (%s) ya está registrado en el sistema.') % record.name)

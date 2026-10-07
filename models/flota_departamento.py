@@ -1,5 +1,5 @@
-from odoo import models, fields, api
-from odoo.exceptions import ValidationError
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError, ValidationError
 
 class FlotaDepartamento(models.Model):
     _name = 'flota.departamento'
@@ -93,3 +93,34 @@ class FlotaDepartamento(models.Model):
             'domain': [('departamento_id', '=', self.id)],
             'context': {'default_departamento_id': self.id, 'active_test': False}
         }
+
+    def action_open_transfer_delete_wizard(self):
+        self.ensure_one()
+        return {
+            'name': _('Eliminar departamento y trasladar registros'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'flota.departamento.delete.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {'default_departamento_id': self.id},
+        }
+
+    def unlink(self):
+        Resumen = self.env['flota.factura.departamento.resumen'].with_context(active_test=False)
+        for rec in self:
+            employee_count = self.env['flota.empleado'].with_context(active_test=False).search_count([
+                ('departamento_id', '=', rec.id),
+            ])
+            subdepartment_count = self.env['flota.subdepartamento'].with_context(active_test=False).search_count([
+                ('departamento_id', '=', rec.id),
+            ])
+            summary_count = Resumen.search_count([('departamento_id', '=', rec.id)])
+            if employee_count or subdepartment_count or summary_count:
+                raise UserError(_(
+                    'No se puede eliminar %(name)s directamente: tiene %(employees)s números/empleados, '
+                    '%(subdepartments)s subdepartamentos y %(summaries)s resúmenes de factura asociados. '
+                    'Use «Eliminar y trasladar a N/A» para conservar los registros, o archive el departamento.',
+                    name=rec.name, employees=employee_count,
+                    subdepartments=subdepartment_count, summaries=summary_count,
+                ))
+        return super().unlink()

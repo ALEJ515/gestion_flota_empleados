@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_flota_departamento_delete_wizard_form" model="ir.ui.view">
+        <field name="name">flota.departamento.delete.wizard.form</field>
+        <field name="model">flota.departamento.delete.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Eliminar Departamento y Trasladar Registros">
+                <sheet>
+                    <div class="alert alert-warning" role="alert">
+                        <i class="fa fa-exclamation-triangle me-2"/>
+                        Esta operación elimina el departamento. Los números y empleados, incluidos los archivados
+                        y disponibles, pasarán a <strong>N/A</strong>. Los subdepartamentos se conservarán bajo
+                        N/A cuando no haya duplicados; los duplicados se consolidarán. Los importes históricos
+                        de facturación también quedarán agrupados en N/A.
+                    </div>
+                    <group>
+                        <field name="departamento_id"/>
+                        <field name="departamento_destino_id" placeholder="Se creará N/A al confirmar si no existe."/>
+                    </group>
+                    <group string="Registros afectados">
+                        <field name="cantidad_lineas" readonly="1"/>
+                        <field name="cantidad_subdepartamentos" readonly="1"/>
+                        <field name="cantidad_resumenes" readonly="1"/>
+                    </group>
+                    <p class="text-muted">
+                        Si no quieres reclasificar los registros históricos, cancela y archiva el departamento.
+                        La operación es transaccional: si una referencia impide eliminarlo, no se aplicará el traslado.
+                    </p>
+                </sheet>
+                <footer>
+                    <button name="action_confirm_transfer_and_delete" string="Trasladar a N/A y Eliminar"
+                            type="object" class="btn-danger"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>
