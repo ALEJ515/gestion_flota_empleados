@@ -36,7 +36,7 @@ class FlotaNombreMixin(models.AbstractModel):
     def name_search(self, name='', domain=None, operator='ilike', limit=100):
         # Odoo resuelve las referencias de importación con name_search(operator='=').
         if name and operator == '=':
-            matches = self.search(
+            matches = self.with_context(active_test=False).search(
                 [('nombre_busqueda', '=', clave_nombre(name))] + list(domain or []),
                 limit=0 if not limit else max(limit, 2),
             )

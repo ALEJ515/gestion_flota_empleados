@@ -1,11 +1,13 @@
 from odoo import models, fields, api
 from odoo.exceptions import ValidationError
+from .flota_import_mixin import _escapar_like
 
 class FlotaRuta(models.Model):
     _name = 'flota.ruta'
     _description = 'Ruta de Empleado (Vendedor / Distribuidor)'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.import.mixin']
     _order = 'name asc'
+    _flota_import_autocrear = True
 
     name = fields.Char(
         string='Código de Ruta',
@@ -56,7 +58,7 @@ class FlotaRuta(models.Model):
     def _check_name_unique(self):
         for record in self:
             if record.name:
-                domain = [('name', '=ilike', record.name), ('id', '!=', record.id)]
+                domain = [('name', '=ilike', _escapar_like(record.name)), ('id', '!=', record.id)]
                 if self.search_count(domain) > 0:
                     raise ValidationError('El código de ruta debe ser único.')
 

@@ -4,6 +4,28 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.94.0] - 2026-10-07
+### Importación/exportación sin errores: reimportar, actualizar y crear catálogos
+- **Reimportar un archivo exportado ya no falla** aunque no se haya cambiado nada. Causas corregidas:
+  - Un Subdepartamento con el mismo nombre en varios Departamentos (p. ej. «Norte») era ambiguo. Ahora se
+    resuelve con el Departamento de la misma fila (o el del registro existente si la columna no viene).
+  - Los Departamentos, Subdepartamentos, Rutas, etc. **archivados** no se encontraban por nombre.
+    Ahora se encuentran y se conservan.
+  - Los nombres se comparan sin importar mayúsculas ni espacios sobrantes; los
+    códigos de ruta con `_` o `%` ya no se interpretan como comodines.
+  - Las celdas vacías de **Estado** y **Asignación de Línea** dejaron de producir «Falta el valor
+    requerido»: se usan Activo y Asignada (o Disponible si la fila no trae nombre). Los archivos sin la
+    columna de asignación ya no la reciben vacía.
+- **Lo que no existe se crea automáticamente** al importar: Departamento, Subdepartamento (dentro del
+  Departamento de la fila), Ubicación, Ruta, Plan de Datos, Marca y Equipo/Licencia. Se muestra un único
+  aviso con lo que se creará. Si la importación termina con errores, no se crea nada. Para desactivar
+  esta creación en una importación por API usar el contexto `flota_import_no_crear`.
+- Un Subdepartamento ambiguo o sin Departamento, o un alta rechazada, produce un error en esa fila con el
+  motivo, en lugar de asignar un registro equivocado.
+- Se añaden pruebas de la lógica de resolución y pruebas de ida y vuelta (exportar → importar).
+
+---
+
 ## [19.0.1.93.0] - 2026-10-06
 ### Reparación automática al arrancar
 - Si el código nuevo se despliega sin actualizar el módulo y falta la columna `estado_asignacion`,

@@ -472,25 +472,22 @@ class FlotaEmpleado(models.Model):
 
     @api.model
     def load(self, fields, data):
+        # Odoo convierte una celda vacía en False; en columnas obligatorias con valor por defecto
+        # eso rompería la importación. La línea sin nombre se interpreta como Disponible.
         fields = list(fields)
         data = [list(row) for row in data]
-        name_index = fields.index('name') if 'name' in fields else None
-        cargo_index = fields.index('cargo') if 'cargo' in fields else None
-        state_index = fields.index('estado_asignacion') if 'estado_asignacion' in fields else None
-        has_number = 'numero_flota' in fields
-        if name_index is not None and has_number:
-            if state_index is None:
-                fields.append('estado_asignacion')
-                state_index = len(fields) - 1
-                for row in data:
-                    row.append('')
-            for row in data:
-                name = row[name_index] if name_index < len(row) else ''
-                if isinstance(name, str) and re.fullmatch(r'disponible(?:\s+\d+)?', name.strip(), re.IGNORECASE):
-                    row[name_index] = ''
-                    if cargo_index is not None and cargo_index < len(row):
-                        row[cargo_index] = ''
-                    row[state_index] = 'Disponible'
+
+        def indice(nombre):
+            return fields.index(nombre) if nombre in fields else None
+
+        name_i, estado_i, asignacion_i = indice('name'), indice('estado'), indice('estado_asignacion')
+        for row in data:
+            if estado_i is not None and estado_i < len(row) and not self._flota_import_tiene_valor(row[estado_i]):
+                row[estado_i] = 'active'
+            if asignacion_i is not None and asignacion_i < len(row) \
+                    and not self._flota_import_tiene_valor(row[asignacion_i]):
+                nombre = row[name_i] if name_i is not None and name_i < len(row) else 'sin columna de nombre'
+                row[asignacion_i] = 'asignada' if self._flota_import_tiene_valor(nombre) else 'disponible'
         return super().load(fields, data)
 
     @api.model_create_multi

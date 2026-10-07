@@ -8,6 +8,8 @@ class FlotaSubdepartamento(models.Model):
     _description = 'Subdepartamento de Flota'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'flota.nombre.mixin']
     _order = 'departamento_id, name, id'
+    _flota_import_autocrear = True
+    _flota_import_campo_padre = 'departamento_id'
 
     name = fields.Char(string='Subdepartamento', required=True, index=True, tracking=True)
     departamento_id = fields.Many2one(
