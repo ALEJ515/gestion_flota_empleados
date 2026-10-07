@@ -4,6 +4,16 @@ Todas las modificaciones del módulo son registradas en este archivo para manten
 
 ---
 
+## [19.0.1.93.0] - 2026-10-06
+### Reparación automática al arrancar
+- Si el código nuevo se despliega sin actualizar el módulo y falta la columna `estado_asignacion`,
+  Odoo la crea al iniciar (gancho de registro, solo cuando falta) y registra una advertencia.
+  Si no puede hacerlo, el servidor continúa iniciando y deja el error en el log.
+- Esto repara el error `column flota_empleado.estado_asignacion does not exist` tras reiniciar Odoo.
+  Aun así, debe actualizarse el módulo para cargar vistas, permisos y la migración de líneas «Disponible».
+
+---
+
 ## [19.0.1.92.0] - 2026-10-06
 ### Preparación del esquema de asignación durante la actualización
 - Se prepara `estado_asignacion` antes de inicializar el ORM, mediante una migración previa

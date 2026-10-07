@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from .phone_utils import whatsapp_url
-from .flota_schema import prepare_employee_assignment_schema
+from .flota_schema import employee_assignment_column_missing, prepare_employee_assignment_schema
 
 _logger = logging.getLogger(__name__)
 
@@ -52,6 +52,24 @@ class FlotaEmpleado(models.Model):
     def _auto_init(self):
         prepare_employee_assignment_schema(self.env.cr)
         return super()._auto_init()
+
+    def _register_hook(self):
+        super()._register_hook()
+        # Odoo ejecuta este gancho en cada arranque; repara la columna si el código nuevo
+        # se desplegó sin actualizar el módulo (-u). Si no puede, el servidor sigue iniciando.
+        try:
+            with self.env.cr.savepoint():
+                if employee_assignment_column_missing(self.env.cr):
+                    _logger.warning(
+                        "flota_empleado.estado_asignacion no existe; se crea automáticamente. "
+                        "Actualice igualmente el módulo gestion_flota_empleados."
+                    )
+                    prepare_employee_assignment_schema(self.env.cr)
+        except Exception:
+            _logger.exception(
+                "No se pudo crear flota_empleado.estado_asignacion automáticamente. "
+                "Actualice el módulo gestion_flota_empleados con el servicio detenido."
+            )
 
     name = fields.Char(
         string='Empleado / Responsable', index=True, tracking=True,

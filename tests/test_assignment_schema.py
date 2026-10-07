@@ -11,14 +11,17 @@ spec.loader.exec_module(schema)
 
 
 class RecordingCursor:
-    def __init__(self, table_exists=True):
+    def __init__(self, table_exists=True, column_missing=True):
         self.table_exists = table_exists
+        self.column_missing = column_missing
         self.statements = []
 
     def execute(self, sql):
         self.statements.append(' '.join(sql.split()))
 
     def fetchone(self):
+        if 'information_schema' in self.statements[-1]:
+            return None if self.column_missing else (1,)
         return ('flota_empleado' if self.table_exists else None,)
 
 
@@ -40,6 +43,10 @@ class TestAssignmentSchema(unittest.TestCase):
         self.assertIn('ALTER COLUMN estado_asignacion SET NOT NULL', cursor.statements[3])
         self.assertIn('ALTER COLUMN name DROP NOT NULL', cursor.statements[3])
         self.assertIn('ALTER COLUMN cargo DROP NOT NULL', cursor.statements[3])
+
+    def test_startup_repair_only_runs_when_column_is_missing(self):
+        self.assertTrue(schema.employee_assignment_column_missing(RecordingCursor(column_missing=True)))
+        self.assertFalse(schema.employee_assignment_column_missing(RecordingCursor(column_missing=False)))
 
     def test_repeated_preparation_uses_idempotent_statements(self):
         cursor = RecordingCursor()
